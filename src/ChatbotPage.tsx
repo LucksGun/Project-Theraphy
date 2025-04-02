@@ -37,16 +37,16 @@ async function getBotResponse(
   } catch (error) { console.error('Error fetching bot response:', error); if (error instanceof Error) { return `Error: ${error.message}`; } return 'Error: Could not fetch response.'; }
 }
 
-// --- NEW: Helper function to parse suggestions ---
+// --- Helper function to parse suggestions (FIXED) ---
 function parseSuggestions(text: string): { mainText: string; suggestions: string[] } {
   const suggestions: string[] = [];
-  // Regex to find [Suggestion: text] - Adjusted to be less greedy if multiple on one line
   const regex = /\[Suggestion:\s*([^\]]+?)\]/g;
   // Replace suggestions in text and collect them
-  const mainText = text.replace(regex, (match, suggestionText) => {
+  // --- FIXED: Use _match to indicate 'match' parameter is unused ---
+  const mainText = text.replace(regex, (_match, suggestionText) => {
     suggestions.push(suggestionText.trim());
     return ''; // Remove the suggestion tag from the main text
-  }).trim(); // Trim any whitespace left after removing tags
+  }).trim();
 
   return { mainText, suggestions };
 }
@@ -73,139 +73,74 @@ function ChatbotPage({ messages, setMessages }: ChatbotPageProps) {
   useEffect(() => { setTimeout(scrollToBottom, 100); }, [messages, scrollToBottom]);
   useEffect(() => { return () => { if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); } }; }, [imagePreviewUrl]);
 
-
-  // --- UPDATED: Renamed handleSend to allow sending programmatically ---
+  // sendMessage function
   const sendMessage = useCallback(async (messageText: string, imageFile: File | null) => {
     if ((messageText.trim() === '' && !imageFile) || isLoading) return;
-
     const userMessageText = messageText.trim();
     const imageToSend = imageFile;
     let imageDataForApi: { type: string; dataUrl: string } | null = null;
-
     const newUserMessage: Message = { id: Date.now(), text: userMessageText + (imageToSend ? ' (+image)' : ''), sender: 'user' };
     setMessages((prevMessages) => [...prevMessages, newUserMessage]);
-
-    // Clear main inputs ONLY if the image came from the main selection state
-    if (imageToSend && imageToSend === selectedImage) {
-        setSelectedImage(null);
-        setImagePreviewUrl(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-    // Always clear text input if this wasn't triggered by a suggestion click
-    // (How to differentiate? Maybe check if imageToSend is null?)
-    // For simplicity now, suggestion clicks won't clear main input.
-    // Or, we clear it always if text matches input? Let's clear input if it matches.
-    if(messageText === input) {
-        setInput('');
-    }
-
-
+    if (imageToSend && imageToSend === selectedImage) { setSelectedImage(null); setImagePreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; }
+    if(messageText === input) { setInput(''); } // Clear input only if it matches current input state
     setIsLoading(true);
-    // Use functional update for loading message as well
     setMessages((prevMessages) => [...prevMessages, { id: Date.now() + 1, text: 'Bot is typing...', sender: 'loading' }]);
-
     if (imageToSend) {
-        try {
-            const base64String = await readFileAsBase64(imageToSend);
-            imageDataForApi = { type: imageToSend.type, dataUrl: base64String };
-        } catch (error) { /* ... error handling ... */
-             console.error("Error reading file:", error);
-              setMessages((prevMessages) => [ ...prevMessages.filter(msg => msg.sender !== 'loading'), { id: Date.now() + 2, text: "Error reading image file.", sender: 'bot' } ]);
-              setIsLoading(false); return;
-        }
+        try { const base64String = await readFileAsBase64(imageToSend); imageDataForApi = { type: imageToSend.type, dataUrl: base64String }; }
+        catch (error) { console.error("Error reading file:", error); setMessages((prevMessages) => [ ...prevMessages.filter(msg => msg.sender !== 'loading'), { id: Date.now() + 2, text: "Error reading image file.", sender: 'bot' } ]); setIsLoading(false); return; }
     }
-
     let botResponseText = '';
     try { botResponseText = await getBotResponse(userMessageText, imageDataForApi); }
-    catch (error) { /* ... error handling ... */
-        console.error("Failed to get bot response:", error);
-        if (error instanceof Error) { botResponseText = `Error: ${error.message}`; } else { botResponseText = "An unknown error occurred."; }
-    } finally {
+    catch (error) { console.error("Failed to get bot response:", error); if (error instanceof Error) { botResponseText = `Error: ${error.message}`; } else { botResponseText = "An unknown error occurred."; } }
+    finally {
        const newBotMessage: Message = { id: Date.now() + 2, text: botResponseText, sender: 'bot' };
        setMessages((prevMessages) => [ ...prevMessages.filter(msg => msg.sender !== 'loading'), newBotMessage ]);
        setIsLoading(false);
     }
-  }, [isLoading, input, selectedImage, setMessages]); // Add dependencies for useCallback
+  }, [isLoading, input, selectedImage, setMessages]); // Added `input` to dependencies
 
+  // handleSend wrapper
+  const handleSend = () => { sendMessage(input, selectedImage); }
 
-  // --- Original handleSend becomes a wrapper ---
-  const handleSend = () => {
-      sendMessage(input, selectedImage);
-  }
-  // --- End wrapper ---
-
-
-  // --- NEW: Handler for clicking a suggestion ---
-  const handleSuggestionClick = useCallback((suggestionText: string) => {
-      // Send the suggestion text as if the user typed it (no image)
-      // Use the sendMessage function directly
-      sendMessage(suggestionText, null);
-  }, [sendMessage]); // Depend on sendMessage
-  // --- End New Handler ---
-
+  // handleSuggestionClick
+  const handleSuggestionClick = useCallback((suggestionText: string) => { sendMessage(suggestionText, null); }, [sendMessage]);
 
   // Other handlers
    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => { setInput(event.target.value); };
    const handleKeyPress = (event: React.KeyboardEvent) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend(); } };
-   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => { /* ... unchanged ... */ };
-   const handleImageUploadClick = () => { /* ... unchanged ... */ };
-   const removeSelectedImage = () => { /* ... unchanged ... */ }
+   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => { // NOTE: event IS used via event.target - TS error might be config issue or bug
+     const file = event.target.files?.[0];
+     if (file && file.type.startsWith('image/')) { setSelectedImage(file); if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); } setImagePreviewUrl(URL.createObjectURL(file)); }
+     else { setSelectedImage(null); setImagePreviewUrl(null); if(file) alert("Please select a valid image file."); if (fileInputRef.current) fileInputRef.current.value = ""; }
+   };
+   const handleImageUploadClick = () => { fileInputRef.current?.click(); };
+   const removeSelectedImage = () => { setSelectedImage(null); setImagePreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; }
 
-  // --- UPDATED JSX for rendering messages ---
+  // JSX rendering
   return (
      <div className="chatbot-container">
        <div className="chatbot-messages">
          {messages.map((message) => {
-             // Parse bot messages for suggestions
              let mainText = message.text;
              let suggestions: string[] = [];
-             if (message.sender === 'bot') {
-                 const parsed = parseSuggestions(message.text);
-                 mainText = parsed.mainText;
-                 suggestions = parsed.suggestions;
-             }
-
+             if (message.sender === 'bot') { const parsed = parseSuggestions(message.text); mainText = parsed.mainText; suggestions = parsed.suggestions; }
              return (
-               // Wrap message and suggestions for alignment
                <div key={message.id} className={`message-wrapper message-wrapper-${message.sender}`}>
                   <div className={`message ${message.sender}`}>
-                     {message.sender === 'bot' ? (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                           {mainText || (suggestions.length > 0 ? '' : ' ')} {/* Ensure non-empty child for MD */}
-                        </ReactMarkdown>
-                     ) : message.sender === 'loading' ? (
-                        <i>{mainText}</i>
-                     ) : (
-                        <p>{mainText}</p>
-                     )}
+                     {message.sender === 'bot' ? ( <ReactMarkdown remarkPlugins={[remarkGfm]}> {mainText || (suggestions.length > 0 ? '' : ' ')} </ReactMarkdown> )
+                      : message.sender === 'loading' ? ( <i>{mainText}</i> )
+                      : ( <p>{mainText}</p> )}
                   </div>
-                  {/* Render suggestion buttons if any */}
-                  {suggestions.length > 0 && (
-                     <div className="suggestions-container">
-                        {suggestions.map((suggestion, index) => (
-                           <button
-                              key={index}
-                              className="suggestion-button"
-                              onClick={() => handleSuggestionClick(suggestion)}
-                              disabled={isLoading}
-                            >
-                              {suggestion}
-                           </button>
-                        ))}
-                     </div>
-                  )}
+                  {suggestions.length > 0 && ( <div className="suggestions-container"> {suggestions.map((suggestion, index) => ( <button key={index} className="suggestion-button" onClick={() => handleSuggestionClick(suggestion)} disabled={isLoading} > {suggestion} </button> ))} </div> )}
                </div>
              );
          })}
           <div ref={messagesEndRef} />
        </div>
-       {/* ... (Image Preview JSX unchanged) ... */}
        {imagePreviewUrl && ( <div className="image-preview-area"> <img src={imagePreviewUrl} alt="Selected preview" style={{maxHeight: '50px', maxWidth: '50px', objectFit: 'cover', marginRight: '10px'}} /> <button onClick={removeSelectedImage} title="Remove image" className="remove-image-button">X</button> </div> )}
-       {/* ... (Input Area JSX unchanged) ... */}
        <div className="chatbot-input-area"> <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/png, image/jpeg, image/gif, image/webp" style={{ display: 'none' }} /> <button onClick={handleImageUploadClick} className="upload-button" title="Upload Image" disabled={isLoading}>📎</button> <input type="text" value={input} onChange={handleInputChange} onKeyPress={handleKeyPress} placeholder="Type your message or upload an image..." disabled={isLoading}/> <button onClick={handleSend} disabled={isLoading || (!input.trim() && !selectedImage)} title="Send"> ➢ </button> </div>
      </div>
   );
-  // --- End UPDATED JSX ---
-}
+ }
 
-export default ChatbotPage;
+ export default ChatbotPage;
