@@ -1,47 +1,74 @@
 // src/ChatbotPage.tsx
-import React, { useState, useRef, useEffect } from 'react'; // Import useRef and useEffect
+import React, { useState, useRef, useEffect } from 'react';
 
-// Define a simple interface for message objects
+// Define interface for message objects
 interface Message {
   id: number;
   text: string;
-  sender: 'user' | 'bot';
+  sender: 'user' | 'bot' | 'loading'; // Add 'loading' type
 }
 
-// Simulates fetching a response from a bot backend
+// Define the Worker URL - Using the one you provided
+const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
+
+// --- NEW: Function to call the Cloudflare Worker ---
 async function getBotResponse(userInput: string): Promise<string> {
-  console.log('Simulating bot response for:', userInput);
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 750)); // Wait 750ms
+  console.log('Sending prompt to Worker:', userInput);
+  try {
+    const response = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt: userInput }), // Send prompt in correct format
+    });
 
-  // Simple echo logic for now - replace with real logic later
-  return `You told me: "${userInput}"`;
+    if (!response.ok) {
+      // Try to get error message from worker response body
+      const errorData = await response.json().catch(() => ({ error: `HTTP error! status: ${response.status}` }));
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      // Handle errors returned by the worker/API
+      throw new Error(data.error);
+    }
+
+    console.log('Received reply from Worker:', data.reply);
+    return data.reply || 'Sorry, I received an empty reply.'; // Return the reply
+
+  } catch (error) {
+    console.error('Error fetching bot response:', error);
+    // Re-throw the error or return a specific error message
+    if (error instanceof Error) {
+      return `Error: ${error.message}`;
+    }
+    return 'Error: Could not fetch response.';
+  }
 }
+// --- End NEW function ---
 
 
 function ChatbotPage() {
-  // State to hold the user's current input
   const [input, setInput] = useState<string>('');
-  // State to hold the list of chat messages
   const [messages, setMessages] = useState<Message[]>([]);
-  // Ref for the messages container end div
-  const messagesEndRef = useRef<HTMLDivElement>(null); // Add this ref
+  const [isLoading, setIsLoading] = useState<boolean>(false); // Add loading state
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Function to scroll to the bottom
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); // Use smooth scrolling
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // useEffect hook to scroll down when messages change
   useEffect(() => {
     scrollToBottom();
-  }, [messages]); // Dependency array includes messages
+  }, [messages]);
 
-  // Function to handle sending a message
-  const handleSend = async () => { // Make the function async
-    if (input.trim() === '') return;
+  const handleSend = async () => {
+    if (input.trim() === '' || isLoading) return; // Prevent sending empty or while loading
 
-    const userMessageText = input.trim(); // Store user text before clearing input
+    const userMessageText = input.trim();
 
     const newUserMessage: Message = {
       id: Date.now(),
@@ -49,46 +76,51 @@ function ChatbotPage() {
       sender: 'user',
     };
 
-    // Add user message to state immediately
-    // Use functional update to ensure we have the latest state if updates batch
-    setMessages((prevMessages) => [...prevMessages, newUserMessage]);
+    // Add user message and a temporary loading message
+    setMessages((prevMessages) => [
+        ...prevMessages,
+        newUserMessage,
+        { id: Date.now() + 1, text: 'Bot is typing...', sender: 'loading' } // Add loading indicator
+    ]);
     setInput(''); // Clear input field
+    setIsLoading(true); // Set loading state
 
-    // --- Simulate getting a bot response ---
+    let botResponseText = '';
     try {
-      // Get a response from our placeholder function (can be replaced later)
-      const botResponseText = await getBotResponse(userMessageText);
-
-      const newBotMessage: Message = {
-        id: Date.now() + 1, // Ensure unique ID
-        text: botResponseText,
-        sender: 'bot',
-      };
-
-      // Add bot message to state after a short delay (handled in getBotResponse)
-      setMessages((prevMessages) => [...prevMessages, newBotMessage]);
-
+      // Get response from the Cloudflare worker
+      botResponseText = await getBotResponse(userMessageText);
     } catch (error) {
-        console.error("Error getting bot response:", error);
-        // Optionally add an error message to the chat
-        const errorMessage: Message = {
-             id: Date.now() + 1,
-             text: "Sorry, I encountered an error.",
-             sender: 'bot',
+        console.error("Failed to get bot response:", error);
+        if (error instanceof Error) {
+           botResponseText = `Error: ${error.message}`;
+        } else {
+           botResponseText = "An unknown error occurred.";
         }
-         setMessages((prevMessages) => [...prevMessages, errorMessage]);
+    } finally {
+       // Create the final bot message (either response or error)
+       const newBotMessage: Message = {
+          id: Date.now() + 2, // Ensure unique ID
+          text: botResponseText,
+          sender: 'bot', // Mark as bot even if it's an error message for styling
+       };
+
+       // Remove the loading message and add the final bot message
+       setMessages((prevMessages) => [
+           ...prevMessages.filter(msg => msg.sender !== 'loading'), // Remove loading message
+           newBotMessage
+       ]);
+       setIsLoading(false); // Clear loading state
     }
-    // --- End simulation ---
   };
 
-  // Function to update the input state as the user types
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInput(event.target.value);
   };
 
-   // Allow sending with Enter key
    const handleKeyPress = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter') {
+    // Prevent sending if Shift+Enter is pressed (allow newlines)
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault(); // Prevent newline in input
       handleSend();
     }
   };
@@ -96,14 +128,16 @@ function ChatbotPage() {
   return (
     <div className="chatbot-container">
       <div className="chatbot-messages">
-        {/* Display messages here */}
         {messages.map((message) => (
           <div key={message.id} className={`message ${message.sender}`}>
-            {/* Wrap text in a paragraph or span for better structure if needed */}
-            <p>{message.text}</p>
+             {/* Style the loading message differently if needed */}
+             {message.sender === 'loading' ? (
+                <i>{message.text}</i>
+             ) : (
+                <p>{message.text}</p>
+             )}
           </div>
         ))}
-         {/* Add this empty div at the end for the ref */}
          <div ref={messagesEndRef} />
       </div>
       <div className="chatbot-input-area">
@@ -111,10 +145,13 @@ function ChatbotPage() {
           type="text"
           value={input}
           onChange={handleInputChange}
-          onKeyPress={handleKeyPress} // Send on Enter
+          onKeyPress={handleKeyPress}
           placeholder="Type your message..."
+          disabled={isLoading} // Disable input while loading
         />
-        <button onClick={handleSend}>Send</button>
+        <button onClick={handleSend} disabled={isLoading}> {/* Disable button while loading */}
+            {isLoading ? '...' : 'Send'} {/* Change button text while loading */}
+        </button>
       </div>
     </div>
   );
