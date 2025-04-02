@@ -1,15 +1,15 @@
 // src/App.tsx
-import './App.css'; // We'll keep the link to the CSS file
-import ChatbotPage from './ChatbotPage'; // Add this line
-function App() {
-  // We'll add state and functions here later as needed
+import './App.css';
+import ChatbotPage from './ChatbotPage'; // THE IMPORT (You likely have this)
 
+function App() {
   return (
     <div className="App">
       <header className="App-header">
         <h1>Project Theraphy Dashboard</h1>
-        {/* We will add dashboard/chatbot components here */}
       </header>
+      {/* THE USAGE - Make sure this line below is present */}
+      <ChatbotPage /> 
     </div>
   );
 }
