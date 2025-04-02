@@ -234,3 +234,64 @@ button, input {
   .image-preview-area { padding: 5px 10px; }
   .upload-button { font-size: 1.2em;} /* Ensure upload emoji is sized okay */
 }
+/* Styles for Suggestion Buttons */
+.message-wrapper {
+  display: flex;
+  flex-direction: column;
+  /* Align based on sender */
+}
+.message-wrapper-user {
+  align-items: flex-end;
+}
+.message-wrapper-bot, .message-wrapper-loading {
+  align-items: flex-start;
+}
+
+.suggestions-container {
+  display: flex;
+  flex-wrap: wrap; /* Allow buttons to wrap */
+  gap: 8px;
+  /* Align suggestions below the bot message bubble */
+  margin-left: 0; /* Align with bot message */
+  margin-top: 8px; /* Space below the bubble */
+  max-width: 75%; /* Match message max-width */
+  justify-content: flex-start; /* Align buttons to the start */
+}
+
+.suggestion-button {
+  padding: 6px 12px;
+  border: 1px solid #dadce0; /* Google style */
+  background-color: #ffffff;
+  color: #1a73e8; /* Blue text */
+  border-radius: 18px; /* Rounded */
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.suggestion-button:hover:not(:disabled) {
+  background-color: #f8f9fa; /* Slight grey on hover */
+  border-color: #c6c9ce;
+}
+
+.suggestion-button:disabled {
+  color: #bdc1c6;
+  border-color: #e8eaed;
+  cursor: default;
+}
+
+/* Adjustments for mobile */
+@media (max-width: 600px) {
+  /* ... (existing mobile styles) ... */
+
+  .suggestions-container {
+       max-width: 90%; /* Allow slightly wider on mobile */
+       margin-left: 0;
+       gap: 6px;
+   }
+   .suggestion-button {
+       padding: 5px 10px;
+       font-size: 0.85em;
+   }
+}
