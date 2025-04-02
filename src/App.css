@@ -18,7 +18,7 @@ html, body, #root {
 }
 
 .App-header {
-  padding: 12px 20px; /* Default padding */
+  padding: 12px 20px; /* Keep some padding for header text */
   background-color: #ffffff;
   border-bottom: 1px solid #e0e0e0;
   text-align: center;
@@ -38,13 +38,12 @@ html, body, #root {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  /* overflow: hidden; was removed */
 }
 
 .chatbot-messages {
   flex-grow: 1;
   overflow-y: auto;
-  padding: 20px 10%; /* Default padding for larger screens */
+  padding: 20px 15px; /* Use fixed horizontal padding instead of % */
   background-color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -59,6 +58,7 @@ html, body, #root {
   word-wrap: break-word;
   line-height: 1.5;
   box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  /* No base margin-left/right needed now */
 }
 
 .message p {
@@ -70,8 +70,7 @@ html, body, #root {
   color: white;
   align-self: flex-end;
   border-bottom-right-radius: 5px;
-  /* Add margin for spacing from edge on desktop */
-  margin-right: 10px;
+  /* margin-right: 10px; /* REMOVED */
 }
 
 .message.bot, .message.loading {
@@ -79,8 +78,7 @@ html, body, #root {
   color: #202124;
   align-self: flex-start;
   border-bottom-left-radius: 5px;
-   /* Add margin for spacing from edge on desktop */
-  margin-left: 10px;
+  /* margin-left: 10px; /* REMOVED */
 }
 
 .message.loading i {
@@ -91,7 +89,7 @@ html, body, #root {
 
 .chatbot-input-area {
   display: flex;
-  padding: 15px 10%; /* Default padding for larger screens */
+  padding: 15px 15px; /* Use fixed horizontal padding */
   border-top: 1px solid #e0e0e0;
   background-color: #ffffff;
   flex-shrink: 0;
@@ -133,6 +131,7 @@ html, body, #root {
 
 
 /* --- Responsive Styles for Small Screens --- */
+/* These might not be strictly needed now but don't hurt */
 @media (max-width: 600px) {
 
   .App-header {
@@ -144,20 +143,12 @@ html, body, #root {
   }
 
   .chatbot-messages {
-    padding: 15px 10px; /* Reduce horizontal padding significantly, keep vertical */
+     /* padding: 15px 10px; /* Base rule now handles small padding */
   }
 
   .chatbot-input-area {
-    padding: 10px 10px; /* Reduce horizontal padding, keep vertical */
-    gap: 8px; /* Slightly reduce gap */
-  }
-
-  /* Remove specific margins for messages on mobile so they align closer to edge */
-  .message.user {
-      margin-right: 0;
-  }
-  .message.bot, .message.loading {
-      margin-left: 0;
+     /* padding: 10px 10px; /* Base rule now handles small padding */
+    gap: 8px;
   }
 
   .message {
