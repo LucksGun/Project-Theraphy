@@ -1,35 +1,84 @@
 // src/ChatbotPage.tsx
-import React, { useState } from 'react'; // Import React and useState hook
+import React, { useState, useRef, useEffect } from 'react'; // Import useRef and useEffect
 
-// Define a simple interface for message objects (optional but good practice)
+// Define a simple interface for message objects
 interface Message {
   id: number;
   text: string;
   sender: 'user' | 'bot';
 }
 
+// Simulates fetching a response from a bot backend
+async function getBotResponse(userInput: string): Promise<string> {
+  console.log('Simulating bot response for:', userInput);
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 750)); // Wait 750ms
+
+  // Simple echo logic for now - replace with real logic later
+  return `You told me: "${userInput}"`;
+}
+
+
 function ChatbotPage() {
   // State to hold the user's current input
   const [input, setInput] = useState<string>('');
-  // State to hold the list of chat messages (start empty)
+  // State to hold the list of chat messages
   const [messages, setMessages] = useState<Message[]>([]);
+  // Ref for the messages container end div
+  const messagesEndRef = useRef<HTMLDivElement>(null); // Add this ref
+
+  // Function to scroll to the bottom
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); // Use smooth scrolling
+  };
+
+  // useEffect hook to scroll down when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]); // Dependency array includes messages
 
   // Function to handle sending a message
-  const handleSend = () => {
-    if (input.trim() === '') return; // Don't send empty messages
+  const handleSend = async () => { // Make the function async
+    if (input.trim() === '') return;
 
-    const newMessage: Message = {
-      id: Date.now(), // Simple unique ID for now
-      text: input,
+    const userMessageText = input.trim(); // Store user text before clearing input
+
+    const newUserMessage: Message = {
+      id: Date.now(),
+      text: userMessageText,
       sender: 'user',
     };
 
-    // Add the user's message to the messages array
-    setMessages([...messages, newMessage]);
+    // Add user message to state immediately
+    // Use functional update to ensure we have the latest state if updates batch
+    setMessages((prevMessages) => [...prevMessages, newUserMessage]);
+    setInput(''); // Clear input field
 
-    // TODO: Add logic here later to get a bot response
+    // --- Simulate getting a bot response ---
+    try {
+      // Get a response from our placeholder function (can be replaced later)
+      const botResponseText = await getBotResponse(userMessageText);
 
-    setInput(''); // Clear the input field
+      const newBotMessage: Message = {
+        id: Date.now() + 1, // Ensure unique ID
+        text: botResponseText,
+        sender: 'bot',
+      };
+
+      // Add bot message to state after a short delay (handled in getBotResponse)
+      setMessages((prevMessages) => [...prevMessages, newBotMessage]);
+
+    } catch (error) {
+        console.error("Error getting bot response:", error);
+        // Optionally add an error message to the chat
+        const errorMessage: Message = {
+             id: Date.now() + 1,
+             text: "Sorry, I encountered an error.",
+             sender: 'bot',
+        }
+         setMessages((prevMessages) => [...prevMessages, errorMessage]);
+    }
+    // --- End simulation ---
   };
 
   // Function to update the input state as the user types
@@ -50,10 +99,12 @@ function ChatbotPage() {
         {/* Display messages here */}
         {messages.map((message) => (
           <div key={message.id} className={`message ${message.sender}`}>
+            {/* Wrap text in a paragraph or span for better structure if needed */}
             <p>{message.text}</p>
           </div>
         ))}
-         {/* TODO: Add auto-scrolling later */}
+         {/* Add this empty div at the end for the ref */}
+         <div ref={messagesEndRef} />
       </div>
       <div className="chatbot-input-area">
         <input
