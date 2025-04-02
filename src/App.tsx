@@ -10,49 +10,82 @@ export interface Message {
   sender: 'user' | 'bot' | 'loading';
 }
 
-const STORAGE_KEY = 'chatMessages';
+const CHAT_STORAGE_KEY = 'chatMessages'; // Key for chat localStorage
+const BETA_ACCEPTED_KEY = 'betaAccepted'; // Key for beta notice localStorage
 
 function App() {
-  // State lives in App
+  // --- Messages State & Persistence ---
   const [messages, setMessages] = useState<Message[]>(() => {
-    const savedMessages = localStorage.getItem(STORAGE_KEY);
+    const savedMessages = localStorage.getItem(CHAT_STORAGE_KEY);
     try {
-      return savedMessages ? JSON.parse(savedMessages) : [];
+      return savedMessages && savedMessages !== '[]' ? JSON.parse(savedMessages) : [];
     } catch (e) {
       console.error("Failed to parse messages from localStorage", e);
+      localStorage.removeItem(CHAT_STORAGE_KEY); // Clear bad data
       return [];
     }
   });
 
-  // Effect for saving lives in App
   useEffect(() => {
-    if (messages.length > 0 || localStorage.getItem(STORAGE_KEY)) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-    }
-     if (messages.length === 0 && localStorage.getItem(STORAGE_KEY)) {
-        localStorage.removeItem(STORAGE_KEY);
-     }
+    // Save messages whenever they change
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
   }, [messages]);
+  // --- End Messages State & Persistence ---
 
-  // Function to clear chat lives in App
+
+  // --- Beta Notice State & Logic ---
+  const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Check if user has already accepted the beta notice on initial load
+    const accepted = localStorage.getItem(BETA_ACCEPTED_KEY);
+    if (accepted !== 'true') {
+      // If not accepted, show the notice
+      setShowBetaNotice(true);
+    }
+  }, []); // Empty dependency array ensures this runs only once on mount
+
+  const handleAcceptBeta = () => {
+    localStorage.setItem(BETA_ACCEPTED_KEY, 'true'); // Remember acceptance
+    setShowBetaNotice(false); // Hide the modal
+  };
+  // --- End Beta Notice Logic ---
+
+
+  // Function to clear chat
   const handleClearChat = () => {
     if (window.confirm("Are you sure you want to clear the chat history?")) {
-       setMessages([]);
+       setMessages([]); // Clear the messages state (useEffect handles storage update)
     }
   };
 
+
   return (
     <div className="App">
+      {/* --- Beta Notice Modal (Renders conditionally) --- */}
+      {showBetaNotice && (
+        <div className="beta-notice-overlay">
+          <div className="beta-notice-modal">
+            <h2>⚠️ Beta Version</h2> {/* Added warning emoji */}
+            <p>Welcome! This is an early version of Project Theraphy.</p>
+            <p>You may encounter bugs or incomplete features. Your patience and feedback are appreciated!</p>
+            <button onClick={handleAcceptBeta} className="beta-accept-button">
+              ✔️ Accept & Continue
+            </button>
+          </div>
+        </div>
+      )}
+      {/* --- End Beta Notice --- */}
+
+      {/* Main App Content (Only rendered visually 'behind' the modal if shown) */}
       <header className="App-header">
         <h1>Project Theraphy Dashboard</h1>
         {messages.length > 0 && (
-           /* --- UPDATED: Use emoji and add title --- */
            <button onClick={handleClearChat} className="clear-chat-button" title="Clear Chat">
               🗑️
            </button>
         )}
       </header>
-      {/* Pass messages and setMessages down as props */}
       <ChatbotPage messages={messages} setMessages={setMessages} />
     </div>
   );
