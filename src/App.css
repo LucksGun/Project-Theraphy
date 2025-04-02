@@ -2,125 +2,173 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
-/* --- Futuristic Modern Dark Theme Variables --- */
+/* --- NEW: White-Blue-Green Light Theme Variables --- */
 :root {
-  --page-bg: #1a1a2e; /* Dark Blue/Purple */
-  --container-bg: #2a2a4e; /* Slightly lighter */
+  --page-bg: #f8f9fa; /* Very light grey background */
+  --container-bg: #ffffff; /* White for main elements */
   --header-bg: var(--container-bg);
   --messages-bg: var(--container-bg);
-  --input-bg: #1a1a2e; /* Match page bg for input area */
-  --border-color: #4a4a6a; /* Muted purple/grey */
-  --text-primary: #f0f0f5; /* Off-white */
-  --text-secondary: #a0a0bd; /* Lighter purple/grey */
-  --user-bubble-bg: #00bcd4; /* Bright Cyan */
-  --bot-bubble-bg: #3a3a5e; /* Darker element background */
-  --button-primary-bg: var(--user-bubble-bg); /* Cyan */
-  --button-primary-hover-bg: #4dd0e1; /* Lighter Cyan */
-  --button-secondary-bg: #4a4a6a; /* Border color */
-  --button-secondary-hover-bg: #5c5c8a; /* Lighter */
-  --button-disabled-bg: #3a3a5e;
-  --button-disabled-text: #7a7a9a;
-  --suggestion-text: var(--user-bubble-bg); /* Cyan text */
-  --suggestion-bg: var(--bot-bubble-bg); /* Match bot bubble */
-  --suggestion-border: var(--button-secondary-bg);
-  --suggestion-hover-bg: var(--button-secondary-bg);
-  --shadow-color: rgba(0, 0, 0, 0.4); /* Slightly stronger dark shadow */
-  --input-border-color: var(--border-color);
+  --input-bg: var(--container-bg);
+  --border-color: #dee2e6; /* Light grey border */
+  --text-primary: #212529; /* Dark text */
+  --text-secondary: #6c757d; /* Medium grey text */
+  --user-bubble-bg: #0d6efd; /* Primary Blue */
+  --bot-bubble-bg: #e7f5e7; /* Light Green */
+  --button-primary-bg: var(--user-bubble-bg); /* Blue */
+  --button-primary-hover-bg: #0b5ed7; /* Darker Blue */
+  --button-secondary-bg: #e9ecef; /* Light Grey */
+  --button-secondary-hover-bg: #dee2e6; /* Darker Grey */
+  --button-disabled-bg: #cfe2ff; /* Light pale blue */
+  --button-disabled-text: #6c757d;
+  --suggestion-text: var(--user-bubble-bg); /* Blue text */
+  --suggestion-bg: #ffffff;
+  --suggestion-border: #ced4da; /* Grey border */
+  --suggestion-hover-bg: #f8f9fa;
+  --shadow-color: rgba(0, 0, 0, 0.08); /* Lighter shadow */
+  --input-border-color: #ced4da;
   --input-focus-border-color: var(--user-bubble-bg);
-  --input-focus-shadow: rgba(0, 188, 212, 0.3); /* Cyan focus */
-  --image-preview-bg: #2a2a4e; /* Match container */
-  --remove-button-bg: #7f1d1d; /* Dark Red */
-  --remove-button-hover-bg: #a72626;
+  --input-focus-shadow: rgba(13, 110, 253, 0.2); /* Blue focus */
+  --image-preview-bg: #e9ecef; /* Light Grey */
+  --remove-button-bg: #dc3545; /* Standard Red */
+  --remove-button-hover-bg: #bb2d3b;
 }
 
 
 /* Basic Reset & Font */
-html, body, #root { /* Unchanged */ }
-button, input { /* Unchanged */ }
-.App { /* Unchanged */ }
-.App-header { /* Unchanged */ }
-.App-header h1 { /* Unchanged */ }
+html, body, #root {
+  height: 100%; margin: 0; padding: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--page-bg);
+  overflow: hidden;
+  color: var(--text-primary);
+}
+button, input { font-family: inherit; color: inherit; background-color: transparent; }
+
+.App {
+  display: flex; flex-direction: column; align-items: stretch;
+  height: 100vh; max-height: 100vh; box-sizing: border-box;
+  overflow: hidden;
+  background-color: var(--page-bg); /* Apply page bg */
+}
+
+.App-header {
+  padding: 12px 20px;
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
+  text-align: center; flex-shrink: 0;
+  box-shadow: 0 1px 3px var(--shadow-color); /* Subtle shadow */
+  display: flex; justify-content: center; align-items: center;
+  position: relative; box-sizing: border-box; z-index: 10;
+}
+.App-header h1 { margin: 0; font-size: 1.2em; font-weight: 600; color: var(--text-primary); }
 
 /* --- Chatbot Styles --- */
-.chatbot-container { /* Unchanged */ }
+.chatbot-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 .chatbot-messages {
-  flex-grow: 1;
-  overflow-y: auto;
-  padding: 25px 15px;
-  background-color: var(--messages-bg);
-  display: flex;
-  flex-direction: column;
-  /* --- UPDATED: Increased gap --- */
-  gap: 20px; /* Was 15px - Increase space between messages */
+  flex-grow: 1; overflow-y: auto; padding: 25px 15px;
+  background-color: var(--messages-bg); /* White */
+  display: flex; flex-direction: column;
+  gap: 20px; /* Keep increased gap */
   font-size: 1rem;
 }
 
 /* Message Styling */
-/* ... (All message styles remain the same) ... */
 .message-wrapper { display: flex; flex-direction: column; }
 .message-wrapper-user { align-items: flex-end; }
 .message-wrapper-bot, .message-wrapper-loading { align-items: flex-start; }
-.message { padding: 12px 18px; border-radius: 12px; max-width: 78%; word-wrap: break-word; line-height: 1.6; box-shadow: 0 1px 3px var(--shadow-color); }
+
+.message {
+  padding: 12px 18px;
+  border-radius: 16px; /* Keep slightly sharp */
+  max-width: 78%; word-wrap: break-word; line-height: 1.6;
+  box-shadow: 0 1px 3px var(--shadow-color); /* Lighter shadow */
+}
 .message p { margin: 0 0 0.6em 0; }
 .message p:last-child { margin-bottom: 0; }
 .message ul, .message ol { margin: 0.6em 0; padding-left: 25px; }
 .message li { margin-bottom: 0.3em; }
-.message.user { background-color: var(--user-bubble-bg); color: #000; align-self: flex-end; border-bottom-right-radius: 4px; }
-.message.bot, .message.loading { background-color: var(--bot-bubble-bg); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 4px; }
+
+.message.user {
+  background-color: var(--user-bubble-bg); /* Blue */
+  color: white; /* White text */
+  align-self: flex-end;
+  border-bottom-right-radius: 6px;
+}
+.message.bot, .message.loading {
+  background-color: var(--bot-bubble-bg); /* Light Green */
+  color: var(--text-primary); /* Dark text */
+  align-self: flex-start;
+  border-bottom-left-radius: 6px;
+}
 .message.loading i { font-style: normal; color: var(--text-secondary); }
 
 
 /* Input Area Styling */
-/* ... (Input/Button styles remain the same) ... */
-.chatbot-input-area { display: flex; align-items: center; padding: 12px 15px; border-top: 1px solid var(--border-color); background-color: var(--input-bg); flex-shrink: 0; gap: 10px; }
-.chatbot-input-area input[type="text"] { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--input-border-color); border-radius: 8px; font-size: 1rem; outline: none; background-color: var(--container-bg); color: var(--text-primary); box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
-.chatbot-input-area input[type="text"]::placeholder { color: var(--text-secondary); opacity: 0.7; }
-.chatbot-input-area input[type="text"]:focus { border-color: var(--input-focus-border-color); box-shadow: inset 0 1px 3px rgba(0,0,0,0.2), 0 0 0 2px var(--input-focus-shadow); }
-.chatbot-input-area button { padding: 10px; width: 42px; height: 42px; border: none; border-radius: 8px; cursor: pointer; font-size: 1.3em; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; }
-.chatbot-input-area button[title="Send"] { background-color: var(--button-primary-bg); color: #000; }
-.chatbot-input-area button[title="Send"]:hover { background-color: var(--button-primary-hover-bg); }
-.chatbot-input-area button[title="Send"]:disabled { background-color: var(--button-disabled-bg); color: var(--button-disabled-text); cursor: default; }
-.upload-button { background-color: var(--button-secondary-bg); color: var(--text-secondary); border: none !important; margin-right: 0; }
-.upload-button:hover { background-color: var(--button-secondary-hover-bg) !important; border-color: #777777 !important; }
-.upload-button:disabled { background-color: var(--button-disabled-bg) !important; color: var(--button-disabled-text) !important; border: none !important; cursor: default; }
+.chatbot-input-area {
+  display: flex; align-items: center; padding: 12px 15px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--input-bg); /* White */
+  flex-shrink: 0; gap: 8px;
+}
+.chatbot-input-area input[type="text"] {
+  flex-grow: 1; padding: 12px 18px;
+  border: 1px solid var(--input-border-color);
+  border-radius: 16px; /* Match bubbles */
+  font-size: 1rem; outline: none;
+  background-color: #ffffff; /* White input bg */
+  color: var(--text-primary);
+  box-shadow: none; /* Remove inset shadow for light theme */
+}
+.chatbot-input-area input[type="text"]::placeholder { color: var(--text-secondary); opacity: 0.9; }
+.chatbot-input-area input[type="text"]:focus { border-color: var(--input-focus-border-color); box-shadow: 0 0 0 2px var(--input-focus-shadow); }
 
+/* Button base style */
+.chatbot-input-area button {
+  padding: 10px; width: 42px; height: 42px; border: none;
+  border-radius: 16px; /* Match bubbles */
+  cursor: pointer; font-size: 1.3em; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0;
+}
+
+/* Send button */
+.chatbot-input-area button[title="Send"] { background-color: var(--button-primary-bg); color: white; }
+.chatbot-input-area button[title="Send"]:hover { background-color: var(--button-primary-hover-bg); }
+.chatbot-input-area button[title="Send"]:disabled { background-color: var(--button-disabled-bg); color: #fff; cursor: default; }
+
+/* Upload button */
+.upload-button { background-color: var(--button-secondary-bg); color: var(--text-secondary); border: 1px solid var(--input-border-color) !important; margin-right: 0; }
+.upload-button:hover { background-color: var(--button-secondary-hover-bg) !important; border-color: #adb5bd !important; }
+.upload-button:disabled { background-color: #e9ecef !important; color: #adb5bd !important; border-color: #dee2e6 !important; cursor: default; }
 
 /* Image Preview Styles */
-/* ... (Styles remain the same) ... */
 .image-preview-area { display: flex; align-items: center; padding: 5px 15px; background-color: var(--image-preview-bg); border-top: 1px solid var(--border-color); flex-shrink: 0; }
 .remove-image-button { background: var(--remove-button-bg); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; line-height: 18px; text-align: center; cursor: pointer; font-size: 12px; font-weight: bold; flex-shrink: 0; }
 .remove-image-button:hover { background: var(--remove-button-hover-bg); }
 
-
 /* Clear Chat Button Styles */
-/* ... (Styles remain the same) ... */
-.clear-chat-button { position: absolute; right: 20px; padding: 8px; width: 36px; height: 36px; font-size: 1.1em; background-color: var(--button-secondary-bg); color: var(--text-secondary); border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; display: flex; align-items: center; justify-content: center; line-height: 1; }
-.clear-chat-button:hover { background-color: var(--button-secondary-hover-bg); border-color: #777777; }
-
+.clear-chat-button { position: absolute; right: 20px; padding: 8px; width: 34px; height: 34px; font-size: 1.1em; background-color: var(--button-secondary-bg); color: var(--text-secondary); border: 1px solid var(--input-border-color); border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.clear-chat-button:hover { background-color: var(--button-secondary-hover-bg); border-color: #adb5bd; }
 
 /* Suggestion Button Styles */
-/* ... (Styles remain the same) ... */
 .suggestions-container { display: flex; flex-wrap: wrap; gap: 8px; margin-left: 0; margin-top: 8px; max-width: 100%; justify-content: flex-start; }
-.suggestion-button { padding: 6px 14px; border: 1px solid var(--suggestion-border); background-color: var(--suggestion-bg); color: var(--suggestion-text); border-radius: 16px; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s ease; white-space: nowrap; }
-.suggestion-button:hover:not(:disabled) { background-color: var(--suggestion-hover-bg); border-color: #a0a0bd; }
-.suggestion-button:disabled { color: var(--button-disabled-text); border-color: var(--input-border-color); cursor: default; background-color: var(--suggestion-bg); }
+.suggestion-button { padding: 6px 14px; border: 1px solid var(--suggestion-border); background-color: var(--suggestion-bg); color: var(--suggestion-text); border-radius: 18px; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s ease; white-space: nowrap; }
+.suggestion-button:hover:not(:disabled) { background-color: var(--suggestion-hover-bg); border-color: #adb5bd; }
+.suggestion-button:disabled { color: #adb5bd; border-color: var(--input-border-color); cursor: default; background-color: var(--suggestion-bg); }
 
 
-/* --- Responsive Styles for Small Screens --- */
+/* --- Responsive Styles --- */
 @media (max-width: 900px) {
-    /* --- UPDATED: Increase gap for mobile too --- */
-    .chatbot-messages { padding: 15px 10px; gap: 15px; font-size: 0.95rem; } /* Was 10px */
-    /* ... (Rest of mobile styles remain the same) ... */
-     .App-header { /* ... */ }
-     .App-header h1 { /* ... */ }
-     .chatbot-input-area { padding: 10px 10px; gap: 5px; }
-     .message { max-width: 85%; }
-     .chatbot-input-area input[type="text"] { padding: 10px 15px; font-size: 0.95rem; border-radius: 16px; }
-     .chatbot-input-area button { width: 40px; height: 40px; font-size: 1.1em; border-radius: 6px; }
-     .clear-chat-button { right: 10px; width: 32px; height: 32px; font-size: 1em; border-radius: 6px; }
-     .image-preview-area { padding: 5px 10px; }
-     .upload-button { font-size: 1.2em;}
-     .suggestions-container { max-width: 100%; gap: 6px; }
-     .suggestion-button { padding: 5px 10px; font-size: 0.85em; }
+  .App-header { padding: 12px 10px; }
+  .App-header h1 { font-size: 1.1em; }
+  .chatbot-messages { padding: 15px 10px; gap: 15px; font-size: 0.95rem; }
+  .chatbot-input-area { padding: 10px 10px; gap: 5px; }
+  .message { max-width: 85%; border-radius: 14px; }
+  .chatbot-input-area input[type="text"] { padding: 10px 15px; font-size: 0.95rem; border-radius: 16px; }
+  .chatbot-input-area button { width: 40px; height: 40px; font-size: 1.1em; border-radius: 16px; } /* Match input rounding */
+  .clear-chat-button { right: 10px; width: 32px; height: 32px; font-size: 1em; border-radius: 6px; }
+  .image-preview-area { padding: 5px 10px; }
+  .upload-button { font-size: 1.2em;}
+  .suggestions-container { max-width: 100%; gap: 6px; }
+  .suggestion-button { padding: 5px 10px; font-size: 0.85em; }
 }
