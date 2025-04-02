@@ -4,41 +4,50 @@ import { Message } from './App'; // Import Message type from App.tsx
 
 // Define the Worker URL
 const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
-// REMOVED const STORAGE_KEY = 'chatMessages';
 
-// --- New Helper Function: Read File as Base64 ---
+// Helper Function: Read File as Base64 (Unchanged)
 function readFileAsBase64(file: File): Promise<string> {
-  // ... (rest of readFileAsBase64 function is unchanged) ...
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      resolve(reader.result as string);
-    };
-    reader.onerror = (error) => {
-      reject(error);
-    };
+    reader.onload = () => { resolve(reader.result as string); };
+    reader.onerror = (error) => { reject(error); };
     reader.readAsDataURL(file);
   });
 }
-// --- End Helper Function ---
 
-
-// --- Updated: Function signature changed, but fetch logic still text-only for now ---
+// --- FINAL VERSION: Sends text and image data to Worker ---
 async function getBotResponse(
     userInput: string,
     imageData: { type: string; dataUrl: string } | null
 ): Promise<string> {
-  // ... (rest of getBotResponse function is unchanged - still only sends text for now) ...
+
   const promptToSend = userInput || (imageData ? "Describe this image." : "");
-  if (!promptToSend) { return "Please type a message or upload an image."; }
-  if (imageData) { console.log('Image ready to send (not sending yet):', { mimeType: imageData.type, base64Preview: imageData.dataUrl.substring(0, 100) + '...' }); }
-  console.log('Sending text prompt to Worker:', promptToSend);
+  if (!promptToSend && !imageData) { // Need at least one
+      return "Please type a message or upload an image.";
+  }
+
+  // --- Prepare request body dynamically ---
+  const requestBody: { prompt: string; imageMimeType?: string; imageDataUrl?: string } = {
+      prompt: promptToSend
+  };
+
+  if (imageData) {
+      requestBody.imageMimeType = imageData.type;
+      requestBody.imageDataUrl = imageData.dataUrl; // Send the full Data URL
+      console.log('Sending image to Worker:', { mimeType: imageData.type, base64Preview: imageData.dataUrl.substring(0, 100) + '...' });
+  }
+  // --- End request body preparation ---
+
+
+  console.log('Sending to Worker:', requestBody);
   try {
     const response = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', },
-      body: JSON.stringify({ prompt: promptToSend }),
+      // --- Send the complete request body ---
+      body: JSON.stringify(requestBody),
     });
+
      if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: `HTTP error! status: ${response.status}` }));
       throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
@@ -47,13 +56,14 @@ async function getBotResponse(
     if (data.error) { throw new Error(data.error); }
     console.log('Received reply from Worker:', data.reply);
     return data.reply || 'Sorry, I received an empty reply.';
+
   } catch (error) {
     console.error('Error fetching bot response:', error);
     if (error instanceof Error) { return `Error: ${error.message}`; }
     return 'Error: Could not fetch response.';
   }
 }
-// --- End Updated function ---
+// --- End FINAL version ---
 
 
 // Component definition starts (props interface, etc. - keep as before)
@@ -63,7 +73,7 @@ interface ChatbotPageProps {
 }
 
 function ChatbotPage({ messages, setMessages }: ChatbotPageProps) {
-  // ... (useState, useRef, useEffect hooks are unchanged) ...
+  // State hooks remain the same
   const [input, setInput] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -71,23 +81,18 @@ function ChatbotPage({ messages, setMessages }: ChatbotPageProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // useEffect hooks remain the same
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
-
   useEffect(() => {
     setTimeout(scrollToBottom, 100);
   }, [messages, scrollToBottom]);
-
   useEffect(() => {
-    return () => {
-      if (imagePreviewUrl) {
-        URL.revokeObjectURL(imagePreviewUrl);
-      }
-    };
+    return () => { if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); } };
   }, [imagePreviewUrl]);
 
-  // --- Updated handleSend function (unchanged from last version) ---
+  // handleSend remains the same (it already prepares imageDataForApi)
   const handleSend = async () => {
      if ((input.trim() === '' && !selectedImage) || isLoading) return;
      const userMessageText = input.trim();
@@ -117,6 +122,7 @@ function ChatbotPage({ messages, setMessages }: ChatbotPageProps) {
      }
      let botResponseText = '';
      try {
+       // This now passes the image data (if present) correctly
        botResponseText = await getBotResponse(userMessageText, imageDataForApi);
      } catch (error) {
          console.error("Failed to get bot response:", error);
@@ -131,45 +137,36 @@ function ChatbotPage({ messages, setMessages }: ChatbotPageProps) {
         setIsLoading(false);
      }
   };
-  // --- End Updated handleSend ---
 
-  // ... (handleInputChange, handleKeyPress, handleImageChange, handleImageUploadClick, removeSelectedImage are unchanged) ...
-   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => { setInput(event.target.value); };
-   const handleKeyPress = (event: React.KeyboardEvent) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend(); } };
-   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-     const file = event.target.files?.[0];
-     if (file && file.type.startsWith('image/')) {
-       setSelectedImage(file);
-       if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); }
-       setImagePreviewUrl(URL.createObjectURL(file));
-     } else {
-       setSelectedImage(null);
-       setImagePreviewUrl(null);
+  // Other handlers remain the same
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => { setInput(event.target.value); };
+  const handleKeyPress = (event: React.KeyboardEvent) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend(); } };
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedImage(file);
+      if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); }
+      setImagePreviewUrl(URL.createObjectURL(file));
+    } else { /* ... reset logic ... */
+       setSelectedImage(null); setImagePreviewUrl(null);
        if(file) alert("Please select a valid image file.");
        if (fileInputRef.current) fileInputRef.current.value = "";
-     }
-   };
-   const handleImageUploadClick = () => { fileInputRef.current?.click(); };
-   const removeSelectedImage = () => { setSelectedImage(null); setImagePreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; }
+    }
+  };
+  const handleImageUploadClick = () => { fileInputRef.current?.click(); };
+  const removeSelectedImage = () => { setSelectedImage(null); setImagePreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; }
 
   // JSX remains the same
   return (
-    // ... (JSX structure is unchanged) ...
      <div className="chatbot-container">
+       {/* ... messages mapping ... */}
        <div className="chatbot-messages">
-         {messages.map((message) => (
-           <div key={message.id} className={`message ${message.sender}`}>
-              {message.sender === 'loading' ? ( <i>{message.text}</i> ) : ( <p>{message.text}</p> )}
-           </div>
-         ))}
+         {messages.map((message) => ( <div key={message.id} className={`message ${message.sender}`}> {message.sender === 'loading' ? ( <i>{message.text}</i> ) : ( <p>{message.text}</p> )} </div> ))}
           <div ref={messagesEndRef} />
        </div>
-       {imagePreviewUrl && (
-           <div className="image-preview-area">
-               <img src={imagePreviewUrl} alt="Selected preview" style={{maxHeight: '50px', maxWidth: '50px', objectFit: 'cover', marginRight: '10px'}} />
-               <button onClick={removeSelectedImage} title="Remove image" className="remove-image-button">X</button>
-           </div>
-       )}
+       {/* ... image preview ... */}
+       {imagePreviewUrl && ( <div className="image-preview-area"> <img src={imagePreviewUrl} alt="Selected preview" style={{maxHeight: '50px', maxWidth: '50px', objectFit: 'cover', marginRight: '10px'}} /> <button onClick={removeSelectedImage} title="Remove image" className="remove-image-button">X</button> </div> )}
+       {/* ... input area ... */}
        <div className="chatbot-input-area">
          <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/png, image/jpeg, image/gif, image/webp" style={{ display: 'none' }} />
          <button onClick={handleImageUploadClick} className="upload-button" title="Upload Image" disabled={isLoading}>📎</button>
