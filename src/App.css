@@ -1,40 +1,59 @@
 /* src/App.css */
 
+/* Ensure body and html take full height and have no margin */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 .App {
-  display: flex;             /* Enable Flexbox */
-  flex-direction: column;    /* Stack children vertically */
-  align-items: center;       /* Center children horizontally */
-  padding-top: 20px;         /* Add some space from the top */
-  min-height: 100vh;         /* Ensure App takes full viewport height (optional, for vertical centering later) */
-  /* text-align: center; was removed as align-items handles centering */
+  display: flex;
+  flex-direction: column;
+  /* align-items: center; /* REMOVE this to allow children to stretch */
+  align-items: stretch; /* Default - let children fill width */
+  min-height: 100vh; /* Use min-height to ensure it covers viewport */
+  box-sizing: border-box;
+  background-color: #f0f0f0; /* Optional: background for the whole page */
 }
 
 .App-header {
-  padding: 20px; /* Keep padding or adjust as needed */
-  /* Add more header styles if needed */
-  width: 100%; /* Make header take full width */
-  text-align: center; /* Re-center text within the header itself */
+  padding: 15px 20px; /* Adjust padding as needed */
+  background-color: #fff; /* Example header background */
+  border-bottom: 1px solid #ccc;
+  text-align: center;
+  flex-shrink: 0; /* Prevent header from shrinking */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Optional shadow */
+}
+
+.App-header h1 {
+  margin: 0; /* Remove default heading margin */
+  font-size: 1.5em;
 }
 
 /* --- Chatbot Styles --- */
 
 .chatbot-container {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  max-width: 600px; /* Or adjust as needed */
-  width: 90%; /* Ensure it doesn't touch edges on small screens */
-  margin: 20px 0; /* Set top/bottom margin, horizontal margin is handled by .App's align-items */
+  flex-grow: 1; /* Allow this container to grow and fill vertical space */
   display: flex;
   flex-direction: column;
-  height: 400px; /* Example fixed height */
-  overflow: hidden; /* Hide overflow for now */
-  background-color: #f9f9f9;
+  overflow: hidden; /* Important: contains the scrolling messages */
+
+  /* Remove fixed size/width constraints */
+  /* remove height: 400px; */
+  /* remove max-width: 600px; */
+  /* remove width: 90%; */
+  /* remove margin: 20px 0; */
+  /* remove border: 1px solid #ccc; */ /* Optional: remove or style differently */
+  /* remove border-radius: 8px; */
+  /* remove background-color: #f9f9f9; */ /* Let messages/input handle background */
 }
 
 .chatbot-messages {
-  flex-grow: 1; /* Takes up available space */
+  flex-grow: 1; /* Takes up available space within chatbot-container */
   overflow-y: auto; /* Allows scrolling for messages */
-  padding: 10px;
+  padding: 15px; /* Add padding around messages */
+  background-color: #ffffff; /* White background for message area */
   display: flex;
   flex-direction: column; /* Stack messages vertically */
 }
@@ -46,6 +65,7 @@
   border-radius: 15px;
   max-width: 70%;
   word-wrap: break-word; /* Break long words */
+  line-height: 1.4;
 }
 
 .message p { /* Target the paragraph inside for margin */
@@ -69,27 +89,31 @@
 
 .chatbot-input-area {
   display: flex;
-  padding: 10px;
+  padding: 10px 15px; /* Adjust padding */
   border-top: 1px solid #ccc;
-  background-color: #fff;
+  background-color: #f9f9f9; /* Light grey background for input area */
+  flex-shrink: 0; /* Prevent input area from shrinking */
 }
 
 .chatbot-input-area input {
   flex-grow: 1;
-  padding: 8px;
+  padding: 10px; /* Increase padding */
   border: 1px solid #ccc;
-  border-radius: 5px;
+  border-radius: 18px; /* More rounded */
   margin-right: 10px;
+  font-size: 1em; /* Ensure text is readable */
 }
 
 .chatbot-input-area button {
-  padding: 8px 15px;
+  padding: 10px 18px; /* Increase padding */
   border: none;
   background-color: #0b93f6;
   color: white;
-  border-radius: 5px;
+  border-radius: 18px; /* More rounded */
   cursor: pointer;
   white-space: nowrap; /* Prevent button text wrapping */
+  font-size: 1em;
+  font-weight: bold;
 }
 
 .chatbot-input-area button:hover {
