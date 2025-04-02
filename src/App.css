@@ -1,26 +1,29 @@
 /* src/App.css */
 
-/* Add general styles here later */
-
 .App {
-  text-align: center; /* Example basic style */
+  display: flex;             /* Enable Flexbox */
+  flex-direction: column;    /* Stack children vertically */
+  align-items: center;       /* Center children horizontally */
+  padding-top: 20px;         /* Add some space from the top */
+  min-height: 100vh;         /* Ensure App takes full viewport height (optional, for vertical centering later) */
+  /* text-align: center; was removed as align-items handles centering */
 }
 
 .App-header {
-  padding: 20px;
+  padding: 20px; /* Keep padding or adjust as needed */
   /* Add more header styles if needed */
+  width: 100%; /* Make header take full width */
+  text-align: center; /* Re-center text within the header itself */
 }
 
-/* Add more specific styles below */
-/* src/App.css */
-
-/* ... (keep existing styles like .App, .App-header) ... */
+/* --- Chatbot Styles --- */
 
 .chatbot-container {
   border: 1px solid #ccc;
   border-radius: 8px;
   max-width: 600px; /* Or adjust as needed */
-  margin: 20px auto; /* Center it */
+  width: 90%; /* Ensure it doesn't touch edges on small screens */
+  margin: 20px 0; /* Set top/bottom margin, horizontal margin is handled by .App's align-items */
   display: flex;
   flex-direction: column;
   height: 400px; /* Example fixed height */
@@ -42,6 +45,11 @@
   padding: 8px 12px;
   border-radius: 15px;
   max-width: 70%;
+  word-wrap: break-word; /* Break long words */
+}
+
+.message p { /* Target the paragraph inside for margin */
+  margin: 0; /* Remove default paragraph margin */
 }
 
 .message.user {
@@ -81,6 +89,7 @@
   color: white;
   border-radius: 5px;
   cursor: pointer;
+  white-space: nowrap; /* Prevent button text wrapping */
 }
 
 .chatbot-input-area button:hover {
