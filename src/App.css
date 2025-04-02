@@ -73,6 +73,67 @@ button, input {
   gap: 12px;
 }
 
+.beta-notice-overlay {
+  position: fixed; /* Fixed position to overlay everything */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
+  display: flex;
+  align-items: center; /* Center modal vertically */
+  justify-content: center; /* Center modal horizontally */
+  z-index: 1000; /* Ensure it's on top */
+  padding: 15px; /* Add padding for small screens */
+  box-sizing: border-box;
+}
+
+.beta-notice-modal {
+  background-color: #ffffff;
+  padding: 25px 30px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  max-width: 500px; /* Limit modal width */
+  width: 100%; /* Responsive width within padding */
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.beta-notice-modal h2 {
+  margin-top: 0;
+  color: #d9534f; /* Warning color */
+  font-size: 1.3em;
+  margin-bottom: 10px;
+}
+
+.beta-notice-modal p {
+  margin-bottom: 15px;
+  line-height: 1.6;
+  color: #333;
+  font-size: 0.95em;
+}
+.beta-notice-modal p:last-of-type {
+  margin-bottom: 25px; /* More space before button */
+}
+
+
+.beta-accept-button {
+  padding: 10px 20px;
+  border: none;
+  background-color: #1a73e8; /* Blue */
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.beta-accept-button:hover {
+  background-color: #185abc; /* Darker blue */
+}
+
+
 /* Message Styling (Includes markdown + suggestions) */
 .message-wrapper { display: flex; flex-direction: column; }
 .message-wrapper-user { align-items: flex-end; }
