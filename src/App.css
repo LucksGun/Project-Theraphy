@@ -1,42 +1,88 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* src/App.css */
+
+/* Add general styles here later */
+
+.App {
+  text-align: center; /* Example basic style */
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.App-header {
+  padding: 20px;
+  /* Add more header styles if needed */
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Add more specific styles below */
+/* src/App.css */
+
+/* ... (keep existing styles like .App, .App-header) ... */
+
+.chatbot-container {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  max-width: 600px; /* Or adjust as needed */
+  margin: 20px auto; /* Center it */
+  display: flex;
+  flex-direction: column;
+  height: 400px; /* Example fixed height */
+  overflow: hidden; /* Hide overflow for now */
+  background-color: #f9f9f9;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.chatbot-messages {
+  flex-grow: 1; /* Takes up available space */
+  overflow-y: auto; /* Allows scrolling for messages */
+  padding: 10px;
+  display: flex;
+  flex-direction: column; /* Stack messages vertically */
 }
 
-.card {
-  padding: 2em;
+/* Basic message styling */
+.message {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 15px;
+  max-width: 70%;
 }
 
-.read-the-docs {
-  color: #888;
+.message.user {
+  background-color: #0b93f6; /* Example blue */
+  color: white;
+  align-self: flex-end; /* Align user messages to the right */
+  border-bottom-right-radius: 5px;
+}
+
+.message.bot {
+  background-color: #e5e5ea; /* Example gray */
+  color: black;
+  align-self: flex-start; /* Align bot messages to the left */
+  border-bottom-left-radius: 5px;
+}
+
+
+.chatbot-input-area {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid #ccc;
+  background-color: #fff;
+}
+
+.chatbot-input-area input {
+  flex-grow: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+.chatbot-input-area button {
+  padding: 8px 15px;
+  border: none;
+  background-color: #0b93f6;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.chatbot-input-area button:hover {
+  background-color: #0a84e0;
 }
