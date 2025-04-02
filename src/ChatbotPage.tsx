@@ -37,17 +37,15 @@ async function getBotResponse(
   } catch (error) { console.error('Error fetching bot response:', error); if (error instanceof Error) { return `Error: ${error.message}`; } return 'Error: Could not fetch response.'; }
 }
 
-// --- Helper function to parse suggestions (FIXED) ---
+// --- Helper function to parse suggestions (with _match FIX) ---
 function parseSuggestions(text: string): { mainText: string; suggestions: string[] } {
   const suggestions: string[] = [];
   const regex = /\[Suggestion:\s*([^\]]+?)\]/g;
-  // Replace suggestions in text and collect them
-  // --- FIXED: Use _match to indicate 'match' parameter is unused ---
+  // --- FIXED: Use _match for unused parameter ---
   const mainText = text.replace(regex, (_match, suggestionText) => {
     suggestions.push(suggestionText.trim());
-    return ''; // Remove the suggestion tag from the main text
+    return '';
   }).trim();
-
   return { mainText, suggestions };
 }
 // --- End Helper Function ---
@@ -82,7 +80,7 @@ function ChatbotPage({ messages, setMessages }: ChatbotPageProps) {
     const newUserMessage: Message = { id: Date.now(), text: userMessageText + (imageToSend ? ' (+image)' : ''), sender: 'user' };
     setMessages((prevMessages) => [...prevMessages, newUserMessage]);
     if (imageToSend && imageToSend === selectedImage) { setSelectedImage(null); setImagePreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; }
-    if(messageText === input) { setInput(''); } // Clear input only if it matches current input state
+    if(messageText === input) { setInput(''); }
     setIsLoading(true);
     setMessages((prevMessages) => [...prevMessages, { id: Date.now() + 1, text: 'Bot is typing...', sender: 'loading' }]);
     if (imageToSend) {
@@ -97,7 +95,7 @@ function ChatbotPage({ messages, setMessages }: ChatbotPageProps) {
        setMessages((prevMessages) => [ ...prevMessages.filter(msg => msg.sender !== 'loading'), newBotMessage ]);
        setIsLoading(false);
     }
-  }, [isLoading, input, selectedImage, setMessages]); // Added `input` to dependencies
+  }, [isLoading, input, selectedImage, setMessages]);
 
   // handleSend wrapper
   const handleSend = () => { sendMessage(input, selectedImage); }
@@ -108,7 +106,7 @@ function ChatbotPage({ messages, setMessages }: ChatbotPageProps) {
   // Other handlers
    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => { setInput(event.target.value); };
    const handleKeyPress = (event: React.KeyboardEvent) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend(); } };
-   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => { // NOTE: event IS used via event.target - TS error might be config issue or bug
+   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
      const file = event.target.files?.[0];
      if (file && file.type.startsWith('image/')) { setSelectedImage(file); if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); } setImagePreviewUrl(URL.createObjectURL(file)); }
      else { setSelectedImage(null); setImagePreviewUrl(null); if(file) alert("Please select a valid image file."); if (fileInputRef.current) fileInputRef.current.value = ""; }
