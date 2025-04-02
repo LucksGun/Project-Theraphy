@@ -101,4 +101,29 @@ html, body, #root {
   border: 1px solid #dadce0; /* Google input border color */
   border-radius: 24px; /* Very rounded */
   font-size: 1rem;
-  outline: none; /*
+  outline: none; /* Remove default outline */
+}
+.chatbot-input-area input:focus {
+  border-color: #1a73e8; /* Highlight border on focus */
+}
+
+.chatbot-input-area button {
+  padding: 12px 20px;
+  border: none;
+  background-color: #1a73e8;
+  color: white;
+  border-radius: 24px; /* Very rounded */
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease; /* Smooth hover transition */
+}
+
+.chatbot-input-area button:hover {
+  background-color: #185abc; /* Darker blue on hover */
+}
+.chatbot-input-area button:disabled {
+  background-color: #d2e3fc; /* Lighter blue when disabled */
+  cursor: default;
+}
