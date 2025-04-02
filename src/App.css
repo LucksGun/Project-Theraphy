@@ -10,7 +10,7 @@ html, body, #root {
   padding: 0;
   /* --- UPDATED: Use imported font --- */
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  background-color: #f7f7f8;
+  background-color: #f7f7f8; /* Light background for the whole page */
 }
 
 /* --- Ensure buttons and inputs also inherit font --- */
@@ -22,18 +22,19 @@ button, input {
 .App {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: stretch; /* Let children stretch full width */
   min-height: 100vh;
   box-sizing: border-box;
 }
 
 .App-header {
-  padding: 12px 20px;
+  padding: 12px 20px; /* Keep some padding for header text */
   background-color: #ffffff;
   border-bottom: 1px solid #e0e0e0;
   text-align: center;
   flex-shrink: 0;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  /* Added styles for Clear button positioning */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -52,12 +53,13 @@ button, input {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
+  /* overflow: hidden; was removed */
 }
 
 .chatbot-messages {
   flex-grow: 1;
   overflow-y: auto;
-  padding: 20px 15px;
+  padding: 20px 15px; /* Use fixed horizontal padding */
   background-color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -65,6 +67,18 @@ button, input {
 }
 
 /* Basic message styling */
+.message-wrapper {
+    display: flex;
+    flex-direction: column;
+    /* Align based on sender */
+}
+.message-wrapper-user {
+    align-items: flex-end;
+}
+.message-wrapper-bot, .message-wrapper-loading {
+    align-items: flex-start;
+}
+
 .message {
   padding: 10px 16px;
   border-radius: 20px;
@@ -74,15 +88,28 @@ button, input {
   box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
 
-.message p {
-  margin: 0;
+.message p { /* Styling paragraphs inside markdown */
+  margin: 0 0 0.5em 0; /* Add some space below paragraphs */
 }
+.message p:last-child {
+  margin-bottom: 0; /* Remove margin for last paragraph */
+}
+
+.message ul, .message ol { /* Styling lists inside markdown */
+    margin: 0.5em 0;
+    padding-left: 25px; /* Indent lists */
+}
+.message li {
+    margin-bottom: 0.25em; /* Space between list items */
+}
+
 
 .message.user {
   background-color: #1a73e8;
   color: white;
   align-self: flex-end;
   border-bottom-right-radius: 5px;
+  /* margin-right: 10px; /* REMOVED */
 }
 
 .message.bot, .message.loading {
@@ -90,6 +117,7 @@ button, input {
   color: #202124;
   align-self: flex-start;
   border-bottom-left-radius: 5px;
+  /* margin-left: 10px; /* REMOVED */
 }
 
 .message.loading i {
@@ -101,9 +129,9 @@ button, input {
 .chatbot-input-area {
   display: flex;
   align-items: center; /* Align items vertically */
-  padding: 15px 15px;
+  padding: 15px 15px; /* Use fixed horizontal padding */
   border-top: 1px solid #e0e0e0;
-  background-color: #ffffff;
+  background-color: #ffffff; /* White background */
   flex-shrink: 0;
   gap: 8px; /* Adjusted gap */
 }
@@ -120,50 +148,54 @@ button, input {
   border-color: #1a73e8;
 }
 
-/* --- UPDATED: Button base style (for icons) --- */
+/* Base style for buttons in input area */
 .chatbot-input-area button {
-  padding: 10px; /* Adjust padding for icons */
-  width: 44px;  /* Fixed width */
-  height: 44px; /* Fixed height */
+  padding: 10px;
+  width: 44px;
+  height: 44px;
   border: none;
-  background-color: #1a73e8;
-  color: white;
-  border-radius: 50%; /* Make circular */
+  border-radius: 50%; /* Circle */
   cursor: pointer;
-  white-space: nowrap;
-  font-size: 1.3em; /* Adjust icon size */
+  font-size: 1.3em;
   font-weight: 500;
   transition: background-color 0.2s ease;
-  display: flex; /* Center icon */
-  align-items: center; /* Center icon */
-  justify-content: center; /* Center icon */
-  line-height: 1; /* Reset line height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0; /* Prevent buttons from shrinking */
 }
 
-.chatbot-input-area button:hover {
+/* Send button specific styles */
+.chatbot-input-area button[title="Send"] {
+  background-color: #1a73e8;
+  color: white;
+}
+.chatbot-input-area button[title="Send"]:hover {
   background-color: #185abc;
 }
-.chatbot-input-area button:disabled {
+.chatbot-input-area button[title="Send"]:disabled {
   background-color: #d2e3fc;
-  color: #a3c7f7; /* Lighter icon color when disabled */
+  color: #a3c7f7;
   cursor: default;
 }
 
-/* Specific style for Upload button */
+/* Upload button specific styles */
 .upload-button {
     background-color: #f8f9fa;
     color: #5f6368;
-    border: 1px solid #dadce0;
+    border: 1px solid #dadce0 !important; /* Override base border:none */
     margin-right: 0; /* Gap handles spacing */
 }
 .upload-button:hover {
-    background-color: #f1f3f4;
-    border-color: #c6c9ce;
+    background-color: #f1f3f4 !important; /* Override base hover */
+    border-color: #c6c9ce !important;
 }
 .upload-button:disabled {
-     background-color: #f1f3f4;
-     color: #bdc1c6;
-     border-color: #e8eaed;
+     background-color: #f1f3f4 !important; /* Override base disabled */
+     color: #bdc1c6 !important;
+     border-color: #e8eaed !important;
+     cursor: default;
 }
 
 
@@ -189,28 +221,30 @@ button, input {
     cursor: pointer;
     font-size: 12px;
     font-weight: bold;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 .remove-image-button:hover {
     background: #e60000;
 }
 
-/* --- UPDATED: Clear Chat Button style --- */
+
+/* Styles for Clear Chat Button */
 .clear-chat-button {
   position: absolute;
   right: 20px;
-  padding: 8px; /* Adjust padding */
-  width: 36px; /* Fixed size */
-  height: 36px; /* Fixed size */
-  font-size: 1.2em; /* Icon size */
-  background-color: #f8f9fa; /* Match upload button */
+  padding: 8px;
+  width: 36px;
+  height: 36px;
+  font-size: 1.2em;
+  background-color: #f8f9fa;
   color: #5f6368;
   border: 1px solid #dadce0;
-  border-radius: 50%; /* Circle */
+  border-radius: 50%;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease;
-  display: flex; /* Center icon */
-  align-items: center; /* Center icon */
-  justify-content: center; /* Center icon */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
 }
 
@@ -226,72 +260,11 @@ button, input {
   .App-header { padding: 12px 10px; }
   .App-header h1 { font-size: 1.1em; }
   .chatbot-messages { padding: 15px 10px; }
-  .chatbot-input-area { padding: 10px 10px; gap: 8px; }
+  .chatbot-input-area { padding: 10px 10px; gap: 5px; } /* Further reduced gap */
   .message { max-width: 85%; }
   .chatbot-input-area input { padding: 10px 15px; font-size: 0.95rem; }
-  .chatbot-input-area button { width: 40px; height: 40px; font-size: 1.1em; } /* Slightly smaller buttons */
-  .clear-chat-button { right: 10px; width: 32px; height: 32px; font-size: 1em; } /* Smaller clear button */
+  .chatbot-input-area button { width: 40px; height: 40px; font-size: 1.1em; }
+  .clear-chat-button { right: 10px; width: 32px; height: 32px; font-size: 1em; }
   .image-preview-area { padding: 5px 10px; }
-  .upload-button { font-size: 1.2em;} /* Ensure upload emoji is sized okay */
-}
-/* Styles for Suggestion Buttons */
-.message-wrapper {
-  display: flex;
-  flex-direction: column;
-  /* Align based on sender */
-}
-.message-wrapper-user {
-  align-items: flex-end;
-}
-.message-wrapper-bot, .message-wrapper-loading {
-  align-items: flex-start;
-}
-
-.suggestions-container {
-  display: flex;
-  flex-wrap: wrap; /* Allow buttons to wrap */
-  gap: 8px;
-  /* Align suggestions below the bot message bubble */
-  margin-left: 0; /* Align with bot message */
-  margin-top: 8px; /* Space below the bubble */
-  max-width: 75%; /* Match message max-width */
-  justify-content: flex-start; /* Align buttons to the start */
-}
-
-.suggestion-button {
-  padding: 6px 12px;
-  border: 1px solid #dadce0; /* Google style */
-  background-color: #ffffff;
-  color: #1a73e8; /* Blue text */
-  border-radius: 18px; /* Rounded */
-  cursor: pointer;
-  font-size: 0.9em;
-  transition: background-color 0.2s ease;
-  white-space: nowrap;
-}
-
-.suggestion-button:hover:not(:disabled) {
-  background-color: #f8f9fa; /* Slight grey on hover */
-  border-color: #c6c9ce;
-}
-
-.suggestion-button:disabled {
-  color: #bdc1c6;
-  border-color: #e8eaed;
-  cursor: default;
-}
-
-/* Adjustments for mobile */
-@media (max-width: 600px) {
-  /* ... (existing mobile styles) ... */
-
-  .suggestions-container {
-       max-width: 90%; /* Allow slightly wider on mobile */
-       margin-left: 0;
-       gap: 6px;
-   }
-   .suggestion-button {
-       padding: 5px 10px;
-       font-size: 0.85em;
-   }
+  .upload-button { font-size: 1.2em;} /* Keep upload icon size reasonable */
 }
