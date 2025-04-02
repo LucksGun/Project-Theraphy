@@ -1,19 +1,19 @@
 // src/App.tsx
-import { useState, useEffect } from 'react'; // Import hooks
+import { useState, useEffect } from 'react';
 import './App.css';
 import ChatbotPage from './ChatbotPage';
 
-// Define Message interface here (or import from a types file)
-export interface Message { // Export it if ChatbotPage needs it directly for props
+// Define Message interface here
+export interface Message {
   id: number;
   text: string;
   sender: 'user' | 'bot' | 'loading';
 }
 
-const STORAGE_KEY = 'chatMessages'; // Key for localStorage
+const STORAGE_KEY = 'chatMessages';
 
 function App() {
-  // --- State moved from ChatbotPage to App ---
+  // State lives in App
   const [messages, setMessages] = useState<Message[]>(() => {
     const savedMessages = localStorage.getItem(STORAGE_KEY);
     try {
@@ -23,24 +23,21 @@ function App() {
       return [];
     }
   });
-  // --- End moved state ---
 
-  // --- Effect moved from ChatbotPage to App ---
+  // Effect for saving lives in App
   useEffect(() => {
     if (messages.length > 0 || localStorage.getItem(STORAGE_KEY)) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
     }
-     // If messages are cleared, remove from storage too
      if (messages.length === 0 && localStorage.getItem(STORAGE_KEY)) {
         localStorage.removeItem(STORAGE_KEY);
      }
   }, [messages]);
-  // --- End moved effect ---
 
-  // Function to clear chat
+  // Function to clear chat lives in App
   const handleClearChat = () => {
     if (window.confirm("Are you sure you want to clear the chat history?")) {
-       setMessages([]); // Clear the messages state
+       setMessages([]);
     }
   };
 
@@ -48,10 +45,10 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>Project Theraphy Dashboard</h1>
-        {/* Add Clear Chat button here */}
-        {messages.length > 0 && ( // Only show button if there are messages
-           <button onClick={handleClearChat} className="clear-chat-button">
-              Clear Chat
+        {messages.length > 0 && (
+           /* --- UPDATED: Use emoji and add title --- */
+           <button onClick={handleClearChat} className="clear-chat-button" title="Clear Chat">
+              🗑️
            </button>
         )}
       </header>
