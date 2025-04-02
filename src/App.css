@@ -163,3 +163,38 @@ html, body, #root {
     padding: 10px 15px;
   }
 }
+/* Styles for Clear Chat Button */
+.App-header {
+  /* Ensure header can contain the button properly */
+  display: flex; /* Use flexbox for header layout */
+  justify-content: center; /* Center title */
+  align-items: center; /* Align items vertically */
+  position: relative; /* Needed for absolute positioning of button */
+}
+
+.clear-chat-button {
+  position: absolute; /* Position relative to header */
+  right: 20px; /* Position on the right */
+  padding: 6px 12px;
+  font-size: 0.85em;
+  background-color: #e8eaed; /* Light grey */
+  color: #5f6368; /* Darker grey text */
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.clear-chat-button:hover {
+  background-color: #dadce0;
+  border-color: #c6c9ce;
+}
+
+/* Adjust for mobile if needed */
+@media (max-width: 600px) {
+  .clear-chat-button {
+     right: 10px; /* Closer to edge on mobile */
+     padding: 5px 8px;
+     font-size: 0.8em;
+  }
+}
