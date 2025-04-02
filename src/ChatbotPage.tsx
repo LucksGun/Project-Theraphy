@@ -98,7 +98,7 @@ function ChatbotPage({ messages, setMessages }: ChatbotPageProps) {
      const userMessageText = input.trim();
      const imageToSend = selectedImage;
      let imageDataForApi: { type: string; dataUrl: string } | null = null;
-     const newUserMessage: Message = { id: Date.now(), text: userMessageText + (imageToSend ? ' (+image)' : ''), sender: 'user' };
+     const newUserMessage: Message = { id: Date.now(), text: userMessageText + (imageToSend ? ' (+รูปภาพ)' : ''), sender: 'user' };
      setMessages((prevMessages) => [...prevMessages, newUserMessage]);
      setInput('');
      setSelectedImage(null);
