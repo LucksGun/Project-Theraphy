@@ -157,7 +157,17 @@ function App() {
       )}
 
       {/* --- Beta Notice Modal --- */}
-      {showBetaNotice && ( /* ... Beta Modal JSX ... */ )}
+      {/* --- Beta Notice Modal --- */}
+      {showBetaNotice && (
+        <div className="beta-notice-overlay">
+           <div className="beta-notice-modal">
+             <h2>⚠️ Beta Version</h2>
+             {/* You can customize this text */}
+             <p>Welcome! This chatbot is currently in beta. Features may change, and occasional errors might occur. Your feedback is valuable!</p>
+             <button onClick={handleAcceptBeta} className="beta-accept-button">✔️ Accept & Continue</button>
+           </div>
+        </div>
+      )}
 
       {/* --- Header --- */}
       <header className="App-header">{/* ... Header content ... */}</header>
