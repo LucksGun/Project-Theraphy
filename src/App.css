@@ -2,374 +2,98 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
-/* --- White-Blue-Green Light Theme Variables --- */
+/* Using White-Blue-Green Light Theme Variables */
 :root {
-  --page-bg: #f8f9fa; /* Very light grey background */
-  --container-bg: #ffffff; /* White for main elements */
-  --header-bg: var(--container-bg);
-  --messages-bg: var(--container-bg);
-  --input-bg: var(--container-bg);
-  --border-color: #dee2e6; /* Light grey border */
-  --text-primary: #212529; /* Dark text */
-  --text-secondary: #6c757d; /* Medium grey text */
-  --user-bubble-bg: #0d6efd; /* Primary Blue */
-  --bot-bubble-bg: #e7f5e7; /* Light Green */
-  --button-primary-bg: var(--user-bubble-bg); /* Blue */
-  --button-primary-hover-bg: #0b5ed7; /* Darker Blue */
-  --button-secondary-bg: #e9ecef; /* Light Grey */
-  --button-secondary-hover-bg: #dee2e6; /* Darker Grey */
-  --button-disabled-bg: #cfe2ff; /* Light pale blue */
-  --button-disabled-text: #6c757d;
-  --suggestion-text: var(--user-bubble-bg); /* Blue text */
-  --suggestion-bg: #ffffff;
-  --suggestion-border: #ced4da; /* Grey border */
-  --suggestion-hover-bg: #f8f9fa;
-  --shadow-color: rgba(0, 0, 0, 0.08); /* Lighter shadow */
-  --input-border-color: #ced4da;
-  --input-focus-border-color: var(--user-bubble-bg);
-  --input-focus-shadow: rgba(13, 110, 253, 0.2); /* Blue focus */
-  --image-preview-bg: #e9ecef; /* Light Grey */
-  --remove-button-bg: #dc3545; /* Standard Red */
-  --remove-button-hover-bg: #bb2d3b;
-  /* Added Beta Notice Colors (Light Theme appropriate) */
-  --beta-overlay-bg: rgba(0, 0, 0, 0.6); /* Keep overlay dark */
-  --beta-modal-bg: #ffffff; /* White modal */
-  --beta-text-color: #333; /* Dark text */
-  --beta-heading-color: #dc3545; /* Red heading for warning */
-  --beta-button-bg: var(--user-bubble-bg); /* Blue button */
-  --beta-button-hover-bg: var(--button-primary-hover-bg); /* Darker blue */
-  --beta-button-text: #ffffff; /* White text */
+  --page-bg: #f8f9fa; --container-bg: #ffffff; --header-bg: var(--container-bg);
+  --messages-bg: var(--container-bg); --input-bg: var(--container-bg);
+  --border-color: #dee2e6; --text-primary: #212529; --text-secondary: #6c757d;
+  --user-bubble-bg: #0d6efd; --bot-bubble-bg: #e7f5e7; --button-primary-bg: var(--user-bubble-bg);
+  --button-primary-hover-bg: #0b5ed7; --button-secondary-bg: #e9ecef;
+  --button-secondary-hover-bg: #dee2e6; --button-disabled-bg: #cfe2ff;
+  --button-disabled-text: #6c757d; --suggestion-text: var(--user-bubble-bg);
+  --suggestion-bg: #ffffff; --suggestion-border: #ced4da; --suggestion-hover-bg: #f8f9fa;
+  --shadow-color: rgba(0, 0, 0, 0.08); --input-border-color: #ced4da;
+  --input-focus-border-color: var(--user-bubble-bg); --input-focus-shadow: rgba(13, 110, 253, 0.2);
+  --image-preview-bg: #e9ecef; --remove-button-bg: #dc3545; --remove-button-hover-bg: #bb2d3b;
+  --beta-overlay-bg: rgba(0, 0, 0, 0.6); --beta-modal-bg: #ffffff; --beta-text-color: #333;
+  --beta-heading-color: #dc3545; --beta-button-bg: var(--user-bubble-bg);
+  --beta-button-hover-bg: var(--button-primary-hover-bg); --beta-button-text: #ffffff;
+  --mic-recording-bg: #dc3545; --mic-recording-hover-bg: #bb2d3b;
 }
 
 /* Basic Reset & Font */
-html, body, #root {
-  height: 100%; margin: 0; padding: 0;
-  font-family: 'Inter', sans-serif;
-  background-color: var(--page-bg);
-  overflow: hidden;
-  color: var(--text-primary);
-}
-button, input { font-family: inherit; color: inherit; background-color: transparent; }
+html, body, #root { height: 100%; margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: var(--page-bg); overflow: hidden; color: var(--text-primary); }
+button, input, select { font-family: inherit; color: inherit; background-color: transparent; }
 
-.App {
-  display: flex; flex-direction: column; align-items: stretch; /* Full Screen */
-  height: 100vh; max-height: 100vh; box-sizing: border-box;
-  overflow: hidden;
-  background-color: var(--page-bg);
-}
+.App { display: flex; flex-direction: column; align-items: stretch; height: 100vh; max-height: 100vh; box-sizing: border-box; overflow: hidden; background-color: var(--page-bg); }
 
 .App-header {
-  padding: 12px 20px;
-  background-color: var(--header-bg);
-  border-bottom: 1px solid var(--border-color);
-  text-align: center; flex-shrink: 0;
-  box-shadow: 0 1px 3px var(--shadow-color);
-  display: flex; justify-content: center; align-items: center;
-  position: relative; box-sizing: border-box; z-index: 10;
+  padding: 10px 15px; /* Adjusted padding */
+  background-color: var(--header-bg); border-bottom: 1px solid var(--border-color);
+  text-align: center; flex-shrink: 0; box-shadow: 0 1px 3px var(--shadow-color);
+  display: flex; justify-content: space-between; align-items: center; /* Space between */
+  position: relative; box-sizing: border-box; z-index: 10; min-height: 50px;
 }
-.App-header h1 { margin: 0; font-size: 1.2em; font-weight: 600; color: var(--text-primary); }
+.header-controls { display: flex; align-items: center; gap: 10px; /* Reduced gap */ }
+.App-header h1 { margin: 0; font-size: 1.15em; /* Adjusted size */ font-weight: 600; color: var(--text-primary); white-space: nowrap; /* Prevent wrapping */ flex-grow: 1; text-align: center; /* Center title */ }
+.model-selector-container, .stt-lang-selector-container { display: flex; align-items: center; gap: 4px; }
+.header-controls label { font-size: 0.75em; color: var(--text-secondary); font-weight: 500; white-space: nowrap; }
+.header-select { font-size: 0.75em; padding: 3px 5px; border-radius: 4px; border: 1px solid var(--input-border-color); background-color: var(--container-bg); color: var(--text-primary); cursor: pointer; max-width: 150px; } /* Added max-width */
 
-/* --- Chatbot Styles --- */
+/* Clear Chat Button (Positioned Right within flex) */
+.clear-chat-button { /* Removed position:absolute */ padding: 8px; width: 34px; height: 34px; font-size: 1.1em; background-color: var(--button-secondary-bg); color: var(--text-secondary); border: 1px solid var(--input-border-color); border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; }
+.clear-chat-button:hover { background-color: var(--button-secondary-hover-bg); border-color: #adb5bd; }
+
+/* Chatbot Container & Messages (Unchanged) */
 .chatbot-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+.chatbot-messages { flex-grow: 1; overflow-y: auto; padding: 25px 15px; background-color: var(--messages-bg); display: flex; flex-direction: column; gap: 20px; font-size: 1rem; }
 
-.chatbot-messages {
-  flex-grow: 1; overflow-y: auto; padding: 25px 15px;
-  background-color: var(--messages-bg);
-  display: flex; flex-direction: column;
-  gap: 20px; /* Keep increased gap */
-  font-size: 1rem;
-}
+/* Message Styling (Unchanged) */
+.message-wrapper { display: flex; flex-direction: column; } .message-wrapper-user { align-items: flex-end; } .message-wrapper-bot, .message-wrapper-loading { align-items: flex-start; } .message { padding: 12px 18px; border-radius: 16px; max-width: 78%; word-wrap: break-word; line-height: 1.6; box-shadow: 0 1px 3px var(--shadow-color); } .message p { margin: 0 0 0.6em 0; } .message p:last-child { margin-bottom: 0; } .message ul, .message ol { margin: 0.6em 0; padding-left: 25px; } .message li { margin-bottom: 0.3em; } .message.user { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; border-bottom-right-radius: 6px; } .message.bot, .message.loading { background-color: var(--bot-bubble-bg); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 6px; } .message.loading i { font-style: normal; color: var(--text-secondary); }
 
-/* Message Styling */
-.message-wrapper { display: flex; flex-direction: column; }
-.message-wrapper-user { align-items: flex-end; }
-.message-wrapper-bot, .message-wrapper-loading { align-items: flex-start; }
-.message {
-  padding: 12px 18px; border-radius: 16px; max-width: 78%;
-  word-wrap: break-word; line-height: 1.6; box-shadow: 0 1px 3px var(--shadow-color);
-}
-.message p { margin: 0 0 0.6em 0; }
-.message p:last-child { margin-bottom: 0; }
-.message ul, .message ol { margin: 0.6em 0; padding-left: 25px; }
-.message li { margin-bottom: 0.3em; }
-.message.user { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; border-bottom-right-radius: 6px; }
-.message.bot, .message.loading { background-color: var(--bot-bubble-bg); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 6px; }
-.message.loading i { font-style: normal; color: var(--text-secondary); }
+/* Timestamp Styles (Unchanged) */
+.message-timestamp { font-size: 0.75em; color: var(--text-secondary); margin-top: 4px; margin-right: 5px; margin-left: 5px; align-self: flex-end; display: block; } .message-wrapper-bot .message-timestamp, .message-wrapper-loading .message-timestamp { align-self: flex-start; }
 
-/* Timestamp Styles */
-.message-timestamp { font-size: 0.75em; color: var(--text-secondary); margin-top: 4px; margin-right: 5px; margin-left: 5px; align-self: flex-end; display: block; }
-.message-wrapper-bot .message-timestamp, .message-wrapper-loading .message-timestamp { align-self: flex-start; }
-
-/* Input Area Styling */
-.chatbot-input-area {
-  display: flex; align-items: center; padding: 12px 15px;
-  border-top: 1px solid var(--border-color);
-  background-color: var(--input-bg); /* White */
-  flex-shrink: 0; gap: 8px;
-}
-.chatbot-input-area input[type="text"] {
-  flex-grow: 1; padding: 12px 18px;
-  border: 1px solid var(--input-border-color);
-  border-radius: 16px; font-size: 1rem; outline: none;
-  background-color: #ffffff; /* White input bg */
-  color: var(--text-primary); box-shadow: none; /* Remove inset shadow */
-}
-.chatbot-input-area input[type="text"]::placeholder { color: var(--text-secondary); opacity: 0.9; }
-.chatbot-input-area input[type="text"]:focus { border-color: var(--input-focus-border-color); box-shadow: 0 0 0 2px var(--input-focus-shadow); }
-
-/* Button base style */
-.chatbot-input-area button {
-  padding: 10px; width: 42px; height: 42px; border: none;
-  border-radius: 16px; /* Match input */
-  cursor: pointer; font-size: 1.3em; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-  display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0;
-}
-/* Send button */
-.chatbot-input-area button[title="Send"] { background-color: var(--button-primary-bg); color: white; }
-.chatbot-input-area button[title="Send"]:hover { background-color: var(--button-primary-hover-bg); }
-.chatbot-input-area button[title="Send"]:disabled { background-color: var(--button-disabled-bg); color: #fff; cursor: default; }
-/* Upload button */
-.upload-button { background-color: var(--button-secondary-bg); color: var(--text-secondary); border: 1px solid var(--input-border-color) !important; margin-right: 0; }
-.upload-button:hover { background-color: var(--button-secondary-hover-bg) !important; border-color: #adb5bd !important; }
-.upload-button:disabled { background-color: #e9ecef !important; color: #adb5bd !important; border-color: #dee2e6 !important; cursor: default; }
+/* Input Area Styles */
+.chatbot-input-area { display: flex; align-items: center; padding: 12px 15px; border-top: 1px solid var(--border-color); background-color: var(--input-bg); flex-shrink: 0; gap: 8px; }
+.chatbot-input-area input[type="text"] { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--input-border-color); border-radius: 16px; font-size: 1rem; outline: none; background-color: #ffffff; color: var(--text-primary); box-shadow: none; }
+.chatbot-input-area input[type="text"]::placeholder { color: var(--text-secondary); opacity: 0.9; } .chatbot-input-area input[type="text"]:focus { border-color: var(--input-focus-border-color); box-shadow: 0 0 0 2px var(--input-focus-shadow); }
+/* Input Area Buttons */
+.chatbot-input-area button { padding: 10px; width: 42px; height: 42px; border: none; border-radius: 16px; cursor: pointer; font-size: 1.3em; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; }
+.chatbot-input-area button[title="Send"] { background-color: var(--button-primary-bg); color: white; } .chatbot-input-area button[title="Send"]:hover { background-color: var(--button-primary-hover-bg); } .chatbot-input-area button[title="Send"]:disabled { background-color: var(--button-disabled-bg); color: #fff; cursor: default; }
+.upload-button, .mic-button { background-color: var(--button-secondary-bg); color: var(--text-secondary); border: 1px solid var(--input-border-color) !important; margin-right: 0; }
+.upload-button:hover, .mic-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg) !important; border-color: #adb5bd !important; }
+.upload-button:disabled, .mic-button:disabled { background-color: #e9ecef !important; color: #adb5bd !important; border-color: #dee2e6 !important; cursor: default; }
+.mic-button.recording { background-color: var(--mic-recording-bg, #dc3545) !important; color: white; border-color: var(--mic-recording-hover-bg, #bb2d3b) !important; } .mic-button.recording:hover { background-color: var(--mic-recording-hover-bg, #bb2d3b) !important; }
 
 /* Image Preview Styles */
 .image-preview-area { display: flex; align-items: center; padding: 5px 15px; background-color: var(--image-preview-bg); border-top: 1px solid var(--border-color); flex-shrink: 0; }
-.remove-image-button { background: var(--remove-button-bg); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; line-height: 18px; text-align: center; cursor: pointer; font-size: 12px; font-weight: bold; flex-shrink: 0; }
-.remove-image-button:hover { background: var(--remove-button-hover-bg); }
-
-/* Clear Chat Button Styles */
-.clear-chat-button { position: absolute; right: 20px; padding: 8px; width: 34px; height: 34px; font-size: 1.1em; background-color: var(--button-secondary-bg); color: var(--text-secondary); border: 1px solid var(--input-border-color); border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; display: flex; align-items: center; justify-content: center; line-height: 1; }
-.clear-chat-button:hover { background-color: var(--button-secondary-hover-bg); border-color: #adb5bd; }
+.remove-image-button { background: var(--remove-button-bg); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; line-height: 18px; text-align: center; cursor: pointer; font-size: 12px; font-weight: bold; flex-shrink: 0; } .remove-image-button:hover { background: var(--remove-button-hover-bg); }
 
 /* Suggestion Button Styles */
 .suggestions-container { display: flex; flex-wrap: wrap; gap: 8px; margin-left: 0; margin-top: 8px; max-width: 100%; justify-content: flex-start; }
-.suggestion-button { padding: 6px 14px; border: 1px solid var(--suggestion-border); background-color: var(--suggestion-bg); color: var(--suggestion-text); border-radius: 18px; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s ease; white-space: nowrap; }
-.suggestion-button:hover:not(:disabled) { background-color: var(--suggestion-hover-bg); border-color: #adb5bd; }
-.suggestion-button:disabled { color: #adb5bd; border-color: var(--input-border-color); cursor: default; background-color: var(--suggestion-bg); }
+.suggestion-button { padding: 6px 14px; border: 1px solid var(--suggestion-border); background-color: var(--suggestion-bg); color: var(--suggestion-text); border-radius: 18px; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s ease; white-space: nowrap; } .suggestion-button:hover:not(:disabled) { background-color: var(--suggestion-hover-bg); border-color: #adb5bd; } .suggestion-button:disabled { color: #adb5bd; border-color: var(--input-border-color); cursor: default; background-color: var(--suggestion-bg); }
+
+/* Beta Notice Modal Styles */
+.beta-notice-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--beta-overlay-bg, rgba(0, 0, 0, 0.6)); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 15px; box-sizing: border-box; }
+.beta-notice-modal { background-color: var(--beta-modal-bg, #ffffff); padding: 25px 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); max-width: 500px; width: 100%; text-align: center; box-sizing: border-box; } .beta-notice-modal h2 { margin-top: 0; color: var(--beta-heading-color, #dc3545); font-size: 1.3em; margin-bottom: 10px; } .beta-notice-modal p { margin-bottom: 15px; line-height: 1.6; color: var(--beta-text-color, #333); font-size: 0.95em; } .beta-notice-modal p:last-of-type { margin-bottom: 25px; } .beta-accept-button { padding: 10px 20px; border: none; background-color: var(--beta-button-bg, var(--user-bubble-bg)); color: var(--beta-button-text, #ffffff); border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: background-color 0.2s ease; } .beta-accept-button:hover { background-color: var(--beta-button-hover-bg, var(--button-primary-hover-bg)); }
 
 
-/* --- Styles for Beta Notice Modal (Included) --- */
-.beta-notice-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background-color: var(--beta-overlay-bg, rgba(0, 0, 0, 0.6));
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1000; padding: 15px; box-sizing: border-box;
-}
-.beta-notice-modal {
-  background-color: var(--beta-modal-bg, #ffffff);
-  padding: 25px 30px; border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  max-width: 500px; width: 100%; text-align: center; box-sizing: border-box;
-}
-.beta-notice-modal h2 {
-  margin-top: 0; color: var(--beta-heading-color, #dc3545);
-  font-size: 1.3em; margin-bottom: 10px;
-}
-.beta-notice-modal p {
-  margin-bottom: 15px; line-height: 1.6;
-  color: var(--beta-text-color, #333); font-size: 0.95em;
-}
-.beta-notice-modal p:last-of-type { margin-bottom: 25px; }
-.beta-accept-button {
-  padding: 10px 20px; border: none;
-  background-color: var(--beta-button-bg, var(--user-bubble-bg));
-  color: var(--beta-button-text, #ffffff);
-  border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500;
-  transition: background-color 0.2s ease;
-}
-.beta-accept-button:hover {
-  background-color: var(--beta-button-hover-bg, var(--button-primary-hover-bg));
-}
-.model-selector-container {
-  position: absolute; /* Position relative to header */
-  left: 20px; /* Position on the left */
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.model-selector-container label {
-  font-size: 0.8em;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.model-select {
-  font-size: 0.8em;
-  padding: 4px 6px;
-  border-radius: 4px;
-  border: 1px solid var(--input-border-color);
-  background-color: var(--container-bg); /* Match input bg */
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-/* Adjust for mobile */
+/* Responsive Styles */
 @media (max-width: 900px) {
-    .model-selector-container {
-        left: 10px; /* Closer to edge */
-    }
-    .model-selector-container label {
-        font-size: 0.75em;
-    }
-    .model-select {
-        font-size: 0.75em;
-        padding: 3px 5px;
-    }
-    .clear-chat-button { /* Adjust clear button slightly */
-        right: 10px;
-    }
-     /* Make header slightly taller to fit controls if needed */
-     /* .App-header { min-height: 55px; } */
-}
+  .App-header { padding: 10px; justify-content: space-between; min-height: 0; } /* Adjust mobile header */
+  .header-controls { order: 1; position: static; width: auto; padding: 0; gap: 10px; }
+  .App-header h1 { order: 2; font-size: 1.0em; margin: 0 5px; padding: 0; flex-grow: 0; /* Allow controls to take space */ }
+  .clear-chat-button { order: 3; position: static; margin: 0; } /* Position clear button */
 
-/* Ensure header doesn't hide selector */
-.App-header h1 {
-    /* Add margin to prevent overlap if title is long */
-    margin: 0 60px; /* Example margin */
-}
-
-.App-header {
-  /* Keep previous styles: padding, bg, border, shadow, display:flex, justify-content:center, align-items:center, position:relative, box-sizing, z-index */
-  justify-content: space-between; /* Align title center, controls left/right */
-}
-.App-header h1 {
-  /* Keep previous: margin, font-size, weight, color */
-  position: absolute; /* Center title absolutely */
-  left: 50%;
-  transform: translateX(-50%);
-  /* Adjust L/R margin if needed based on control widths */
-  margin: 0 150px; /* Example margin to avoid overlap */
-  white-space: nowrap;
-}
-.header-controls {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  /* Position controls container */
-  /* Example: position left */
-  position: absolute;
-  left: 15px;
-}
-.model-selector-container,
-.stt-lang-selector-container {
-display: flex;
-align-items: center;
-gap: 5px;
-}
-.header-controls label {
-font-size: 0.8em;
-color: var(--text-secondary);
-font-weight: 500;
-}
-.header-select { /* Style for both dropdowns */
-font-size: 0.8em;
-padding: 4px 6px;
-border-radius: 4px;
-border: 1px solid var(--input-border-color);
-background-color: var(--container-bg);
-color: var(--text-primary);
-cursor: pointer;
-}
-
-/* Ensure clear button doesn't overlap */
-.clear-chat-button {
- position: static; /* Changed from absolute */
- margin-left: auto; /* Push to the right */
- /* Add margin if needed */
- margin-right: 15px; /* Align with header padding */
-}
-
-
-/* --- Styles for Mic Button --- */
-.mic-button {
-  /* Inherit base button styles from .chatbot-input-area button if possible */
-  /* Or define specific styles */
-  padding: 10px; width: 42px; height: 42px; border: none; border-radius: 8px; cursor: pointer;
-  font-size: 1.3em; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-  display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0;
-
-  background-color: var(--button-secondary-bg);
-  color: var(--text-secondary);
-  border: 1px solid var(--input-border-color) !important;
-  margin-right: 0; /* Use gap from parent */
-}
-.mic-button:hover:not(:disabled) {
-  background-color: var(--button-secondary-hover-bg) !important;
-  border-color: #777777 !important;
-}
-.mic-button.recording {
-  background-color: #dc3545; /* Red when recording */
-  color: white;
-  border-color: #a71d2a !important;
-}
-.mic-button:disabled {
-   background-color: var(--button-disabled-bg) !important;
-   color: var(--button-disabled-text) !important;
-   border-color: var(--input-border-color) !important;
-   cursor: default;
-}
-
-
-/* --- Responsive Adjustments --- */
-@media (max-width: 900px) {
-  /* ... (existing mobile styles) ... */
-
-  .App-header {
-      justify-content: center; /* Center title on mobile */
-  }
-  .App-header h1 {
-      position: static; /* Remove absolute positioning */
-      transform: none;
-      margin: 0; /* Reset margin */
-      font-size: 1.1em;
-      order: 2; /* Put title between controls */
-  }
-  .header-controls {
-      position: static; /* Remove absolute positioning */
-      width: 100%; /* Allow wrapping */
-      justify-content: space-between; /* Space out controls */
-      order: 1; /* Put controls above title */
-      padding: 0 10px 5px 10px; /* Adjust padding */
-      gap: 10px;
-      box-sizing: border-box;
-      flex-wrap: wrap; /* Allow wrapping */
-  }
-   .model-selector-container,
-   .stt-lang-selector-container {
-       gap: 3px;
-   }
-  .header-controls label { font-size: 0.75em; }
-  .header-select { font-size: 0.75em; padding: 3px 5px; }
-
-  .clear-chat-button {
-     order: 3; /* Put clear button last */
-     margin: 5px auto 0 auto; /* Center below controls/title */
-     position: static; /* Remove absolute positioning */
-  }
-
-  /* Adjust input area gap if needed */
-  .chatbot-input-area { gap: 5px; }
-  .chatbot-input-area button { width: 40px; height: 40px; font-size: 1.1em; border-radius: 6px; }
-}
-
-/* --- End Beta Notice Modal Styles --- */
-
-
-/* --- Responsive Styles for Small Screens --- */
-@media (max-width: 900px) {
-    /* Keep full width layout for mobile */
-    .App-header { padding: 12px 10px; }
-    .App-header h1 { font-size: 1.1em; }
-    .chatbot-messages { padding: 15px 10px; gap: 15px; font-size: 0.95rem; }
-    .chatbot-input-area { padding: 10px 10px; gap: 5px; }
-    .message { max-width: 85%; border-radius: 14px; }
-    .chatbot-input-area input[type="text"] { padding: 10px 15px; font-size: 0.95rem; border-radius: 16px; }
-    .chatbot-input-area button { width: 40px; height: 40px; font-size: 1.1em; border-radius: 16px; }
-    .clear-chat-button { right: 10px; width: 32px; height: 32px; font-size: 1em; border-radius: 6px; }
-    .image-preview-area { padding: 5px 10px; }
-    .upload-button { font-size: 1.2em;}
-    .suggestions-container { max-width: 100%; gap: 6px; }
-    .suggestion-button { padding: 5px 10px; font-size: 0.85em; }
+  .chatbot-messages { padding: 15px 10px; gap: 15px; font-size: 0.95rem; }
+  .chatbot-input-area { padding: 10px 10px; gap: 5px; }
+  .message { max-width: 85%; border-radius: 14px; }
+  .chatbot-input-area input[type="text"] { padding: 10px 15px; font-size: 0.95rem; border-radius: 16px; }
+  .chatbot-input-area button { width: 40px; height: 40px; font-size: 1.1em; border-radius: 16px; }
+  .clear-chat-button { width: 32px; height: 32px; font-size: 1em; border-radius: 6px; margin-left: 5px; }
+  .image-preview-area { padding: 5px 10px; }
+  .upload-button { font-size: 1.2em;}
+  .suggestions-container { max-width: 100%; gap: 6px; }
+  .suggestion-button { padding: 5px 10px; font-size: 0.85em; }
 }
