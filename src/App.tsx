@@ -273,7 +273,7 @@ function App() {
       {/* --- Header --- */}
       <header className="App-header">
         <button onClick={toggleSettings} className="settings-button" title="Settings" aria-label="Open settings menu" aria-expanded={isSettingsOpen}>⚙️</button>
-        <h1>Project Theraphy Dashboard</h1>
+        <h1>Project Theraphy - Chatbot</h1>
         <div className="header-spacer-right"></div>
       </header>
 
