@@ -29,7 +29,7 @@ interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
 
 const ALL_AVAILABLE_MODELS: ModelInfo[] = [
   { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', restricted: false },
-  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', restricted: false },
+  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', restricted: true },
   { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', restricted: false },
   { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', restricted: true }, // Restricted
   { value: 'gemini-2.5-pro-exp', label: 'Gemini 2.5 Pro Exp', restricted: true } // Restricted
