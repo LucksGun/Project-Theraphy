@@ -1,137 +1,106 @@
 // src/App.tsx
-import { useState, useEffect, ChangeEvent } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import './App.css';
 import ChatbotPage from './ChatbotPage';
 
-// Define Message interface here
+// Define Message interface (includes timestamp)
 export interface Message {
   id: number;
   text: string;
   sender: 'user' | 'bot' | 'loading';
-  timestamp: number; // Keep timestamp
+  timestamp: number;
 }
 
-// Define allowed model types
+// Define allowed model types (keep if using model selector)
 export type GeminiModel = 'gemini-2.0-flash' | 'gemini-1.5-pro' | 'gemini-1.5-flash';
 
-const CHAT_STORAGE_KEY = 'chatMessages'; // Key for chat localStorage
-const BETA_ACCEPTED_KEY = 'betaAccepted'; // Key for beta notice localStorage
-const MODEL_STORAGE_KEY = 'selectedApiModel'; // Key for model choice localStorage
+const CHAT_STORAGE_KEY = 'chatMessages';
+const BETA_ACCEPTED_KEY = 'betaAccepted';
+const MODEL_STORAGE_KEY = 'selectedApiModel';
 
 function App() {
-  // --- Messages State & Persistence ---
+  // --- UPDATED: Messages State Initialization adds Welcome Message ---
   const [messages, setMessages] = useState<Message[]>(() => {
     const savedMessages = localStorage.getItem(CHAT_STORAGE_KEY);
+    let initialMessages: Message[] = [];
     try {
-      return savedMessages && savedMessages !== '[]' ? JSON.parse(savedMessages) : [];
+      initialMessages = savedMessages && savedMessages !== '[]' ? JSON.parse(savedMessages) : [];
     } catch (e) {
       console.error("Failed to parse messages from localStorage", e);
       localStorage.removeItem(CHAT_STORAGE_KEY); // Clear bad data
-      return [];
+      initialMessages = [];
+    }
+
+    // If no saved messages, add the welcome message
+    if (initialMessages.length === 0) {
+      const welcomeMessage: Message = {
+        id: Date.now(), // Use current time for ID/timestamp
+        text: "Welcome to the Project Theraphy Assistant! How can I help you plan your future, manage stress, or discuss college options today?", // Customize your welcome text
+        sender: 'bot',
+        timestamp: Date.now()
+      };
+      return [welcomeMessage]; // Start with only the welcome message
+    } else {
+      return initialMessages; // Otherwise, return the saved messages
     }
   });
+  // --- End Update ---
 
+  // Effect for saving messages (Unchanged)
   useEffect(() => {
-    // Save messages whenever they change
     localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
   }, [messages]);
-  // --- End Messages State & Persistence ---
 
-
-  // --- Beta Notice State & Logic ---
+  // Beta Notice State & Logic (Unchanged)
   const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
+  useEffect(() => { const accepted = localStorage.getItem(BETA_ACCEPTED_KEY); if (accepted !== 'true') { setShowBetaNotice(true); } }, []);
+  const handleAcceptBeta = () => { localStorage.setItem(BETA_ACCEPTED_KEY, 'true'); setShowBetaNotice(false); };
 
-  useEffect(() => {
-    // Check if user has already accepted the beta notice on initial load
-    const accepted = localStorage.getItem(BETA_ACCEPTED_KEY);
-    if (accepted !== 'true') {
-      setShowBetaNotice(true); // If not accepted, show the notice
-    }
-  }, []); // Runs once on mount
+  // Model Selection State & Persistence (Unchanged)
+  const [selectedModel, setSelectedModel] = useState<GeminiModel>(() => { /* ... */ });
+  useEffect(() => { /* ... */ }, [selectedModel]);
+  const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => { /* ... */ }
 
-  const handleAcceptBeta = () => {
-    localStorage.setItem(BETA_ACCEPTED_KEY, 'true'); // Remember acceptance
-    setShowBetaNotice(false); // Hide the modal
-  };
-  // --- End Beta Notice Logic ---
+  // Function to clear chat (Unchanged)
+  const handleClearChat = () => { /* ... */ };
 
-
-  // --- Model Selection State & Persistence ---
-  const [selectedModel, setSelectedModel] = useState<GeminiModel>(() => {
-    const savedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-    // Check if saved model is one of the valid options
-    if (savedModel === 'gemini-1.5-pro' || savedModel === 'gemini-2.0-flash' || savedModel === 'gemini-1.5-flash') {
-        return savedModel;
-    }
-    return 'gemini-2.0-flash'; // Default to 2.0 flash
-  });
-
-  useEffect(() => {
-      // Save model choice whenever it changes
-      localStorage.setItem(MODEL_STORAGE_KEY, selectedModel);
-  }, [selectedModel]);
-
-  const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => {
-      const newModel = event.target.value as GeminiModel;
-      setSelectedModel(newModel);
-      // Optional: Provide feedback or clear chat
-      alert(`Model changed to ${newModel}. New chats will use this model.`);
-      // setMessages([]); // Uncomment to clear chat on model switch
-  }
-  // --- End Model Selection ---
-
-
-  // Function to clear chat
-  const handleClearChat = () => {
-    if (window.confirm("Are you sure you want to clear the chat history?")) {
-       setMessages([]); // Clear the messages state (useEffect handles storage update)
-    }
-  };
-
-
+  // JSX (Unchanged)
   return (
     <div className="App">
       {/* Beta Notice Modal */}
-      {showBetaNotice && (
-        <div className="beta-notice-overlay">
-          <div className="beta-notice-modal">
-            <h2>⚠️ Beta Version</h2>
-            <p>Welcome! This is an early version of Project Theraphy.</p>
-            <p>You may encounter bugs or incomplete features. Your patience and feedback are appreciated!</p>
-            <button onClick={handleAcceptBeta} className="beta-accept-button">
-              ✔️ Accept & Continue
-            </button>
-          </div>
-        </div>
-      )}
-
+      {showBetaNotice && ( /* ... */ )}
       {/* Main App Content */}
       <header className="App-header">
         {/* Model Selector */}
-         <div className="model-selector-container">
-            <label htmlFor="model-select">Model: </label>
-            <select id="model-select" value={selectedModel} onChange={handleModelChange} className="model-select">
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-            </select>
-         </div>
+         <div className="model-selector-container">{/* ... */}</div>
         <h1>Project Theraphy Dashboard</h1>
-        {/* Clear Chat Button */}
-        {messages.length > 0 && (
-           <button onClick={handleClearChat} className="clear-chat-button" title="Clear Chat">
-              🗑️
-           </button>
-        )}
+        {/* Clear Chat Button - Adjusted logic slightly to hide if only welcome message exists? Optional. */}
+        {messages.length > 1 && (<button onClick={handleClearChat} className="clear-chat-button" title="Clear Chat">🗑️</button>)}
+        {/* Or keep original: messages.length > 0 */}
       </header>
-      {/* Chatbot Page Component */}
       <ChatbotPage
         messages={messages}
         setMessages={setMessages}
-        selectedModel={selectedModel} // Pass down selected model
+        selectedModel={selectedModel}
        />
     </div>
   );
 }
 
 export default App;
+
+
+// --- FULL STATE/EFFECT/HANDLER LOGIC if user needs full paste ---
+function App_Full_Logic_Placeholder() {
+    // Messages State (shows updated initial logic)
+    const [messages, setMessages] = useState<Message[]>(() => { const savedMessages = localStorage.getItem(CHAT_STORAGE_KEY); let initialMessages: Message[] = []; try { initialMessages = savedMessages && savedMessages !== '[]' ? JSON.parse(savedMessages) : []; } catch (e) { console.error("Failed to parse messages from localStorage", e); localStorage.removeItem(CHAT_STORAGE_KEY); initialMessages = []; } if (initialMessages.length === 0) { const welcomeMessage: Message = { id: Date.now(), text: "Welcome! How can I help?", sender: 'bot', timestamp: Date.now() }; return [welcomeMessage]; } else { return initialMessages; } });
+    // Save Effect
+    useEffect(() => { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages)); }, [messages]);
+    // Beta Notice
+    const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false); useEffect(() => { const accepted = localStorage.getItem(BETA_ACCEPTED_KEY); if (accepted !== 'true') { setShowBetaNotice(true); } }, []); const handleAcceptBeta = () => { localStorage.setItem(BETA_ACCEPTED_KEY, 'true'); setShowBetaNotice(false); };
+    // Model Selector
+    const [selectedModel, setSelectedModel] = useState<GeminiModel>(() => { const savedModel = localStorage.getItem(MODEL_STORAGE_KEY); if (savedModel === 'gemini-1.5-pro' || savedModel === 'gemini-2.0-flash' || savedModel === 'gemini-1.5-flash') { return savedModel; } return 'gemini-2.0-flash'; }); useEffect(() => { localStorage.setItem(MODEL_STORAGE_KEY, selectedModel); }, [selectedModel]); const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => { const newModel = event.target.value as GeminiModel; setSelectedModel(newModel); alert(`Model changed to ${newModel}. New chats will use this model.`); }
+    // Clear Chat
+    const handleClearChat = () => { if (window.confirm("Are you sure you want to clear the chat history?")) { setMessages([]); } };
+     return ( <div className="App">{/* JSX as above */}</div> );
+}
