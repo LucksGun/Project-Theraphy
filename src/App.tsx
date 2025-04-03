@@ -164,7 +164,7 @@ function App() {
             <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select">
                 <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                 {/* Added Gemini 2.5 Pro Option */}
-                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                <option value="gemini-2.5-pro-esp">Gemini 2.5 Pro Experimental</option>
                 <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                 <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
             </select>
