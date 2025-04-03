@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import './App.css'; // Assuming you have this CSS file
 import ChatbotPage from './ChatbotPage'; // Assuming ChatbotPage component exists
 
