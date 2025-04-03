@@ -12,7 +12,7 @@ export interface Message {
 }
 
 // Define allowed model types
-export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.5-pro-exp' | 'gemini-1.5-pro' | 'gemini-1.5-flash';
+export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.5-pro-exp' | 'gemini-1.5-pro' | 'gemini-1.5-flash' | 'gemini-2.0-flash-lite';
 
 // Define Speech Language type
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR'; // Add more as needed
@@ -55,7 +55,7 @@ function App() {
   const [selectedModel, setSelectedModel] = useState<GeminiModel>(() => {
     const savedModel = localStorage.getItem(MODEL_STORAGE_KEY);
     // Check for all valid models including the new one
-    if (savedModel === 'gemini-2.0-flash' || savedModel === 'gemini-2.5-pro-exp' || savedModel === 'gemini-1.5-pro' || savedModel === 'gemini-1.5-flash') {
+    if (savedModel === 'gemini-2.0-flash' || savedModel === 'gemini-2.5-pro-exp' || savedModel === 'gemini-1.5-pro' || savedModel === 'gemini-1.5-flash'|| savedModel === 'gemini-2.0-flash-lite') {
         return savedModel; // Return the valid saved model
     }
     return 'gemini-2.0-flash'; // Default model
@@ -163,6 +163,7 @@ function App() {
             <label htmlFor="model-select">AI Model:</label>
             <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select">
                 <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
                 {/* Added Gemini 2.5 Pro Option */}
                 <option value="gemini-2.5-pro-esp">Gemini 2.5 Pro Experimental</option>
                 <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
