@@ -1,6 +1,6 @@
 // src/App.tsx
 import { useState, useEffect, ChangeEvent } from 'react';
-import './App.css'; // Assuming you have this CSS file
+import './App.css'; // Make sure to update this CSS file with styles for settings menu/button
 import ChatbotPage from './ChatbotPage'; // Assuming ChatbotPage component exists
 
 // Define Message interface
@@ -19,11 +19,13 @@ export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR'; // Add more 
 // localStorage Keys
 const CHAT_STORAGE_KEY = 'chatMessages';
 const BETA_ACCEPTED_KEY = 'betaAccepted';
-const MODEL_STORAGE_KEY = 'selectedApiModel'; // Key for model choice
-const STT_LANG_STORAGE_KEY = 'selectedSttLang'; // Key for STT language
+const MODEL_STORAGE_KEY = 'selectedApiModel';
+const STT_LANG_STORAGE_KEY = 'selectedSttLang';
 
 function App() {
-  // Messages State & Persistence
+  // --- State Variables ---
+
+  // Messages State & Persistence (Full Logic)
   const [messages, setMessages] = useState<Message[]>(() => {
     const savedMessages = localStorage.getItem(CHAT_STORAGE_KEY);
     let initialMessages: Message[] = [];
@@ -35,7 +37,6 @@ function App() {
       localStorage.removeItem(CHAT_STORAGE_KEY);
       initialMessages = [];
     }
-    // Set initial welcome message only if chat is truly empty after loading/parsing
     if (initialMessages.length === 0) {
       const welcomeTime = Date.now();
       const welcomeMessage: Message = { id: welcomeTime, text: "Welcome! How can I help you plan your future, manage stress, or discuss college options today?", sender: 'bot', timestamp: welcomeTime };
@@ -44,121 +45,151 @@ function App() {
       return initialMessages;
     }
   });
+
+  // Beta Notice State
+  const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
+
+  // Model Selection State & Persistence (Full Corrected Logic)
+  const [selectedModel, setSelectedModel] = useState<GeminiModel>(() => {
+    const savedModel = localStorage.getItem(MODEL_STORAGE_KEY);
+    if (savedModel === 'gemini-1.5-pro' || savedModel === 'gemini-2.0-flash' || savedModel === 'gemini-1.5-flash') {
+        return savedModel; // Return the valid saved model
+    }
+    return 'gemini-2.0-flash'; // Default model
+  });
+
+  // STT Language Selection State & Persistence (Full Corrected Logic)
+  const [sttLang, setSttLang] = useState<SpeechLanguage>(() => {
+    const savedLang = localStorage.getItem(STT_LANG_STORAGE_KEY);
+    // Check against all defined types
+    if (savedLang === 'th-TH' || savedLang === 'es-ES' || savedLang === 'fr-FR' || savedLang === 'en-US') {
+        return savedLang; // Return the valid saved language
+    }
+    return 'en-US'; // Default language
+  });
+
+  // Settings Menu State
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  // --- Effects for Persistence and Setup ---
+
+  // Message Persistence Effect
   useEffect(() => {
-    // Avoid saving the initial state if it's just the welcome message and nothing else has happened yet
     if (messages.length > 1 || (messages.length === 1 && messages[0].sender !== 'bot')) {
          localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
     } else if (messages.length === 0) {
-         localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages)); // Save empty state if cleared
+         localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
     }
   }, [messages]);
 
-  // Beta Notice State & Logic
-  const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
+  // Beta Notice Effect
   useEffect(() => {
     const accepted = localStorage.getItem(BETA_ACCEPTED_KEY);
     if (accepted !== 'true') {
       setShowBetaNotice(true);
     }
   }, []);
+
+  // Model Persistence Effect
+  useEffect(() => {
+    localStorage.setItem(MODEL_STORAGE_KEY, selectedModel);
+  }, [selectedModel]);
+
+  // STT Language Persistence Effect
+  useEffect(() => {
+    localStorage.setItem(STT_LANG_STORAGE_KEY, sttLang);
+  }, [sttLang]);
+
+  // --- Event Handlers (Full Definitions) ---
+
   const handleAcceptBeta = () => {
     localStorage.setItem(BETA_ACCEPTED_KEY, 'true');
     setShowBetaNotice(false);
   };
 
-  // Model Selection State & Persistence
-  const [selectedModel, setSelectedModel] = useState<GeminiModel>(() => {
-    const savedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-    // Explicitly check for allowed values
-    if (savedModel === 'gemini-1.5-pro' || savedModel === 'gemini-2.0-flash' || savedModel === 'gemini-1.5-flash') {
-        return savedModel;
-    }
-    return 'gemini-2.0-flash'; // Default model
-  });
-  useEffect(() => {
-    localStorage.setItem(MODEL_STORAGE_KEY, selectedModel);
-  }, [selectedModel]);
   const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => {
       const newModel = event.target.value as GeminiModel;
       setSelectedModel(newModel);
-      // Consider if an alert is the best UX, maybe just update state
-      // alert(`Model changed to ${newModel}. New chats will use this model.`);
-  }
+  };
 
-  // STT Language Selection State & Persistence
-  const [sttLang, setSttLang] = useState<SpeechLanguage>(() => {
-    const savedLang = localStorage.getItem(STT_LANG_STORAGE_KEY);
-    // Explicitly check for allowed values
-    if (savedLang === 'th-TH' || savedLang === 'es-ES' || savedLang === 'fr-FR') {
-        return savedLang;
-    }
-    return 'en-US'; // Default language
-  });
-  useEffect(() => {
-    localStorage.setItem(STT_LANG_STORAGE_KEY, sttLang);
-  }, [sttLang]);
   const handleSttLangChange = (event: ChangeEvent<HTMLSelectElement>) => {
     setSttLang(event.target.value as SpeechLanguage);
-  }
+  };
 
-  // Function to clear chat
   const handleClearChat = () => {
     if (window.confirm("Are you sure you want to clear the entire chat history? This cannot be undone.")) {
-      // Clear state which triggers useEffect to clear localStorage
-      setMessages([]);
-      // Optionally reset to the welcome message immediately
       const welcomeTime = Date.now();
       const welcomeMessage: Message = { id: welcomeTime, text: "Welcome! How can I help you plan your future, manage stress, or discuss college options today?", sender: 'bot', timestamp: welcomeTime };
+      // Reset state to only welcome message
       setMessages([welcomeMessage]);
-      // Clear localStorage directly as well just in case (though useEffect should handle it)
+      // Also explicitly clear storage immediately (useEffect might lag)
       localStorage.removeItem(CHAT_STORAGE_KEY);
     }
   };
 
+  const toggleSettings = () => {
+    setIsSettingsOpen(prev => !prev); // Toggle the settings menu visibility
+  };
+
+  // --- JSX Return ---
   return (
     <div className="App">
-      {/* --- CORRECTED: Beta Notice Modal --- */}
+      {/* --- Settings Button --- */}
+      <button onClick={toggleSettings} className="settings-button" title="Settings" aria-label="Open settings menu" aria-expanded={isSettingsOpen}>
+        ⚙️ {/* Gear icon */}
+      </button>
+
+      {/* --- Settings Menu (Conditionally Rendered) --- */}
+      {isSettingsOpen && (
+        // Consider adding role="dialog" and aria-modal="true" for better accessibility
+        <div className="settings-menu" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+          <h3 id="settings-title">Settings</h3>
+          {/* STT Language Selector */}
+          <div className="settings-option stt-lang-selector-container">
+            <label htmlFor="stt-lang-select">Speak Language:</label>
+            <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange}>
+                <option value="en-US">English (US)</option>
+                <option value="th-TH">ไทย (Thai)</option>
+                <option value="es-ES">Español (España)</option>
+                <option value="fr-FR">Français (France)</option>
+            </select>
+          </div>
+          {/* Model Selector */}
+          <div className="settings-option model-selector-container">
+            <label htmlFor="model-select">AI Model:</label>
+            <select id="model-select" value={selectedModel} onChange={handleModelChange}>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+            </select>
+          </div>
+          <button onClick={toggleSettings} className="close-settings-button">Close</button>
+        </div>
+      )}
+
+      {/* --- Beta Notice Modal (Keep as before) --- */}
       {showBetaNotice && (
         <div className="beta-notice-overlay">
           <div className="beta-notice-modal">
             <h2>⚠️ Beta Version</h2>
             <p>Welcome! This chatbot is currently in beta. Features may change, and occasional errors might occur. Your feedback is valuable!</p>
-            {/* Add a class for styling the button if needed */}
             <button onClick={handleAcceptBeta} className="accept-beta-button">✔️ Accept & Continue</button>
           </div>
         </div>
       )}
 
+      {/* --- Header --- */}
       <header className="App-header">
-          <div className="header-controls">
-              {/* STT Language Selector */}
-              <div className="stt-lang-selector-container">
-                <label htmlFor="stt-lang-select">Speak:</label>
-                <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="header-select">
-                    <option value="en-US">English (US)</option>
-                    <option value="th-TH">ไทย (Thai)</option>
-                    <option value="es-ES">Español (España)</option>
-                    <option value="fr-FR">Français (France)</option>
-                </select>
-              </div>
-              {/* Model Selector */}
-              <div className="model-selector-container">
-                <label htmlFor="model-select">Model:</label>
-                <select id="model-select" value={selectedModel} onChange={handleModelChange} className="header-select">
-                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                </select>
-              </div>
-          </div>
+        {/* Title is centered via CSS potentially */}
         <h1>Project Theraphy Dashboard</h1>
-        {/* Show clear button only if there are user messages or more than the initial bot message */}
+        {/* Clear Chat Button (Positioned via CSS potentially) */}
         {(messages.length > 1 || (messages.length === 1 && messages[0].sender === 'user')) && (
           <button onClick={handleClearChat} className="clear-chat-button" title="Clear Chat History">🗑️</button>
         )}
       </header>
 
-      {/* Pass state and setters to ChatbotPage */}
+      {/* --- Chatbot Page --- */}
+      {/* Ensure ChatbotPage component can handle these props */}
       <ChatbotPage
         messages={messages}
         setMessages={setMessages}
