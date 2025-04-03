@@ -12,7 +12,7 @@ export interface Message {
 }
 
 // Define allowed model types (All possible models)
-export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.0-flash-lite' | 'gemini-2.5-pro-exp' | 'gemini-1.5-pro' | 'gemini-1.5-flash';
+export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.0-flash-lite' | 'gemini-2.5-pro-exp' | 'gemini-1.5-pro' | 'gemini-1.5-flash' | 'gemini-2.0-flash-thinking-exp';
 
 // Define Speech Language type
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR'; // Add more as needed
@@ -32,7 +32,8 @@ const ALL_AVAILABLE_MODELS: ModelInfo[] = [
   { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', restricted: true },
   { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', restricted: false },
   { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', restricted: true }, // Restricted
-  { value: 'gemini-2.5-pro-exp', label: 'Gemini 2.5 Pro Exp', restricted: true } // Restricted
+  { value: 'gemini-2.5-pro-exp', label: 'Gemini 2.5 Pro Exp', restricted: true }, // Restricted
+  { value: 'gemini-2.0-flash-thinking-exp', label: 'Gemini 2.0 Flash Thinking Exp', restricted: true } // Restricted
 ];
 
 // Create a list of just the restricted model values for easier checking
@@ -82,7 +83,7 @@ function App() {
 
   // Model Selection State & Persistence (Use MODEL_STORAGE_KEY and RESTRICTED_MODELS_VALUES)
   // Initialize with a default, the effect below will adjust based on loaded key/saved model
-  const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash');
+  const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-1.5-flash');
 
   // STT Language Selection State & Persistence (Use STT_LANG_STORAGE_KEY)
   const [sttLang, setSttLang] = useState<SpeechLanguage>(() => {
