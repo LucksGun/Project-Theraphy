@@ -67,190 +67,95 @@ button, input, select { font-family: inherit; color: inherit; background-color: 
   color: var(--text-primary);
   white-space: nowrap;
   text-align: center;
-  /* No flex-grow needed */
-  /* margin: 0 10px; /* Optional horizontal margin */
 }
 
 /* --- MODIFIED: Settings Button Styles (Integrated into Header) --- */
 .settings-button {
-  /* No position:fixed needed */
-  background: none;
-  border: none;
-  padding: 5px; /* Padding for click area */
-  font-size: 22px; /* Adjust size */
-  cursor: pointer;
-  color: var(--text-secondary);
-  opacity: 0.9;
-  transition: opacity 0.2s ease;
-  line-height: 1; /* Prevent extra space */
-  flex-shrink: 0; /* Prevent shrinking */
-  /* Ensure vertical alignment if needed */
-  /* align-self: center; */
+  background: none; border: none; padding: 5px; font-size: 22px; cursor: pointer;
+  color: var(--text-secondary); opacity: 0.9; transition: opacity 0.2s ease;
+  line-height: 1; flex-shrink: 0;
 }
-.settings-button:hover {
-  opacity: 1;
-}
+.settings-button:hover { opacity: 1; }
 
-/* Spacer for header layout (Adjust width to match button visual width) */
-.header-spacer-right {
-   width: 32px; /* Match settings button size + padding */
-   flex-shrink: 0;
-}
+/* Spacer for header layout */
+.header-spacer-right { width: 32px; flex-shrink: 0; }
 
-/* --- Settings Menu (Still Fixed Position) --- */
+/* --- Settings Menu --- */
 .settings-menu {
-  position: fixed;
-  top: 55px; /* Adjust based on final header height */
-  left: 15px;
-  background-color: var(--settings-menu-bg);
-  border: 1px solid var(--settings-menu-border);
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 5px 15px var(--settings-menu-shadow);
-  z-index: 1000; /* High z-index for overlay */
-  min-width: 280px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+  position: fixed; top: 55px; left: 15px; background-color: var(--settings-menu-bg);
+  border: 1px solid var(--settings-menu-border); border-radius: 8px; padding: 20px;
+  box-shadow: 0 5px 15px var(--settings-menu-shadow); z-index: 1000;
+  min-width: 280px; display: flex; flex-direction: column; gap: 15px;
 }
 .settings-menu h3 {
-  text-align: center;
-  font-size: 1.1em;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-top: 0;
-  margin-bottom: 5px;
+  text-align: center; font-size: 1.1em; font-weight: 600; color: var(--text-primary);
+  margin-top: 0; margin-bottom: 5px;
 }
-.settings-option {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.settings-option { display: flex; flex-direction: column; gap: 6px; }
+.settings-option label { font-weight: 500; font-size: 0.85em; color: var(--settings-label-text); }
+
+/* Style for inputs/selects in settings */
+.settings-select, .settings-input {
+  padding: 8px 10px; border: 1px solid var(--settings-select-border); border-radius: 4px;
+  font-size: 0.9em; background-color: var(--settings-select-bg); color: var(--text-primary);
 }
-.settings-option label {
-  font-weight: 500;
-  font-size: 0.85em;
-  color: var(--settings-label-text);
-}
-.settings-select { /* Added this class to selects in settings menu */
-  padding: 8px 10px;
-  border: 1px solid var(--settings-select-border);
-  border-radius: 4px;
-  font-size: 0.9em;
-  background-color: var(--settings-select-bg);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-.settings-select:focus {
-  outline: none;
-  border-color: var(--input-focus-border-color);
+.settings-select { cursor: pointer; } /* Only select needs cursor pointer */
+.settings-select:focus, .settings-input:focus {
+  outline: none; border-color: var(--input-focus-border-color);
   box-shadow: 0 0 0 2px var(--input-focus-shadow);
 }
 
 /* Clear Chat Button (Inside Menu) */
 .clear-chat-settings-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 12px;
-  background-color: var(--settings-clear-bg);
-  color: var(--settings-clear-text);
-  border: 1px solid var(--settings-clear-border);
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: left;
-  font-weight: 500;
-  font-size: 0.9em;
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px;
+  background-color: var(--settings-clear-bg); color: var(--settings-clear-text);
+  border: 1px solid var(--settings-clear-border); border-radius: 4px; cursor: pointer;
+  text-align: left; font-weight: 500; font-size: 0.9em;
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
-.clear-chat-settings-button:hover {
-  background-color: var(--settings-clear-hover-bg);
-  border-color: var(--settings-clear-hover-border);
-}
+.clear-chat-settings-button:hover { background-color: var(--settings-clear-hover-bg); border-color: var(--settings-clear-hover-border); }
 
 /* Optional Separator Line */
-.settings-separator {
-  border: none;
-  border-top: 1px solid var(--border-color);
-  margin: 5px 0;
-}
+.settings-separator { border: none; border-top: 1px solid var(--border-color); margin: 5px 0; }
 
 /* Close Settings Button */
 .close-settings-button {
-  display: block;
-  width: 100%;
-  padding: 9px 15px;
-  margin-top: 5px;
-  background-color: var(--settings-close-bg);
-  color: var(--settings-close-text);
-  border: 1px solid var(--settings-menu-border);
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: center;
-  font-weight: 500;
-  font-size: 0.9em;
+  display: block; width: 100%; padding: 9px 15px; margin-top: 5px;
+  background-color: var(--settings-close-bg); color: var(--settings-close-text);
+  border: 1px solid var(--settings-menu-border); border-radius: 4px; cursor: pointer;
+  text-align: center; font-weight: 500; font-size: 0.9em;
   transition: background-color 0.2s ease;
 }
-.close-settings-button:hover {
-  background-color: var(--settings-close-hover-bg);
-}
+.close-settings-button:hover { background-color: var(--settings-close-hover-bg); }
 
-
-/* --- Styles below are mostly from your original CSS --- */
-
-/* Chatbot Container & Messages */
+/* --- Styles below mostly unchanged from your provided CSS --- */
 .chatbot-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
 .chatbot-messages { flex-grow: 1; overflow-y: auto; padding: 25px 15px; background-color: var(--messages-bg); display: flex; flex-direction: column; gap: 20px; font-size: 1rem; }
-
-/* Message Styling */
 .message-wrapper { display: flex; flex-direction: column; } .message-wrapper-user { align-items: flex-end; } .message-wrapper-bot, .message-wrapper-loading { align-items: flex-start; } .message { padding: 12px 18px; border-radius: 16px; max-width: 78%; word-wrap: break-word; line-height: 1.6; box-shadow: 0 1px 3px var(--shadow-color); } .message p { margin: 0 0 0.6em 0; } .message p:last-child { margin-bottom: 0; } .message ul, .message ol { margin: 0.6em 0; padding-left: 25px; } .message li { margin-bottom: 0.3em; } .message.user { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; border-bottom-right-radius: 6px; } .message.bot, .message.loading { background-color: var(--bot-bubble-bg); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 6px; } .message.loading i { font-style: normal; color: var(--text-secondary); }
-
-/* Timestamp Styles */
 .message-timestamp { font-size: 0.75em; color: var(--text-secondary); margin-top: 4px; margin-right: 5px; margin-left: 5px; align-self: flex-end; display: block; } .message-wrapper-bot .message-timestamp, .message-wrapper-loading .message-timestamp { align-self: flex-start; }
-
-/* Input Area Styles */
 .chatbot-input-area { display: flex; align-items: center; padding: 12px 15px; border-top: 1px solid var(--border-color); background-color: var(--input-bg); flex-shrink: 0; gap: 8px; }
 .chatbot-input-area input[type="text"] { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--input-border-color); border-radius: 16px; font-size: 1rem; outline: none; background-color: #ffffff; color: var(--text-primary); box-shadow: none; }
 .chatbot-input-area input[type="text"]::placeholder { color: var(--text-secondary); opacity: 0.9; } .chatbot-input-area input[type="text"]:focus { border-color: var(--input-focus-border-color); box-shadow: 0 0 0 2px var(--input-focus-shadow); }
-/* Input Area Buttons */
 .chatbot-input-area button { padding: 10px; width: 42px; height: 42px; border: none; border-radius: 16px; cursor: pointer; font-size: 1.3em; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; }
 .chatbot-input-area button[title="Send"] { background-color: var(--button-primary-bg); color: white; } .chatbot-input-area button[title="Send"]:hover { background-color: var(--button-primary-hover-bg); } .chatbot-input-area button[title="Send"]:disabled { background-color: var(--button-disabled-bg); color: #fff; cursor: default; }
 .upload-button, .mic-button { background-color: var(--button-secondary-bg); color: var(--text-secondary); border: 1px solid var(--input-border-color) !important; margin-right: 0; }
 .upload-button:hover, .mic-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg) !important; border-color: #adb5bd !important; }
 .upload-button:disabled, .mic-button:disabled { background-color: #e9ecef !important; color: #adb5bd !important; border-color: #dee2e6 !important; cursor: default; }
 .mic-button.recording { background-color: var(--mic-recording-bg, #dc3545) !important; color: white; border-color: var(--mic-recording-hover-bg, #bb2d3b) !important; } .mic-button.recording:hover { background-color: var(--mic-recording-hover-bg, #bb2d3b) !important; }
-
-/* Image Preview Styles */
 .image-preview-area { display: flex; align-items: center; padding: 5px 15px; background-color: var(--image-preview-bg); border-top: 1px solid var(--border-color); flex-shrink: 0; }
 .remove-image-button { background: var(--remove-button-bg); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; line-height: 18px; text-align: center; cursor: pointer; font-size: 12px; font-weight: bold; flex-shrink: 0; } .remove-image-button:hover { background: var(--remove-button-hover-bg); }
-
-/* Suggestion Button Styles */
 .suggestions-container { display: flex; flex-wrap: wrap; gap: 8px; margin-left: 0; margin-top: 8px; max-width: 100%; justify-content: flex-start; }
 .suggestion-button { padding: 6px 14px; border: 1px solid var(--suggestion-border); background-color: var(--suggestion-bg); color: var(--suggestion-text); border-radius: 18px; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s ease; white-space: nowrap; } .suggestion-button:hover:not(:disabled) { background-color: var(--suggestion-hover-bg); border-color: #adb5bd; } .suggestion-button:disabled { color: #adb5bd; border-color: var(--input-border-color); cursor: default; background-color: var(--suggestion-bg); }
-
-/* Beta Notice Modal Styles */
 .beta-notice-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--beta-overlay-bg, rgba(0, 0, 0, 0.6)); display: flex; align-items: center; justify-content: center; z-index: 1050; padding: 15px; box-sizing: border-box; }
 .beta-notice-modal { background-color: var(--beta-modal-bg, #ffffff); padding: 25px 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); max-width: 500px; width: 100%; text-align: center; box-sizing: border-box; } .beta-notice-modal h2 { margin-top: 0; color: var(--beta-heading-color, #dc3545); font-size: 1.3em; margin-bottom: 10px; } .beta-notice-modal p { margin-bottom: 15px; line-height: 1.6; color: var(--beta-text-color, #333); font-size: 0.95em; } .beta-notice-modal p:last-of-type { margin-bottom: 25px; }
 .beta-accept-button { padding: 10px 20px; border: none; background-color: var(--beta-button-bg, var(--user-bubble-bg)); color: var(--beta-button-text, #ffffff); border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: background-color 0.2s ease; } .beta-accept-button:hover { background-color: var(--beta-button-hover-bg, var(--button-primary-hover-bg)); }
 
-
 /* Responsive Styles */
 @media (max-width: 900px) {
-  .App-header {
-    padding: 8px 10px; /* Adjusted mobile header padding */
-    /* justify-content: space-between; (already set) */
-    min-height: 0;
-  }
-  .App-header h1 {
-     font-size: 1.0em;
-     /* Centering handled by flex */
-  }
-   /* Adjust spacers/button for mobile */
+  .App-header { padding: 8px 10px; min-height: 0; }
+  .App-header h1 { font-size: 1.0em; }
   .settings-button { font-size: 20px; padding: 4px; }
-  .header-spacer-right { width: 28px; /* Match smaller button */ }
-
-  /* REMOVED: Old clear chat button responsive styles */
-
+  .header-spacer-right { width: 28px; }
   .chatbot-messages { padding: 15px 10px; gap: 15px; font-size: 0.95rem; }
   .chatbot-input-area { padding: 10px 10px; gap: 5px; }
   .message { max-width: 85%; border-radius: 14px; }
@@ -260,15 +165,5 @@ button, input, select { font-family: inherit; color: inherit; background-color: 
   .upload-button { font-size: 1.2em;}
   .suggestions-container { max-width: 100%; gap: 6px; }
   .suggestion-button { padding: 5px 10px; font-size: 0.85em; }
-
-  /* Adjust settings menu position/size on smaller screens */
-  .settings-menu {
-      min-width: 240px;
-      padding: 15px;
-      top: 50px; /* Adjust based on mobile header height */
-      left: 10px;
-      right: 10px; /* Allow it to not exceed screen width */
-      width: auto; /* Allow width to adjust */
-   }
-
+  .settings-menu { min-width: 240px; padding: 15px; top: 50px; left: 10px; right: 10px; width: auto; }
 }
