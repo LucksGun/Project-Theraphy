@@ -102,7 +102,7 @@ function App() {
   // Effect to set initial or saved model based on key access (Runs once or when key changes)
   useEffect(() => {
       const savedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null;
-      let initialModel: GeminiModel = 'gemini-2.0-flash'; // Default
+      let initialModel: GeminiModel = 'gemini-1.5-flash'; // Default
 
       const currentAccess = enteredKey === REQUIRED_ACCESS_KEY; // Check current key state
 
