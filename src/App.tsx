@@ -11,7 +11,7 @@ export interface Message {
   timestamp: number;
 }
 
-// Define allowed model types
+// Define allowed model types (All possible models)
 export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.0-flash-lite' | 'gemini-2.5-pro-exp' | 'gemini-1.5-pro' | 'gemini-1.5-flash';
 
 // Define Speech Language type
@@ -24,12 +24,39 @@ const MODEL_STORAGE_KEY = 'selectedApiModel';
 const STT_LANG_STORAGE_KEY = 'selectedSttLang';
 
 
+// --- Configuration for Model Display ---
+interface ModelInfo {
+  value: GeminiModel;
+  label: string;
+  restricted: boolean;
+}
+
+// Define all models available in the UI and if they are restricted
+const ALL_AVAILABLE_MODELS: ModelInfo[] = [
+  { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', restricted: false },
+  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', restricted: false },
+  { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', restricted: false },
+  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', restricted: true }, // Restricted
+  { value: 'gemini-2.5-pro-exp', label: 'Gemini 2.5 Pro Exp', restricted: true } // Restricted
+];
+
+// Create a list of just the restricted model values for easier checking
+const RESTRICTED_MODELS_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS
+  .filter(m => m.restricted)
+  .map(m => m.value);
+
+// !! IMPORTANT: Storing/using secrets directly in frontend code is insecure !!
+// This logic is for demonstrating frontend filtering based on a hypothetical key.
+// Replace with your actual access control method if needed.
+const USER_PROVIDED_ACCESS_KEY = "super_secret_password_123"; // Example - How does the frontend get this?
+const REQUIRED_ACCESS_KEY = "super_secret_password_123"; // This ideally matches the worker env.ACCESS_KEY value
+
+
 function App() {
   // --- State Variables ---
 
-  // Messages State & Persistence (Full Logic)
+  // Messages State & Persistence (Use CHAT_STORAGE_KEY)
   const [messages, setMessages] = useState<Message[]>(() => {
-    // Use CHAT_STORAGE_KEY here
     const savedMessages = localStorage.getItem(CHAT_STORAGE_KEY);
     let initialMessages: Message[] = [];
     try {
@@ -42,7 +69,6 @@ function App() {
     }
     if (initialMessages.length === 0) {
       const welcomeTime = Date.now();
-      // Ensure welcome message matches Message interface
       const welcomeMessage: Message = { id: welcomeTime, text: "Welcome! How can I help you plan your future, manage stress, or discuss college options today?", sender: 'bot', timestamp: welcomeTime };
       return [welcomeMessage];
     } else {
@@ -53,19 +79,35 @@ function App() {
   // Beta Notice State
   const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
 
-  // Model Selection State & Persistence (Full Corrected Logic)
+  // Determine if the user has the 'key' to see restricted models
+  const userHasAccessToRestricted = USER_PROVIDED_ACCESS_KEY === REQUIRED_ACCESS_KEY;
+
+  // Model Selection State & Persistence (Use MODEL_STORAGE_KEY and RESTRICTED_MODELS_VALUES)
   const [selectedModel, setSelectedModel] = useState<GeminiModel>(() => {
-    // Use MODEL_STORAGE_KEY here
     const savedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null;
-    if (savedModel && ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-pro-exp', 'gemini-1.5-pro', 'gemini-1.5-flash'].includes(savedModel) ) {
-      return savedModel;
+    // Check if saved model is valid *and* potentially restricted
+    if (savedModel && ALL_AVAILABLE_MODELS.some(m => m.value === savedModel)) {
+        // Is it restricted? Now using the constant.
+        if (RESTRICTED_MODELS_VALUES.includes(savedModel)) {
+             // Only allow loading this saved model if user has access
+             if (userHasAccessToRestricted) {
+                 return savedModel;
+             } else {
+                 // User doesn't have access to the saved restricted model, fallback
+                 console.warn(`Saved model ${savedModel} is restricted, falling back to default.`);
+                 return 'gemini-2.0-flash'; // Default non-restricted
+             }
+        } else {
+            // Not restricted, allow it
+            return savedModel;
+        }
     }
-    return 'gemini-2.0-flash'; // Default model
+    // If no valid/allowed saved model found, return default
+    return 'gemini-2.0-flash';
   });
 
-  // STT Language Selection State & Persistence (Full Corrected Logic)
+  // STT Language Selection State & Persistence (Use STT_LANG_STORAGE_KEY)
   const [sttLang, setSttLang] = useState<SpeechLanguage>(() => {
-    // Use STT_LANG_STORAGE_KEY here
     const savedLang = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null;
     if (savedLang && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(savedLang) ) {
         return savedLang;
@@ -93,7 +135,7 @@ function App() {
     if (accepted !== 'true') {
       setShowBetaNotice(true); // Use setShowBetaNotice
     }
-  }, []); // Removed setShowBetaNotice from dependency array as it's stable
+  }, []); // Dependency array should be empty if effect only runs on mount
 
   // Model Persistence Effect (Use MODEL_STORAGE_KEY)
   useEffect(() => {
@@ -105,7 +147,7 @@ function App() {
     localStorage.setItem(STT_LANG_STORAGE_KEY, sttLang);
   }, [sttLang]);
 
-  // --- Event Handlers (Full Definitions) ---
+  // --- Event Handlers (Full Definitions & Usage) ---
 
   // Use BETA_ACCEPTED_KEY and setShowBetaNotice
   const handleAcceptBeta = () => {
@@ -113,9 +155,14 @@ function App() {
     setShowBetaNotice(false); // Use setShowBetaNotice
   };
 
+  // Use setSelectedModel
   const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => {
       const newModel = event.target.value as GeminiModel;
-      setSelectedModel(newModel);
+      if (ALL_AVAILABLE_MODELS.some(m => m.value === newModel)) {
+          setSelectedModel(newModel); // Use setSelectedModel
+      } else {
+          console.error(`Attempted to select invalid model: ${newModel}`);
+      }
   };
 
   // Use setSttLang
@@ -123,8 +170,9 @@ function App() {
     setSttLang(event.target.value as SpeechLanguage); // Use setSttLang
   };
 
+  // Use setIsSettingsOpen
   const toggleSettings = () => {
-    setIsSettingsOpen(prev => !prev);
+    setIsSettingsOpen(prev => !prev); // Use setIsSettingsOpen
   };
 
   // Use setMessages and CHAT_STORAGE_KEY
@@ -134,40 +182,24 @@ function App() {
       const welcomeMessage: Message = { id: welcomeTime, text: "Welcome! How can I help you plan your future, manage stress, or discuss college options today?", sender: 'bot', timestamp: welcomeTime };
       setMessages([welcomeMessage]); // Use setMessages
       localStorage.removeItem(CHAT_STORAGE_KEY); // Use CHAT_STORAGE_KEY
-      setIsSettingsOpen(false);
+      setIsSettingsOpen(false); // Close settings menu
     }
   };
-
-  // --- Configuration for Model Display (Copied from previous example) ---
-    interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
-    const ALL_AVAILABLE_MODELS: ModelInfo[] = [
-        { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', restricted: false },
-        { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', restricted: false },
-        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', restricted: false },
-        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', restricted: true }, // Restricted
-        { value: 'gemini-2.5-pro-exp', label: 'Gemini 2.5 Pro Exp', restricted: true } // Restricted
-    ];
-    const RESTRICTED_MODELS_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS.filter(m => m.restricted).map(m => m.value);
-    const USER_PROVIDED_ACCESS_KEY = "super_secret_password_123"; // Example - Insecure
-    const REQUIRED_ACCESS_KEY = "super_secret_password_123";
-    const userHasAccessToRestricted = USER_PROVIDED_ACCESS_KEY === REQUIRED_ACCESS_KEY;
-
 
   // --- JSX Return ---
   return (
     <div className="App">
-      {/* Settings Button */}
-      {/* (Rendered in header) */}
+      {/* --- Settings Button (Inside Header) --- */}
+      {/* (Rendered in header below) */}
 
-      {/* --- Settings Menu --- */}
+      {/* --- Settings Menu (Conditional, Handlers Connected) --- */}
       {isSettingsOpen && (
         <div className="settings-menu" role="dialog" aria-modal="true" aria-labelledby="settings-title">
           <h3 id="settings-title">Settings</h3>
 
-          {/* STT Language Selector (Use handleSttLangChange) */}
+          {/* STT Language Selector (Connected) */}
           <div className="settings-option">
             <label htmlFor="stt-lang-select">Speak Language:</label>
-            {/* Connect value and onChange */}
             <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select">
                 <option value="en-US">English (US)</option>
                 <option value="th-TH">ไทย (Thai)</option>
@@ -176,10 +208,9 @@ function App() {
             </select>
           </div>
 
-          {/* Model Selector */}
+          {/* Model Selector (Connected & Filtered) */}
           <div className="settings-option">
              <label htmlFor="model-select">AI Model:</label>
-             {/* Connect value and onChange */}
              <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select">
                  {ALL_AVAILABLE_MODELS.map((modelInfo) => {
                      if (!modelInfo.restricted || userHasAccessToRestricted) {
@@ -187,10 +218,14 @@ function App() {
                      } return null;
                  })}
              </select>
-              {/* ... Optional restricted message ... */}
+             {!userHasAccessToRestricted && RESTRICTED_MODELS_VALUES.length > 0 && (
+                <p style={{fontSize: '0.8em', color: 'var(--text-secondary)', marginTop: '5px'}}>
+                    Some models require special access.
+                </p>
+             )}
           </div>
 
-          {/* Clear Chat History Button (Use handleClearChat) */}
+          {/* Clear Chat History Button (Connected) */}
           <div className="settings-option">
              <button onClick={handleClearChat} className="clear-chat-settings-button">
                🗑️ Clear Chat History
@@ -200,25 +235,23 @@ function App() {
           {/* Separator Line */}
           <hr className="settings-separator" />
 
-          {/* Close Button */}
+          {/* Close Button (Connected) */}
           <button onClick={toggleSettings} className="close-settings-button">Close</button>
         </div>
       )}
 
-      {/* --- Beta Notice Modal (Use handleAcceptBeta) --- */}
-      {/* Ensure this full block is present */}
+      {/* --- Beta Notice Modal (Correct JSX & Connected) --- */}
       {showBetaNotice && (
         <div className="beta-notice-overlay">
            <div className="beta-notice-modal">
              <h2>⚠️ Beta Version</h2>
              <p>Welcome! This chatbot is currently in beta. Features may change, and occasional errors might occur. Your feedback is valuable!</p>
-             {/* Connect onClick */}
              <button onClick={handleAcceptBeta} className="beta-accept-button">✔️ Accept & Continue</button>
            </div>
         </div>
       )}
 
-      {/* --- Header --- */}
+      {/* --- Header (Structure Correct) --- */}
       <header className="App-header">
         {/* Settings Button */}
         <button onClick={toggleSettings} className="settings-button" title="Settings" aria-label="Open settings menu" aria-expanded={isSettingsOpen}>⚙️</button>
@@ -228,13 +261,14 @@ function App() {
         <div className="header-spacer-right"></div>
       </header>
 
-      {/* --- Chatbot Page --- */}
-      {/* Ensure props are passed correctly */}
+      {/* --- Chatbot Page (Props Passed) --- */}
       <ChatbotPage
         messages={messages}
         setMessages={setMessages}
         selectedModel={selectedModel}
         sttLang={sttLang}
+        // Pass access key down if needed by ChatbotPage's fetch call
+        // accessKey={USER_PROVIDED_ACCESS_KEY}
        />
     </div>
   );
