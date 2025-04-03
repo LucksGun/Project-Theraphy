@@ -19,7 +19,7 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
-// Call the Cloudflare Worker
+// Call the Cloudflare Worker (Sends model choice)
 async function getBotResponse(
     userInput: string,
     imageData: { type: string; dataUrl: string } | null,
@@ -116,7 +116,7 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
 
   // --- Core Send Logic ---
   const sendMessage = useCallback(async (messageText: string, imageFile: File | null) => {
-    if ((messageText.trim() === '' && !imageFile) || isLoading) return;
+    if ((messageText.trim() === '' && !imageFile) || isLoading) return; // Prevent empty/loading sends
     const currentTime = Date.now();
     const userMessageText = messageText.trim();
     const imageToSend = imageFile;
@@ -124,7 +124,7 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
 
     // Add user message to state immediately
     const newUserMessage: Message = { id: currentTime, text: userMessageText + (imageToSend ? ' (+image)' : ''), sender: 'user', timestamp: currentTime };
-    setMessages((prevMessages) => [...prevMessages, newUserMessage]);
+    setMessages((prevMessages) => [...prevMessages, newUserMessage]); // Use prop
 
     // Clear inputs associated with this send action
     if (imageToSend && imageToSend === selectedImage) {
@@ -147,7 +147,7 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
         } catch (error) {
             console.error("Error reading file:", error);
             const errorTime = Date.now() + 2;
-            setMessages((prevMessages) => [ ...prevMessages.filter(msg => msg.sender !== 'loading'), { id: errorTime, text: "Error reading image file.", sender: 'bot', timestamp: errorTime } ]);
+            setMessages((prevMessages) => [ ...prevMessages.filter(msg => msg.sender !== 'loading'), { id: errorTime, text: "Error reading image file.", sender: 'bot', timestamp: errorTime } ]); // Use prop
             setIsLoading(false); return;
         }
     }
@@ -155,18 +155,19 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
     // Get bot response
     let botResponseText = '';
     try {
+      // Pass selectedModel from props to the API call
       botResponseText = await getBotResponse(userMessageText, imageDataForApi, selectedModel);
     } catch (error) {
         console.error("Failed to get bot response:", error);
         if (error instanceof Error) { botResponseText = `Error: ${error.message}`; } else { botResponseText = "An unknown error occurred."; }
     } finally {
-       const botTime = Date.now() + 2; // Ensure unique ID from potential error message
+       const botTime = Date.now() + 2;
        const newBotMessage: Message = { id: botTime, text: botResponseText, sender: 'bot', timestamp: botTime };
        // Replace loading message with final bot message
-       setMessages((prevMessages) => [ ...prevMessages.filter(msg => msg.sender !== 'loading'), newBotMessage ]);
+       setMessages((prevMessages) => [ ...prevMessages.filter(msg => msg.sender !== 'loading'), newBotMessage ]); // Use prop
        setIsLoading(false);
     }
-  }, [isLoading, input, selectedImage, setMessages, selectedModel]); // Added selectedModel
+  }, [isLoading, input, selectedImage, setMessages, selectedModel]); // Dependencies updated
 
 
   // --- Event Handlers ---
@@ -178,7 +179,7 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
   const handleSuggestionClick = useCallback((suggestionText: string) => {
     // Trigger send using suggestion text (no image)
     sendMessage(suggestionText, null);
-  }, [sendMessage]); // Depends on sendMessage
+  }, [sendMessage]);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInput(event.target.value);
@@ -191,17 +192,17 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
     }
   };
 
-   // Includes _event fix for unused parameter rule
+   // Includes _event fix
   const handleImageChange = (_event: React.ChangeEvent<HTMLInputElement>) => {
      const file = _event.target.files?.[0];
      if (file && file.type.startsWith('image/')) {
        setSelectedImage(file);
-       if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); } // Clean up previous
+       if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); }
        setImagePreviewUrl(URL.createObjectURL(file));
      } else {
         setSelectedImage(null); setImagePreviewUrl(null);
-        if(file) alert("Please select a valid image file."); // Alert if a file was selected but wasn't an image
-        if (fileInputRef.current) fileInputRef.current.value = ""; // Clear the file input
+        if(file) alert("Please select a valid image file.");
+        if (fileInputRef.current) fileInputRef.current.value = "";
      }
    };
 
@@ -211,14 +212,14 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
 
    const removeSelectedImage = () => {
       setSelectedImage(null); setImagePreviewUrl(null);
-      if (fileInputRef.current) fileInputRef.current.value = ""; // Clear the file input
+      if (fileInputRef.current) fileInputRef.current.value = "";
    }
 
   // --- JSX Rendering ---
   return (
      <div className="chatbot-container">
        <div className="chatbot-messages">
-         {messages.map((message: Message) => { // Added explicit Message type here
+         {messages.map((message: Message) => { // Explicit type for message
              let mainText = message.text;
              let suggestions: string[] = [];
              if (message.sender === 'bot') {
@@ -266,7 +267,6 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
        {/* Image Preview Area */}
        {imagePreviewUrl && (
            <div className="image-preview-area">
-               {/* Fixed src attribute */}
                <img src={imagePreviewUrl || ""} alt="Selected preview" style={{maxHeight: '50px', maxWidth: '50px', objectFit: 'cover', marginRight: '10px'}} />
                <button onClick={removeSelectedImage} title="Remove image" className="remove-image-button">X</button>
            </div>
