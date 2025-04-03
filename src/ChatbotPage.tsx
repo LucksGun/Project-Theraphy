@@ -4,7 +4,7 @@ import { Message, GeminiModel } from './App'; // Import types from App.tsx
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-// Define the Worker URL (Make sure this is correct)
+// Define the Worker URL (Make sure this is your correct Worker URL)
 const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
 
 // --- Helper Functions defined ONCE outside the component ---
@@ -35,7 +35,7 @@ async function getBotResponse(
 
   if (imageData) {
       requestBody.imageMimeType = imageData.type;
-      requestBody.imageDataUrl = imageData.dataUrl;
+      requestBody.imageDataUrl = imageData.dataUrl; // Send the full Data URL
   }
 
   console.log(`Sending to Worker (Using Model: ${model}):`, { prompt: requestBody.prompt, imageMimeType: requestBody.imageMimeType });
@@ -46,8 +46,8 @@ async function getBotResponse(
       body: JSON.stringify(requestBody),
     });
      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: `HTTP error! status: ${response.status}` }));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ error: `HTTP error! status: ${response.status} ${response.statusText}` }));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status} ${response.statusText}`);
      }
     const data = await response.json();
     if (data.error) { throw new Error(data.error); }
@@ -64,8 +64,11 @@ async function getBotResponse(
 function parseSuggestions(text: string): { mainText: string; suggestions: string[] } {
   const suggestions: string[] = [];
   const regex = /\[Suggestion:\s*([^\]]+?)\]/g;
-  const mainText = text.replace(regex, (_match, suggestionText) => {
-    suggestions.push(suggestionText.trim());
+  const mainText = text.replace(regex, (_match, suggestionText) => { // Use _match
+    // Ensure suggestionText is treated as string before trim()
+    if (typeof suggestionText === 'string') {
+       suggestions.push(suggestionText.trim());
+    }
     return '';
   }).trim();
   return { mainText, suggestions };
@@ -73,11 +76,12 @@ function parseSuggestions(text: string): { mainText: string; suggestions: string
 
 // Format Timestamp
 function formatTime(timestamp: number): string {
+    if (!timestamp) return ''; // Handle cases where timestamp might be missing
     const date = new Date(timestamp);
-    return date.toLocaleTimeString(navigator.language || 'en-US', { // Add fallback locale
+    return date.toLocaleTimeString(navigator.language || 'en-US', { // Fallback locale
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false
+        hour12: false // Use 24-hour format
     });
 }
 
@@ -88,12 +92,16 @@ interface ChatbotPageProps {
   selectedModel: GeminiModel;
 }
 
+const SEND_COOLDOWN_MS = 3000; // Cooldown period in milliseconds (3 seconds)
+
 function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps) {
   // --- State ---
   const [input, setInput] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [isOnCooldown, setIsOnCooldown] = useState<boolean>(false);
+  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- Refs ---
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -101,42 +109,62 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
 
   // --- Effects ---
   const scrollToBottom = useCallback(() => {
+    // Optional: Add check if ref exists
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   useEffect(() => {
     // Scroll after messages update
-    setTimeout(scrollToBottom, 100);
+    setTimeout(scrollToBottom, 100); // Timeout helps ensure DOM is updated
   }, [messages, scrollToBottom]);
 
   useEffect(() => {
-    // Clean up object URLs
+    // Clean up object URLs for image preview
     return () => { if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); } };
   }, [imagePreviewUrl]);
 
+  // Cleanup cooldown timer on unmount
+  useEffect(() => {
+      return () => { if (cooldownTimerRef.current) { clearTimeout(cooldownTimerRef.current); } };
+  }, []);
+
+
   // --- Core Send Logic ---
   const sendMessage = useCallback(async (messageText: string, imageFile: File | null) => {
-    if ((messageText.trim() === '' && !imageFile) || isLoading) return; // Prevent empty/loading sends
+    // Prevent sending if loading, on cooldown, or no content
+    if ((messageText.trim() === '' && !imageFile) || isLoading || isOnCooldown) return;
+
     const currentTime = Date.now();
     const userMessageText = messageText.trim();
     const imageToSend = imageFile;
     let imageDataForApi: { type: string; dataUrl: string } | null = null;
 
     // Add user message to state immediately
-    const newUserMessage: Message = { id: currentTime, text: userMessageText + (imageToSend ? ' (+image)' : ''), sender: 'user', timestamp: currentTime };
+    const newUserMessage: Message = {
+        id: currentTime,
+        text: userMessageText + (imageToSend ? ' (+image)' : ''),
+        sender: 'user',
+        timestamp: currentTime
+    };
     setMessages((prevMessages) => [...prevMessages, newUserMessage]); // Use prop
 
     // Clear inputs associated with this send action
     if (imageToSend && imageToSend === selectedImage) {
         setSelectedImage(null); setImagePreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = "";
     }
-    if (messageText === input) { // Only clear text input if it was the source
+     // Only clear text input if the text being sent *is* the current input value
+    if(messageText === input) {
         setInput('');
     }
 
-    // Set loading state and add placeholder message
+    // Set loading and cooldown states
     setIsLoading(true);
-    const loadingTime = Date.now() + 1;
+    setIsOnCooldown(true);
+    if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current); // Clear previous timer
+    cooldownTimerRef.current = setTimeout(() => { setIsOnCooldown(false); }, SEND_COOLDOWN_MS);
+
+    // Add placeholder loading message
+    const loadingTime = Date.now() + 1; // Ensure unique ID
     setMessages((prevMessages) => [...prevMessages, { id: loadingTime, text: 'Bot is typing...', sender: 'loading', timestamp: loadingTime }]);
 
     // Process image if exists
@@ -147,27 +175,31 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
         } catch (error) {
             console.error("Error reading file:", error);
             const errorTime = Date.now() + 2;
+            // Replace loading msg with error msg
             setMessages((prevMessages) => [ ...prevMessages.filter(msg => msg.sender !== 'loading'), { id: errorTime, text: "Error reading image file.", sender: 'bot', timestamp: errorTime } ]); // Use prop
-            setIsLoading(false); return;
+            setIsLoading(false);
+             // Reset cooldown state immediately on local error too
+             setIsOnCooldown(false);
+             if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+            return; // Stop processing
         }
     }
 
     // Get bot response
     let botResponseText = '';
     try {
-      // Pass selectedModel from props to the API call
       botResponseText = await getBotResponse(userMessageText, imageDataForApi, selectedModel);
     } catch (error) {
         console.error("Failed to get bot response:", error);
         if (error instanceof Error) { botResponseText = `Error: ${error.message}`; } else { botResponseText = "An unknown error occurred."; }
     } finally {
-       const botTime = Date.now() + 2;
+       const botTime = Date.now() + 2; // Ensure unique ID from potential error message or successful response
        const newBotMessage: Message = { id: botTime, text: botResponseText, sender: 'bot', timestamp: botTime };
-       // Replace loading message with final bot message
+       // Replace loading message with final bot message/error
        setMessages((prevMessages) => [ ...prevMessages.filter(msg => msg.sender !== 'loading'), newBotMessage ]); // Use prop
-       setIsLoading(false);
+       setIsLoading(false); // Clear loading state (cooldown timer runs independently)
     }
-  }, [isLoading, input, selectedImage, setMessages, selectedModel]); // Dependencies updated
+  }, [isLoading, isOnCooldown, input, selectedImage, setMessages, selectedModel]); // Dependencies
 
 
   // --- Event Handlers ---
@@ -179,7 +211,7 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
   const handleSuggestionClick = useCallback((suggestionText: string) => {
     // Trigger send using suggestion text (no image)
     sendMessage(suggestionText, null);
-  }, [sendMessage]);
+  }, [sendMessage]); // Depends on sendMessage
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInput(event.target.value);
@@ -192,17 +224,17 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
     }
   };
 
-   // Includes _event fix
+   // Includes _event fix for unused parameter rule
   const handleImageChange = (_event: React.ChangeEvent<HTMLInputElement>) => {
      const file = _event.target.files?.[0];
      if (file && file.type.startsWith('image/')) {
        setSelectedImage(file);
-       if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); }
+       if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); } // Clean up previous
        setImagePreviewUrl(URL.createObjectURL(file));
      } else {
         setSelectedImage(null); setImagePreviewUrl(null);
-        if(file) alert("Please select a valid image file.");
-        if (fileInputRef.current) fileInputRef.current.value = "";
+        if(file) alert("Please select a valid image file."); // Alert if a file was selected but wasn't an image
+        if (fileInputRef.current) fileInputRef.current.value = ""; // Clear the file input
      }
    };
 
@@ -212,27 +244,24 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
 
    const removeSelectedImage = () => {
       setSelectedImage(null); setImagePreviewUrl(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = ""; // Clear the file input
    }
 
   // --- JSX Rendering ---
   return (
      <div className="chatbot-container">
        <div className="chatbot-messages">
-         {messages.map((message: Message) => { // Explicit type for message
+         {messages.map((message: Message) => { // Explicit type
              let mainText = message.text;
              let suggestions: string[] = [];
-             if (message.sender === 'bot') {
-                 const parsed = parseSuggestions(message.text);
-                 mainText = parsed.mainText;
-                 suggestions = parsed.suggestions;
-             }
+             if (message.sender === 'bot') { const parsed = parseSuggestions(message.text); mainText = parsed.mainText; suggestions = parsed.suggestions; }
              return (
                <div key={message.id} className={`message-wrapper message-wrapper-${message.sender}`}>
                   <div className={`message ${message.sender}`}>
                      {message.sender === 'bot' ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                           {mainText || (suggestions.length > 0 ? '' : ' ')}
+                           {/* Ensure children is always a string, even if empty */}
+                           {mainText || ''}
                         </ReactMarkdown>
                      ) : message.sender === 'loading' ? (
                         <i>{mainText}</i>
@@ -252,7 +281,8 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
                               key={index}
                               className="suggestion-button"
                               onClick={() => handleSuggestionClick(suggestion)}
-                              disabled={isLoading} >
+                              // Disable suggestions during cooldown too
+                              disabled={isLoading || isOnCooldown} >
                                 {suggestion}
                            </button>
                         ))}
@@ -267,6 +297,7 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
        {/* Image Preview Area */}
        {imagePreviewUrl && (
            <div className="image-preview-area">
+               {/* Fixed src attribute */}
                <img src={imagePreviewUrl || ""} alt="Selected preview" style={{maxHeight: '50px', maxWidth: '50px', objectFit: 'cover', marginRight: '10px'}} />
                <button onClick={removeSelectedImage} title="Remove image" className="remove-image-button">X</button>
            </div>
@@ -275,10 +306,10 @@ function ChatbotPage({ messages, setMessages, selectedModel }: ChatbotPageProps)
        {/* Input Area */}
        <div className="chatbot-input-area">
           <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/png, image/jpeg, image/gif, image/webp" style={{ display: 'none' }} />
-          <button onClick={handleImageUploadClick} className="upload-button" title="Upload Image" disabled={isLoading}>📎</button>
-          <input type="text" value={input} onChange={handleInputChange} onKeyPress={handleKeyPress} placeholder="Type your message or upload an image..." disabled={isLoading}/>
+          <button onClick={handleImageUploadClick} className="upload-button" title="Upload Image" disabled={isLoading || isOnCooldown}>📎</button>
+          <input type="text" value={input} onChange={handleInputChange} onKeyPress={handleKeyPress} placeholder="Type your message or upload an image..." disabled={isLoading || isOnCooldown}/>
           {/* Fixed Send button icon using char code */}
-          <button onClick={handleSend} disabled={isLoading || (!input.trim() && !selectedImage)} title="Send">
+          <button onClick={handleSend} disabled={isLoading || isOnCooldown || (!input.trim() && !selectedImage)} title="Send">
              {String.fromCharCode(10148)}
           </button>
        </div>

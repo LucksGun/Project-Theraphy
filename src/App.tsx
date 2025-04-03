@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import './App.css';
 import ChatbotPage from './ChatbotPage';
 
