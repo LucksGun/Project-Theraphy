@@ -181,6 +181,55 @@ button, input { font-family: inherit; color: inherit; background-color: transpar
 .beta-accept-button:hover {
   background-color: var(--beta-button-hover-bg, var(--button-primary-hover-bg));
 }
+.model-selector-container {
+  position: absolute; /* Position relative to header */
+  left: 20px; /* Position on the left */
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.model-selector-container label {
+  font-size: 0.8em;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.model-select {
+  font-size: 0.8em;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--input-border-color);
+  background-color: var(--container-bg); /* Match input bg */
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+/* Adjust for mobile */
+@media (max-width: 900px) {
+    .model-selector-container {
+        left: 10px; /* Closer to edge */
+    }
+    .model-selector-container label {
+        font-size: 0.75em;
+    }
+    .model-select {
+        font-size: 0.75em;
+        padding: 3px 5px;
+    }
+    .clear-chat-button { /* Adjust clear button slightly */
+        right: 10px;
+    }
+     /* Make header slightly taller to fit controls if needed */
+     /* .App-header { min-height: 55px; } */
+}
+
+/* Ensure header doesn't hide selector */
+.App-header h1 {
+    /* Add margin to prevent overlap if title is long */
+    margin: 0 60px; /* Example margin */
+}
+
 /* --- End Beta Notice Modal Styles --- */
 
 
