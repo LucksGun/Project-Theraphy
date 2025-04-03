@@ -1,6 +1,6 @@
 // src/App.tsx
 import { useState, useEffect, ChangeEvent } from 'react';
-import './App.css'; // Make sure to update this CSS file with styles for settings menu/button
+import './App.css'; // Ensure this CSS file is linked
 import ChatbotPage from './ChatbotPage'; // Assuming ChatbotPage component exists
 
 // Define Message interface
@@ -116,36 +116,43 @@ function App() {
     setSttLang(event.target.value as SpeechLanguage);
   };
 
+  const toggleSettings = () => {
+    setIsSettingsOpen(prev => !prev); // Toggle the settings menu visibility
+  };
+
   const handleClearChat = () => {
+    // Confirmation dialog
     if (window.confirm("Are you sure you want to clear the entire chat history? This cannot be undone.")) {
       const welcomeTime = Date.now();
       const welcomeMessage: Message = { id: welcomeTime, text: "Welcome! How can I help you plan your future, manage stress, or discuss college options today?", sender: 'bot', timestamp: welcomeTime };
-      // Reset state to only welcome message
       setMessages([welcomeMessage]);
-      // Also explicitly clear storage immediately (useEffect might lag)
       localStorage.removeItem(CHAT_STORAGE_KEY);
+      // Close settings menu after clearing
+      setIsSettingsOpen(false);
     }
-  };
-
-  const toggleSettings = () => {
-    setIsSettingsOpen(prev => !prev); // Toggle the settings menu visibility
   };
 
   // --- JSX Return ---
   return (
     <div className="App">
-      {/* --- Settings Button --- */}
-      <button onClick={toggleSettings} className="settings-button" title="Settings" aria-label="Open settings menu" aria-expanded={isSettingsOpen}>
-        ⚙️ {/* Gear icon */}
+      {/* --- Settings Button (Styled via CSS for theme) --- */}
+      <button
+        onClick={toggleSettings}
+        className="settings-button" // Apply styles via CSS
+        title="Settings"
+        aria-label="Open settings menu"
+        aria-expanded={isSettingsOpen}
+      >
+        ⚙️ {/* Gear icon - or consider an SVG for better control */}
       </button>
 
       {/* --- Settings Menu (Conditionally Rendered) --- */}
       {isSettingsOpen && (
-        // Consider adding role="dialog" and aria-modal="true" for better accessibility
         <div className="settings-menu" role="dialog" aria-modal="true" aria-labelledby="settings-title">
           <h3 id="settings-title">Settings</h3>
+
           {/* STT Language Selector */}
-          <div className="settings-option stt-lang-selector-container">
+          <div className="settings-option">
             <label htmlFor="stt-lang-select">Speak Language:</label>
             <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange}>
                 <option value="en-US">English (US)</option>
@@ -154,8 +161,9 @@ function App() {
                 <option value="fr-FR">Français (France)</option>
             </select>
           </div>
+
           {/* Model Selector */}
-          <div className="settings-option model-selector-container">
+          <div className="settings-option">
             <label htmlFor="model-select">AI Model:</label>
             <select id="model-select" value={selectedModel} onChange={handleModelChange}>
                 <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
@@ -163,6 +171,18 @@ function App() {
                 <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
             </select>
           </div>
+
+          {/* Clear Chat History Button (Moved Here) */}
+          <div className="settings-option">
+             <button onClick={handleClearChat} className="clear-chat-settings-button">
+               🗑️ Clear Chat History
+             </button>
+          </div>
+
+          {/* Separator Line (Optional) */}
+          <hr className="settings-separator" />
+
+          {/* Close Button */}
           <button onClick={toggleSettings} className="close-settings-button">Close</button>
         </div>
       )}
@@ -178,14 +198,10 @@ function App() {
         </div>
       )}
 
-      {/* --- Header --- */}
+      {/* --- Header (Clear button removed) --- */}
       <header className="App-header">
-        {/* Title is centered via CSS potentially */}
         <h1>Project Theraphy Dashboard</h1>
-        {/* Clear Chat Button (Positioned via CSS potentially) */}
-        {(messages.length > 1 || (messages.length === 1 && messages[0].sender === 'user')) && (
-          <button onClick={handleClearChat} className="clear-chat-button" title="Clear Chat History">🗑️</button>
-        )}
+        {/* Clear chat button is now in settings menu */}
       </header>
 
       {/* --- Chatbot Page --- */}
