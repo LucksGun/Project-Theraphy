@@ -12,7 +12,8 @@ export interface Message {
 }
 
 // Define allowed model types
-export type GeminiModel = 'gemini-2.0-flash' | 'gemini-1.5-pro' | 'gemini-1.5-flash';
+export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.5-pro' | 'gemini-1.5-pro' | 'gemini-1.5-flash';
+
 // Define Speech Language type
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR'; // Add more as needed
 
@@ -22,7 +23,6 @@ const BETA_ACCEPTED_KEY = 'betaAccepted';
 const MODEL_STORAGE_KEY = 'selectedApiModel';
 const STT_LANG_STORAGE_KEY = 'selectedSttLang';
 
-// REMOVED: const currentDate = new Date().toLocaleDateString('en-CA');
 
 function App() {
   // --- State Variables ---
@@ -51,10 +51,11 @@ function App() {
   // Beta Notice State
   const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
 
-  // Model Selection State & Persistence (Full Corrected Logic)
+  // Model Selection State & Persistence (Includes 2.5 Pro check)
   const [selectedModel, setSelectedModel] = useState<GeminiModel>(() => {
     const savedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-    if (savedModel === 'gemini-1.5-pro' || savedModel === 'gemini-2.0-flash' || savedModel === 'gemini-1.5-flash') {
+    // Check for all valid models including the new one
+    if (savedModel === 'gemini-2.0-flash' || savedModel === 'gemini-2.5-pro' || savedModel === 'gemini-1.5-pro' || savedModel === 'gemini-1.5-flash') {
         return savedModel; // Return the valid saved model
     }
     return 'gemini-2.0-flash'; // Default model
@@ -111,6 +112,7 @@ function App() {
   };
 
   const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => {
+      // The type cast here correctly uses the updated GeminiModel type
       const newModel = event.target.value as GeminiModel;
       setSelectedModel(newModel);
   };
@@ -138,8 +140,7 @@ function App() {
   // --- JSX Return ---
   return (
     <div className="App">
-      {/* --- Settings Button Now Inside Header --- */}
-      {/* (Button is rendered inside the header below) */}
+      {/* Settings button is rendered inside the header below */}
 
       {/* --- Settings Menu (Conditionally Rendered, still uses fixed position) --- */}
       {isSettingsOpen && (
@@ -162,6 +163,8 @@ function App() {
             <label htmlFor="model-select">AI Model:</label>
             <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select">
                 <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                {/* Added Gemini 2.5 Pro Option */}
+                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                 <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                 <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
             </select>
@@ -214,6 +217,7 @@ function App() {
       </header>
 
       {/* --- Chatbot Page --- */}
+      {/* Ensure ChatbotPage component can handle these props */}
       <ChatbotPage
         messages={messages}
         setMessages={setMessages}
