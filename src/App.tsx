@@ -12,7 +12,7 @@ export interface Message {
 }
 
 // Define allowed model types (All possible models)
-export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.0-flash-lite' | 'gemini-2.5-pro-exp' | 'gemini-2.0-flash-thinking-exp';
+export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.0-flash-lite' | 'gemini-2.5-pro-exp' | 'gemini-2.0-flash-thinking-exp' | 'gemini-2.0-flash-exp-image-generation';
 
 // Define Speech Language type
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR'; // Add more as needed
@@ -31,6 +31,7 @@ const ALL_AVAILABLE_MODELS: ModelInfo[] = [
   { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', restricted: false },
   { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', restricted: false },
   { value: 'gemini-2.0-flash-thinking-exp', label: 'Gemini 2.0 Flash Thinking Experimental', restricted: true }, // Restricted
+  { value: 'gemini-2.0-flash-exp-image-generation', label: 'Gemini 2.0 Flash Image Generation Experimental', restricted: true }, // Restricted
   { value: 'gemini-2.5-pro-exp', label: 'Gemini 2.5 Pro Experimental', restricted: true } // Restricted
 ];
 
