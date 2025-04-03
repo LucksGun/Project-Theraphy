@@ -12,7 +12,7 @@ export interface Message {
 }
 
 // Define allowed model types (All possible models)
-export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.0-flash-lite' | 'gemini-2.5-pro-exp' | 'gemini-1.5-pro' | 'gemini-1.5-flash' | 'gemini-2.0-flash-thinking-exp';
+export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.0-flash-lite' | 'gemini-2.5-pro-exp' | 'gemini-2.0-flash-thinking-exp';
 
 // Define Speech Language type
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR'; // Add more as needed
@@ -30,10 +30,8 @@ interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
 const ALL_AVAILABLE_MODELS: ModelInfo[] = [
   { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', restricted: false },
   { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', restricted: false },
-  { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', restricted: false },
-  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', restricted: true }, // Restricted
-  { value: 'gemini-2.5-pro-exp', label: 'Gemini 2.5 Pro Exp', restricted: true }, // Restricted
-  { value: 'gemini-2.0-flash-thinking-exp', label: 'Gemini 2.0 Flash Thinking Exp', restricted: true } // Restricted
+  { value: 'gemini-2.0-flash-thinking-exp', label: 'Gemini 2.0 Flash Thinking Experimental', restricted: true }, // Restricted
+  { value: 'gemini-2.5-pro-exp', label: 'Gemini 2.5 Pro Experimental', restricted: true } // Restricted
 ];
 
 // Create a list of just the restricted model values for easier checking
@@ -83,7 +81,7 @@ function App() {
 
   // Model Selection State & Persistence (Use MODEL_STORAGE_KEY and RESTRICTED_MODELS_VALUES)
   // Initialize with a default, the effect below will adjust based on loaded key/saved model
-  const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-1.5-flash');
+  const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash');
 
   // STT Language Selection State & Persistence (Use STT_LANG_STORAGE_KEY)
   const [sttLang, setSttLang] = useState<SpeechLanguage>(() => {
@@ -103,7 +101,7 @@ function App() {
   // Effect to set initial or saved model based on key access (Runs once or when key changes)
   useEffect(() => {
       const savedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null;
-      let initialModel: GeminiModel = 'gemini-1.5-flash'; // Default
+      let initialModel: GeminiModel = 'gemini-2.0-flash'; // Default
 
       const currentAccess = enteredKey === REQUIRED_ACCESS_KEY; // Check current key state
 
@@ -123,7 +121,7 @@ function App() {
       setSelectedModel(currentModel => {
           // If current model is restricted but user lost access, reset to default
           if (RESTRICTED_MODELS_VALUES.includes(currentModel) && !currentAccess) {
-              return 'gemini-1.5-flash';
+              return 'gemini-2.0-flash';
           }
           // Otherwise, set to calculated initial (which might be default or saved)
           // This handles setting the initial load correctly too
