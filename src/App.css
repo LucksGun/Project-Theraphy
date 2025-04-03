@@ -40,62 +40,74 @@
 html, body, #root { height: 100%; margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: var(--page-bg); overflow: hidden; color: var(--text-primary); }
 button, input, select { font-family: inherit; color: inherit; background-color: transparent; }
 
-.App { display: flex; flex-direction: column; align-items: stretch; height: 100vh; max-height: 100vh; box-sizing: border-box; overflow: hidden; background-color: var(--page-bg); position: relative; /* Added for positioning context if needed */ }
+.App { display: flex; flex-direction: column; align-items: stretch; height: 100vh; max-height: 100vh; box-sizing: border-box; overflow: hidden; background-color: var(--page-bg); position: relative; /* Keep for positioning context */ }
 
+/* --- MODIFIED: Header Styles --- */
 .App-header {
-  /* MODIFIED: Adjusted padding for fixed settings button */
-  padding: 10px 15px 10px 60px; /* Left padding increased */
-  background-color: var(--header-bg); border-bottom: 1px solid var(--border-color);
-  text-align: center; flex-shrink: 0; box-shadow: 0 1px 3px var(--shadow-color);
-  display: flex; justify-content: space-between; align-items: center;
-  position: relative; box-sizing: border-box; z-index: 10; min-height: 50px;
+  /* Use standard padding, rely on flex for spacing */
+  padding: 10px 15px;
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px var(--shadow-color);
+  display: flex;
+  justify-content: space-between; /* Space between items */
+  align-items: center;
+  position: relative;
+  box-sizing: border-box;
+  z-index: 10;
+  min-height: 50px; /* Ensure minimum height */
 }
-/* REMOVED/IRRELEVANT: .header-controls might not be needed in header anymore */
-/* .header-controls { display: flex; align-items: center; gap: 10px; } */
-.App-header h1 { margin: 0; font-size: 1.15em; font-weight: 600; color: var(--text-primary); white-space: nowrap; flex-grow: 1; text-align: center; }
-/* REMOVED/IRRELEVANT: Selectors moved to settings menu */
-/* .model-selector-container, .stt-lang-selector-container { ... } */
-/* .header-controls label { ... } */
-/* .header-select { ... } */
 
-/* Spacers for header layout with space-between (can be empty divs) */
-.header-spacer-left, .header-spacer-right {
-   width: 40px; /* Adjust width to balance header */
+.App-header h1 {
+  margin: 0;
+  font-size: 1.15em;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  text-align: center;
+  /* No flex-grow needed */
+  /* margin: 0 10px; /* Optional horizontal margin */
+}
+
+/* --- MODIFIED: Settings Button Styles (Integrated into Header) --- */
+.settings-button {
+  /* No position:fixed needed */
+  background: none;
+  border: none;
+  padding: 5px; /* Padding for click area */
+  font-size: 22px; /* Adjust size */
+  cursor: pointer;
+  color: var(--text-secondary);
+  opacity: 0.9;
+  transition: opacity 0.2s ease;
+  line-height: 1; /* Prevent extra space */
+  flex-shrink: 0; /* Prevent shrinking */
+  /* Ensure vertical alignment if needed */
+  /* align-self: center; */
+}
+.settings-button:hover {
+  opacity: 1;
+}
+
+/* Spacer for header layout (Adjust width to match button visual width) */
+.header-spacer-right {
+   width: 32px; /* Match settings button size + padding */
    flex-shrink: 0;
 }
 
-/* REMOVED: Old Clear Chat Button Styles from Header */
-/* .clear-chat-button { ... old styles ... } */
-/* .clear-chat-button:hover { ... } */
-
-/* --- NEW: Settings Button --- */
-.settings-button {
-  position: fixed;
-  top: 8px; /* Align better with header padding */
-  left: 12px;
-  z-index: 1001;
-  background: none;
-  border: none;
-  padding: 5px;
-  font-size: 24px; /* Adjust icon size if needed */
-  cursor: pointer;
-  color: var(--text-secondary); /* Use theme color */
-  opacity: 0.9;
-  transition: opacity 0.2s ease;
-}
-.settings-button:hover { opacity: 1; }
-
-/* --- NEW: Settings Menu --- */
+/* --- Settings Menu (Still Fixed Position) --- */
 .settings-menu {
   position: fixed;
-  top: 55px; /* Below header */
+  top: 55px; /* Adjust based on final header height */
   left: 15px;
   background-color: var(--settings-menu-bg);
   border: 1px solid var(--settings-menu-border);
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 5px 15px var(--settings-menu-shadow);
-  z-index: 1000;
+  z-index: 1000; /* High z-index for overlay */
   min-width: 280px;
   display: flex;
   flex-direction: column;
@@ -103,7 +115,7 @@ button, input, select { font-family: inherit; color: inherit; background-color: 
 }
 .settings-menu h3 {
   text-align: center;
-  font-size: 1.1em; /* Slightly smaller */
+  font-size: 1.1em;
   font-weight: 600;
   color: var(--text-primary);
   margin-top: 0;
@@ -112,19 +124,18 @@ button, input, select { font-family: inherit; color: inherit; background-color: 
 .settings-option {
   display: flex;
   flex-direction: column;
-  gap: 6px; /* Slightly smaller gap */
+  gap: 6px;
 }
 .settings-option label {
-  font-weight: 500; /* Medium weight */
-  font-size: 0.85em; /* Smaller label */
+  font-weight: 500;
+  font-size: 0.85em;
   color: var(--settings-label-text);
 }
-/* New class added in TSX for styling selects within menu */
-.settings-select {
+.settings-select { /* Added this class to selects in settings menu */
   padding: 8px 10px;
   border: 1px solid var(--settings-select-border);
   border-radius: 4px;
-  font-size: 0.9em; /* Consistent font size */
+  font-size: 0.9em;
   background-color: var(--settings-select-bg);
   color: var(--text-primary);
   cursor: pointer;
@@ -135,7 +146,7 @@ button, input, select { font-family: inherit; color: inherit; background-color: 
   box-shadow: 0 0 0 2px var(--input-focus-shadow);
 }
 
-/* NEW: Clear Chat Button (Inside Menu) */
+/* Clear Chat Button (Inside Menu) */
 .clear-chat-settings-button {
   display: flex;
   align-items: center;
@@ -148,7 +159,7 @@ button, input, select { font-family: inherit; color: inherit; background-color: 
   border-radius: 4px;
   cursor: pointer;
   text-align: left;
-  font-weight: 500; /* Medium weight */
+  font-weight: 500;
   font-size: 0.9em;
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
@@ -157,22 +168,22 @@ button, input, select { font-family: inherit; color: inherit; background-color: 
   border-color: var(--settings-clear-hover-border);
 }
 
-/* NEW: Optional Separator Line */
+/* Optional Separator Line */
 .settings-separator {
   border: none;
-  border-top: 1px solid var(--border-color); /* Use theme border */
+  border-top: 1px solid var(--border-color);
   margin: 5px 0;
 }
 
-/* NEW: Close Settings Button */
+/* Close Settings Button */
 .close-settings-button {
   display: block;
   width: 100%;
-  padding: 9px 15px; /* Slightly less padding */
+  padding: 9px 15px;
   margin-top: 5px;
   background-color: var(--settings-close-bg);
   color: var(--settings-close-text);
-  border: 1px solid var(--settings-menu-border); /* Match menu border */
+  border: 1px solid var(--settings-menu-border);
   border-radius: 4px;
   cursor: pointer;
   text-align: center;
@@ -218,34 +229,27 @@ button, input, select { font-family: inherit; color: inherit; background-color: 
 .suggestion-button { padding: 6px 14px; border: 1px solid var(--suggestion-border); background-color: var(--suggestion-bg); color: var(--suggestion-text); border-radius: 18px; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s ease; white-space: nowrap; } .suggestion-button:hover:not(:disabled) { background-color: var(--suggestion-hover-bg); border-color: #adb5bd; } .suggestion-button:disabled { color: #adb5bd; border-color: var(--input-border-color); cursor: default; background-color: var(--suggestion-bg); }
 
 /* Beta Notice Modal Styles */
-.beta-notice-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--beta-overlay-bg, rgba(0, 0, 0, 0.6)); display: flex; align-items: center; justify-content: center; z-index: 1050; padding: 15px; box-sizing: border-box; } /* Increased z-index */
+.beta-notice-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--beta-overlay-bg, rgba(0, 0, 0, 0.6)); display: flex; align-items: center; justify-content: center; z-index: 1050; padding: 15px; box-sizing: border-box; }
 .beta-notice-modal { background-color: var(--beta-modal-bg, #ffffff); padding: 25px 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); max-width: 500px; width: 100%; text-align: center; box-sizing: border-box; } .beta-notice-modal h2 { margin-top: 0; color: var(--beta-heading-color, #dc3545); font-size: 1.3em; margin-bottom: 10px; } .beta-notice-modal p { margin-bottom: 15px; line-height: 1.6; color: var(--beta-text-color, #333); font-size: 0.95em; } .beta-notice-modal p:last-of-type { margin-bottom: 25px; }
 .beta-accept-button { padding: 10px 20px; border: none; background-color: var(--beta-button-bg, var(--user-bubble-bg)); color: var(--beta-button-text, #ffffff); border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: background-color 0.2s ease; } .beta-accept-button:hover { background-color: var(--beta-button-hover-bg, var(--button-primary-hover-bg)); }
 
 
 /* Responsive Styles */
 @media (max-width: 900px) {
-  /* MODIFIED: Adjusted header padding and ensure settings button space */
   .App-header {
-    padding: 8px 10px 8px 50px; /* Adjusted mobile header padding, ensure left padding */
-    justify-content: space-between;
+    padding: 8px 10px; /* Adjusted mobile header padding */
+    /* justify-content: space-between; (already set) */
     min-height: 0;
   }
   .App-header h1 {
-     order: 2; /* Keep title in middle */
      font-size: 1.0em;
-     margin: 0 5px;
-     padding: 0;
-     flex-grow: 0; /* Allow controls/spacers to take space */
-     text-align: center;
+     /* Centering handled by flex */
   }
-   /* Adjust spacers for mobile */
-  .header-spacer-left, .header-spacer-right { width: 30px; }
-  .header-spacer-left { order: 1; }
-  .header-spacer-right { order: 3; }
+   /* Adjust spacers/button for mobile */
+  .settings-button { font-size: 20px; padding: 4px; }
+  .header-spacer-right { width: 28px; /* Match smaller button */ }
 
-  /* REMOVED: Old clear chat button positioning */
-  /* .clear-chat-button { order: 3; position: static; margin: 0; } */
+  /* REMOVED: Old clear chat button responsive styles */
 
   .chatbot-messages { padding: 15px 10px; gap: 15px; font-size: 0.95rem; }
   .chatbot-input-area { padding: 10px 10px; gap: 5px; }
@@ -257,7 +261,14 @@ button, input, select { font-family: inherit; color: inherit; background-color: 
   .suggestions-container { max-width: 100%; gap: 6px; }
   .suggestion-button { padding: 5px 10px; font-size: 0.85em; }
 
-  /* Adjust settings menu position/size on smaller screens if needed */
-  .settings-menu { min-width: 240px; padding: 15px; }
-  .settings-button { top: 6px; left: 8px; font-size: 22px; }
+  /* Adjust settings menu position/size on smaller screens */
+  .settings-menu {
+      min-width: 240px;
+      padding: 15px;
+      top: 50px; /* Adjust based on mobile header height */
+      left: 10px;
+      right: 10px; /* Allow it to not exceed screen width */
+      width: auto; /* Allow width to adjust */
+   }
+
 }
