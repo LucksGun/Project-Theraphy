@@ -230,6 +230,130 @@ button, input { font-family: inherit; color: inherit; background-color: transpar
     margin: 0 60px; /* Example margin */
 }
 
+.App-header {
+  /* Keep previous styles: padding, bg, border, shadow, display:flex, justify-content:center, align-items:center, position:relative, box-sizing, z-index */
+  justify-content: space-between; /* Align title center, controls left/right */
+}
+.App-header h1 {
+  /* Keep previous: margin, font-size, weight, color */
+  position: absolute; /* Center title absolutely */
+  left: 50%;
+  transform: translateX(-50%);
+  /* Adjust L/R margin if needed based on control widths */
+  margin: 0 150px; /* Example margin to avoid overlap */
+  white-space: nowrap;
+}
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  /* Position controls container */
+  /* Example: position left */
+  position: absolute;
+  left: 15px;
+}
+.model-selector-container,
+.stt-lang-selector-container {
+display: flex;
+align-items: center;
+gap: 5px;
+}
+.header-controls label {
+font-size: 0.8em;
+color: var(--text-secondary);
+font-weight: 500;
+}
+.header-select { /* Style for both dropdowns */
+font-size: 0.8em;
+padding: 4px 6px;
+border-radius: 4px;
+border: 1px solid var(--input-border-color);
+background-color: var(--container-bg);
+color: var(--text-primary);
+cursor: pointer;
+}
+
+/* Ensure clear button doesn't overlap */
+.clear-chat-button {
+ position: static; /* Changed from absolute */
+ margin-left: auto; /* Push to the right */
+ /* Add margin if needed */
+ margin-right: 15px; /* Align with header padding */
+}
+
+
+/* --- Styles for Mic Button --- */
+.mic-button {
+  /* Inherit base button styles from .chatbot-input-area button if possible */
+  /* Or define specific styles */
+  padding: 10px; width: 42px; height: 42px; border: none; border-radius: 8px; cursor: pointer;
+  font-size: 1.3em; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0;
+
+  background-color: var(--button-secondary-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--input-border-color) !important;
+  margin-right: 0; /* Use gap from parent */
+}
+.mic-button:hover:not(:disabled) {
+  background-color: var(--button-secondary-hover-bg) !important;
+  border-color: #777777 !important;
+}
+.mic-button.recording {
+  background-color: #dc3545; /* Red when recording */
+  color: white;
+  border-color: #a71d2a !important;
+}
+.mic-button:disabled {
+   background-color: var(--button-disabled-bg) !important;
+   color: var(--button-disabled-text) !important;
+   border-color: var(--input-border-color) !important;
+   cursor: default;
+}
+
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 900px) {
+  /* ... (existing mobile styles) ... */
+
+  .App-header {
+      justify-content: center; /* Center title on mobile */
+  }
+  .App-header h1 {
+      position: static; /* Remove absolute positioning */
+      transform: none;
+      margin: 0; /* Reset margin */
+      font-size: 1.1em;
+      order: 2; /* Put title between controls */
+  }
+  .header-controls {
+      position: static; /* Remove absolute positioning */
+      width: 100%; /* Allow wrapping */
+      justify-content: space-between; /* Space out controls */
+      order: 1; /* Put controls above title */
+      padding: 0 10px 5px 10px; /* Adjust padding */
+      gap: 10px;
+      box-sizing: border-box;
+      flex-wrap: wrap; /* Allow wrapping */
+  }
+   .model-selector-container,
+   .stt-lang-selector-container {
+       gap: 3px;
+   }
+  .header-controls label { font-size: 0.75em; }
+  .header-select { font-size: 0.75em; padding: 3px 5px; }
+
+  .clear-chat-button {
+     order: 3; /* Put clear button last */
+     margin: 5px auto 0 auto; /* Center below controls/title */
+     position: static; /* Remove absolute positioning */
+  }
+
+  /* Adjust input area gap if needed */
+  .chatbot-input-area { gap: 5px; }
+  .chatbot-input-area button { width: 40px; height: 40px; font-size: 1.1em; border-radius: 6px; }
+}
+
 /* --- End Beta Notice Modal Styles --- */
 
 

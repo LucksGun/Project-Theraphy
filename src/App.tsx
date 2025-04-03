@@ -1,83 +1,110 @@
 // src/App.tsx
-import { useState, useEffect, ChangeEvent } from 'react'; // Keep specific hooks
+import { useState, useEffect, ChangeEvent } from 'react';
 import './App.css';
 import ChatbotPage from './ChatbotPage';
 
-// Define Message interface here
+// Define Message interface (must match ChatbotPage usage)
 export interface Message {
   id: number;
   text: string;
   sender: 'user' | 'bot' | 'loading';
-  timestamp: number;
+  timestamp: number; // Timestamp is included
 }
 
-// Define allowed model types
-export type GeminiModel = 'gemini-2.0-flash' | 'gemini-1.5-pro' | 'gemini-1.5-flash';
+// Define Speech Language type
+export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR'; // Add more as needed
 
+// localStorage Keys
 const CHAT_STORAGE_KEY = 'chatMessages';
 const BETA_ACCEPTED_KEY = 'betaAccepted';
-const MODEL_STORAGE_KEY = 'selectedApiModel';
+const STT_LANG_STORAGE_KEY = 'selectedSttLang';
 
 function App() {
-  // Messages State & Persistence
+  // --- Messages State & Persistence ---
   const [messages, setMessages] = useState<Message[]>(() => {
     const savedMessages = localStorage.getItem(CHAT_STORAGE_KEY);
+    let initialMessages: Message[] = [];
     try {
-        let initialMessages: Message[] = [];
-        if (savedMessages && savedMessages !== '[]') {
-            initialMessages = JSON.parse(savedMessages);
-        }
-        // Ensure initialMessages is always an array before checking length
-        if (!Array.isArray(initialMessages)) {
-             console.error("Loaded messages is not an array, resetting.");
-             localStorage.removeItem(CHAT_STORAGE_KEY);
-             initialMessages = [];
-        }
-
-        // Add welcome message if history is empty
-        if (initialMessages.length === 0) {
-            const welcomeMessage: Message = {
-                id: Date.now(),
-                text: "Welcome to the Project Theraphy Assistant! How can I help you plan your future, manage stress, or discuss college options today?",
-                sender: 'bot',
-                timestamp: Date.now()
-            };
-            return [welcomeMessage];
-        } else {
-            return initialMessages;
-        }
+      initialMessages = savedMessages && savedMessages !== '[]' ? JSON.parse(savedMessages) : [];
+       // Basic validation: ensure it's an array
+       if (!Array.isArray(initialMessages)) {
+         console.warn("Loaded messages not an array, resetting.");
+         initialMessages = [];
+         localStorage.removeItem(CHAT_STORAGE_KEY);
+       }
     } catch (e) {
-        console.error("Failed to parse messages from localStorage", e);
-        localStorage.removeItem(CHAT_STORAGE_KEY);
-        // Return with welcome message on error too? Or empty? Let's go empty on error.
-        return [];
+      console.error("Failed to parse messages from localStorage", e);
+      localStorage.removeItem(CHAT_STORAGE_KEY);
+      initialMessages = [];
+    }
+    // Add welcome message if history is empty after loading/parsing
+    if (initialMessages.length === 0) {
+      const welcomeTime = Date.now();
+      const welcomeMessage: Message = {
+        id: welcomeTime,
+        text: "Welcome to the Project Theraphy Assistant! How can I help you plan your future, manage stress, or discuss college options today?",
+        sender: 'bot',
+        timestamp: welcomeTime
+      };
+      return [welcomeMessage];
+    } else {
+      return initialMessages;
     }
   });
-  useEffect(() => { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages)); }, [messages]);
 
-  // Beta Notice State & Logic
+  useEffect(() => {
+    // Save messages whenever they change
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+  }, [messages]);
+  // --- End Messages State ---
+
+
+  // --- Beta Notice State & Logic ---
   const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
-  useEffect(() => { const accepted = localStorage.getItem(BETA_ACCEPTED_KEY); if (accepted !== 'true') { setShowBetaNotice(true); } }, []);
-  const handleAcceptBeta = () => { localStorage.setItem(BETA_ACCEPTED_KEY, 'true'); setShowBetaNotice(false); };
+  useEffect(() => {
+    const accepted = localStorage.getItem(BETA_ACCEPTED_KEY);
+    if (accepted !== 'true') {
+      setShowBetaNotice(true);
+    }
+  }, []); // Runs once on mount
+  const handleAcceptBeta = () => {
+    localStorage.setItem(BETA_ACCEPTED_KEY, 'true');
+    setShowBetaNotice(false);
+  };
+  // --- End Beta Notice ---
 
-  // Model Selection State & Persistence
-  const [selectedModel, setSelectedModel] = useState<GeminiModel>(() => {
-    const savedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-    if (savedModel === 'gemini-1.5-pro' || savedModel === 'gemini-2.0-flash' || savedModel === 'gemini-1.5-flash') { return savedModel; }
-    return 'gemini-2.0-flash';
+
+  // --- STT Language Selection State & Persistence ---
+  const [sttLang, setSttLang] = useState<SpeechLanguage>(() => {
+    const savedLang = localStorage.getItem(STT_LANG_STORAGE_KEY);
+    // Add checks for all languages you support
+    if (savedLang === 'th-TH' || savedLang === 'es-ES' || savedLang === 'fr-FR') {
+        return savedLang;
+    }
+    return 'en-US'; // Default
   });
-  useEffect(() => { localStorage.setItem(MODEL_STORAGE_KEY, selectedModel); }, [selectedModel]);
-  const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => {
-      const newModel = event.target.value as GeminiModel;
-      setSelectedModel(newModel);
-      alert(`Model changed to ${newModel}. New chats will use this model.`);
+
+  useEffect(() => {
+      localStorage.setItem(STT_LANG_STORAGE_KEY, sttLang);
+  }, [sttLang]);
+
+  const handleSttLangChange = (event: ChangeEvent<HTMLSelectElement>) => {
+      setSttLang(event.target.value as SpeechLanguage);
+      // Optionally provide feedback
+      // alert(`Speech input language changed to ${event.target.value}`);
   }
+  // --- End STT Language ---
+
 
   // Function to clear chat
-  const handleClearChat = () => { if (window.confirm("Are you sure you want to clear the chat history?")) { setMessages([]); } };
+  const handleClearChat = () => {
+    if (window.confirm("Are you sure you want to clear the entire chat history?")) {
+       setMessages([]); // Clear state (useEffect will clear localStorage)
+    }
+  };
+
 
   return (
-    // Ensure no stray characters outside of main div or between elements
     <div className="App">
       {/* Beta Notice Modal */}
       {showBetaNotice && (
@@ -92,23 +119,37 @@ function App() {
           </div>
         </div>
       )}
+
       {/* Main App Content */}
       <header className="App-header">
-        <div className="model-selector-container">
-            <label htmlFor="model-select">Model: </label>
-            <select id="model-select" value={selectedModel} onChange={handleModelChange} className="model-select">
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-            </select>
+         <div className="header-controls">
+             {/* STT Language Selector */}
+             <div className="stt-lang-selector-container">
+                <label htmlFor="stt-lang-select">Speak:</label>
+                <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="header-select">
+                    <option value="en-US">English (US)</option>
+                    <option value="th-TH">ไทย (Thai)</option>
+                    <option value="es-ES">Español (España)</option>
+                    <option value="fr-FR">Français (France)</option>
+                    {/* Add more supported languages here */}
+                </select>
+             </div>
          </div>
+
         <h1>Project Theraphy Dashboard</h1>
-        {messages.length > 0 && (<button onClick={handleClearChat} className="clear-chat-button" title="Clear Chat">🗑️</button>)}
+
+        {/* Clear Chat Button - Show only if more than just the welcome message exists */}
+        {messages.length > 1 && (
+           <button onClick={handleClearChat} className="clear-chat-button" title="Clear Chat">
+              🗑️
+           </button>
+        )}
       </header>
+      {/* Pass necessary state and functions down */}
       <ChatbotPage
         messages={messages}
         setMessages={setMessages}
-        selectedModel={selectedModel}
+        sttLang={sttLang} // Pass STT language
        />
     </div>
   );
