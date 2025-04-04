@@ -42,7 +42,7 @@ const RESTRICTED_MODELS_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS
 
 // The actual secret key required (should match worker env.ACCESS_KEY)
 // NOTE: In a real app, avoid exposing this directly if possible.
-const REQUIRED_ACCESS_KEY = "super_secret_password_123"; // Replace with your actual key value
+const REQUIRED_ACCESS_KEY = "super_secret_password_321"; // Replace with your actual key value
 
 
 function App() {
