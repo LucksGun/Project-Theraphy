@@ -14,7 +14,6 @@ if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_
   try {
     ReactGA.initialize(GA_MEASUREMENT_ID);
     console.log("Google Analytics Initialized with ID:", GA_MEASUREMENT_ID);
-    // Send initial pageview right after initialization
     ReactGA.send({ hitType: "pageview", page: window.location.pathname + window.location.search, title: "Chatbot Initial Load" });
     console.log("Initial Pageview Sent:", window.location.pathname + window.location.search);
   } catch (error) {
@@ -51,16 +50,16 @@ const BETA_ACCEPTED_KEY = 'betaAccepted';
 const MODEL_STORAGE_KEY = 'selectedApiModel';
 const STT_LANG_STORAGE_KEY = 'selectedSttLang';
 const ACCESS_KEY_STORAGE_KEY = 'userAccessKey';
-const PERSONA_STORAGE_KEY = 'selectedPersona'; // Key for storing persona
+const PERSONA_STORAGE_KEY = 'selectedPersona';
 
 // --- Model Configuration ---
 interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
 const ALL_AVAILABLE_MODELS: ModelInfo[] = [
   { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', restricted: false },
   { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', restricted: false },
-  { value: 'gemini-2.0-flash-thinking-exp-01-21', label: 'Gemini 2.0 Flash Thinking Experimental', restricted: true }, // Restricted
-  { value: 'gemini-2.0-flash-exp-image-generation', label: 'Gemini 2.0 Flash Image Generation Experimental', restricted: true }, // Restricted
-  { value: 'gemini-2.5-pro-exp-03-25', label: 'Gemini 2.5 Pro Experimental', restricted: true } // Restricted
+  { value: 'gemini-2.0-flash-thinking-exp-01-21', label: 'Gemini 2.0 Flash Thinking Experimental', restricted: true },
+  { value: 'gemini-2.0-flash-exp-image-generation', label: 'Gemini 2.0 Flash Image Generation Experimental', restricted: true },
+  { value: 'gemini-2.5-pro-exp-03-25', label: 'Gemini 2.5 Pro Experimental', restricted: true }
 ];
 const RESTRICTED_MODELS_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS.filter(m => m.restricted).map(m => m.value);
 
@@ -74,52 +73,26 @@ const AVAILABLE_PERSONAS: PersonaInfo[] = [
 const RESTRICTED_PERSONAS_VALUES: Persona[] = AVAILABLE_PERSONAS.filter(p => p.restricted).map(p => p.value);
 const DEFAULT_UNRESTRICTED_PERSONA: Persona = 'university_master'; // The default if access denied
 
-// The actual secret key required (should match worker env.ACCESS_KEY)
-// IMPORTANT: Replace with your actual secure key and manage it securely (e.g., environment variables)
-const REQUIRED_ACCESS_KEY = "super_secret_password_321";
+// The actual secret key required
+const REQUIRED_ACCESS_KEY = "super_secret_password_321"; // Replace with your actual key
 
-// --- API Call Logic (Kept inside App.tsx for Analysis Form) ---
+// --- API Call Logic ---
 const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
-
-// Define interface for API request body
 interface ApiRequestBody {
-    prompt: string;
-    model: GeminiModel;
-    persona: Persona; // Added persona
-    imageMimeType?: string;
-    imageDataUrl?: string;
-    accessKey: string;
+    prompt: string; model: GeminiModel; persona: Persona; imageMimeType?: string; imageDataUrl?: string; accessKey: string;
 }
-
-// Note: This version is simplified for text-only analysis form usage
 async function getBotResponseForAnalysis(
-    userInput: string,
-    model: GeminiModel,
-    persona: Persona, // Added persona
-    accessKey: string
+    userInput: string, model: GeminiModel, persona: Persona, accessKey: string
 ): Promise<string> {
     const promptToSend = userInput;
     if (!promptToSend) { return "Error: No text provided for analysis."; }
-
-    const requestBody: ApiRequestBody = {
-        prompt: promptToSend,
-        model: model,
-        persona: persona, // Added persona
-        accessKey: accessKey
-    };
-
+    const requestBody: ApiRequestBody = { prompt: promptToSend, model: model, persona: persona, accessKey: accessKey };
     console.log(`Sending Analysis Request (Model: ${model}, Persona: ${persona}):`, {
-         promptLength: promptToSend.length,
-         model: requestBody.model,
-         persona: requestBody.persona,
-         accessKey: requestBody.accessKey ? 'present' : 'none'
+         promptLength: promptToSend.length, model: requestBody.model, persona: requestBody.persona, accessKey: requestBody.accessKey ? 'present' : 'none'
     });
-
     try {
         const response = await fetch(WORKER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', },
-            body: JSON.stringify(requestBody),
+            method: 'POST', headers: { 'Content-Type': 'application/json', }, body: JSON.stringify(requestBody),
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status} ${response.statusText}` }));
@@ -140,313 +113,75 @@ async function getBotResponseForAnalysis(
 
 function App() {
   // --- State Variables ---
-  // Messages State & Persistence
   const [messages, setMessages] = useState<Message[]>(() => {
     const savedMessages = localStorage.getItem(CHAT_STORAGE_KEY);
     let initialMessages: Message[] = [];
-    try {
-      initialMessages = savedMessages && savedMessages !== '[]' ? JSON.parse(savedMessages) : [];
-      if (!Array.isArray(initialMessages)) { throw new Error("Parsed data not an array"); }
-    } catch (e) {
-      console.error("Failed to parse messages from localStorage", e);
-      localStorage.removeItem(CHAT_STORAGE_KEY); // Clear corrupted data
-      initialMessages = [];
-    }
-    if (initialMessages.length === 0) {
-      const welcomeTime = Date.now();
-      const welcomeMessage: Message = { id: welcomeTime, text: "Welcome! How can I help you plan your future, manage stress, or discuss college options today?", sender: 'bot', timestamp: welcomeTime };
-      return [welcomeMessage];
-    } else {
-      // Filter out any potential loading messages from previous sessions if they somehow got saved
-      return initialMessages.filter(msg => msg.sender !== 'loading');
-    }
+    try { initialMessages = savedMessages && savedMessages !== '[]' ? JSON.parse(savedMessages) : []; if (!Array.isArray(initialMessages)) { throw new Error("Parsed data not an array"); } }
+    catch (e) { console.error("Failed to parse messages from localStorage", e); localStorage.removeItem(CHAT_STORAGE_KEY); initialMessages = []; }
+    if (initialMessages.length === 0) { const welcomeTime = Date.now(); const welcomeMessage: Message = { id: welcomeTime, text: "Welcome! How can I help you plan your future, manage stress, or discuss college options today?", sender: 'bot', timestamp: welcomeTime }; return [welcomeMessage]; }
+    else { return initialMessages.filter(msg => msg.sender !== 'loading'); }
   });
-
-  // Beta Notice State
   const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
-
-  // Entered Access Key State
   const [enteredKey, setEnteredKey] = useState<string>(() => localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '');
-  const userHasAccessToRestricted = enteredKey === REQUIRED_ACCESS_KEY; // Calculate access based on current key state
-
-  // Model Selection State & Persistence
-  const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash'); // Default set by useEffect
-
-  // STT Language Selection State & Persistence
+  const userHasAccessToRestricted = enteredKey === REQUIRED_ACCESS_KEY;
+  const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash');
   const [sttLang, setSttLang] = useState<SpeechLanguage>(() => {
-    const savedLang = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null;
-    if (savedLang && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(savedLang) ) {
-        return savedLang;
-    }
-    return 'en-US';
+    const savedLang = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null; if (savedLang && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(savedLang) ) { return savedLang; } return 'en-US';
   });
-
-  // Persona Selection State & Persistence (with fallback logic)
-  const [selectedPersona, setSelectedPersona] = useState<Persona>(DEFAULT_UNRESTRICTED_PERSONA); // Default set by useEffect now
-
-  // Settings Menu State
+  const [selectedPersona, setSelectedPersona] = useState<Persona>(DEFAULT_UNRESTRICTED_PERSONA);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-
-  // --- State for Analysis Form ---
   const [isAnalysisFormVisible, setIsAnalysisFormVisible] = useState<boolean>(false);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
-  const [field1, setField1] = useState<string>('');
-  const [field2, setField2] = useState<string>('');
-  const [field3, setField3] = useState<string>('');
-  const [field4, setField4] = useState<string>('');
-  const [field5, setField5] = useState<string>('');
-
+  const [field1, setField1] = useState<string>(''); const [field2, setField2] = useState<string>(''); const [field3, setField3] = useState<string>(''); const [field4, setField4] = useState<string>(''); const [field5, setField5] = useState<string>('');
 
   // --- Effects ---
-
-  // Effect to set initial Model AND Persona based on key access
   useEffect(() => {
     const currentAccess = enteredKey === REQUIRED_ACCESS_KEY;
+    // Model Logic
+    const savedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null; let initialModel: GeminiModel = 'gemini-2.0-flash';
+    if (savedModel && ALL_AVAILABLE_MODELS.some(m => m.value === savedModel)) { if (RESTRICTED_MODELS_VALUES.includes(savedModel)) { if (currentAccess) { initialModel = savedModel; } else { console.warn(`Saved model ${savedModel} restricted, falling back.`); } } else { initialModel = savedModel; } }
+    if (RESTRICTED_MODELS_VALUES.includes(initialModel) && !currentAccess) { initialModel = 'gemini-2.0-flash'; }
+     setSelectedModel(currentModel => { if (RESTRICTED_MODELS_VALUES.includes(currentModel) && !currentAccess) { console.warn(`Current model ${currentModel} restricted, access lost. Falling back.`); return 'gemini-2.0-flash'; } return currentModel !== initialModel ? initialModel : currentModel; });
+    // Persona Logic
+    const savedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null; let initialPersona: Persona = DEFAULT_UNRESTRICTED_PERSONA;
+     if (savedPersona && AVAILABLE_PERSONAS.some(p => p.value === savedPersona)) { if (RESTRICTED_PERSONAS_VALUES.includes(savedPersona)) { if (currentAccess) { initialPersona = savedPersona; } else { console.warn(`Saved persona ${savedPersona} restricted, falling back.`); } } else { initialPersona = savedPersona; } }
+    if (RESTRICTED_PERSONAS_VALUES.includes(initialPersona) && !currentAccess) { initialPersona = DEFAULT_UNRESTRICTED_PERSONA; }
+    setSelectedPersona(currentPersona => { if (RESTRICTED_PERSONAS_VALUES.includes(currentPersona) && !currentAccess) { console.warn(`Current persona ${currentPersona} restricted, access lost. Falling back.`); return DEFAULT_UNRESTRICTED_PERSONA; } return currentPersona !== initialPersona ? initialPersona : currentPersona; });
+  }, [enteredKey]);
 
-    // --- Model Logic ---
-    const savedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null;
-    let initialModel: GeminiModel = 'gemini-2.0-flash'; // Default public model
-    if (savedModel && ALL_AVAILABLE_MODELS.some(m => m.value === savedModel)) {
-        if (RESTRICTED_MODELS_VALUES.includes(savedModel)) {
-            if (currentAccess) { initialModel = savedModel; }
-            else { console.warn(`Saved model ${savedModel} is restricted, access denied. Falling back to default.`); }
-        } else { initialModel = savedModel; } // Unrestricted is safe
-    }
-    // Ensure initialModel isn't restricted if access is denied
-    if (RESTRICTED_MODELS_VALUES.includes(initialModel) && !currentAccess) {
-        initialModel = 'gemini-2.0-flash'; // Fallback to default public
-    }
-    // Update state, also handling loss of access for current selection
-     setSelectedModel(currentModel => {
-        if (RESTRICTED_MODELS_VALUES.includes(currentModel) && !currentAccess) {
-            console.warn(`Current model ${currentModel} is restricted, access lost. Falling back.`);
-            return 'gemini-2.0-flash'; // Fallback if current restricted model loses access
-        }
-        // Only update if the calculated initial model is different from current
-        return currentModel !== initialModel ? initialModel : currentModel;
-    });
-
-    // --- Persona Logic ---
-    const savedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null;
-    let initialPersona: Persona = DEFAULT_UNRESTRICTED_PERSONA; // Default unrestricted
-     if (savedPersona && AVAILABLE_PERSONAS.some(p => p.value === savedPersona)) {
-        if (RESTRICTED_PERSONAS_VALUES.includes(savedPersona)) {
-            if (currentAccess) { initialPersona = savedPersona; }
-            else { console.warn(`Saved persona ${savedPersona} is restricted, access denied. Falling back to default.`); }
-        } else { initialPersona = savedPersona; } // Unrestricted is okay
-    }
-    // Ensure initialPersona isn't restricted if access is denied
-    if (RESTRICTED_PERSONAS_VALUES.includes(initialPersona) && !currentAccess) {
-        initialPersona = DEFAULT_UNRESTRICTED_PERSONA; // Fallback to default unrestricted
-    }
-    // Update state, also handling loss of access for current selection
-    setSelectedPersona(currentPersona => {
-        if (RESTRICTED_PERSONAS_VALUES.includes(currentPersona) && !currentAccess) {
-            console.warn(`Current persona ${currentPersona} is restricted, access lost. Falling back.`);
-            return DEFAULT_UNRESTRICTED_PERSONA; // Fallback if current restricted persona loses access
-        }
-         // Only update if the calculated initial persona is different from current
-        return currentPersona !== initialPersona ? initialPersona : currentPersona;
-    });
-
-  }, [enteredKey]); // Re-run when access key changes
-
-
-  // Persistence Effects
-  useEffect(() => {
-    // Only save if there are messages beyond the initial welcome, or if explicitly cleared to empty
-    // Also filter out loading messages before saving
-    const messagesToSave = messages.filter(msg => msg.sender !== 'loading');
-    if (messagesToSave.length > 1 || (messagesToSave.length === 1 && messagesToSave[0].sender !== 'bot')) {
-        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave));
-    } else if (messagesToSave.length === 0) {
-        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave)); // Save empty array if cleared
-    }
-    // Avoid saving if only the initial bot welcome message exists and no user interaction happened
-  }, [messages]);
-
-  useEffect(() => {
-    const accepted = localStorage.getItem(BETA_ACCEPTED_KEY);
-    if (accepted !== 'true') { setShowBetaNotice(true); }
-  }, []);
-
+  useEffect(() => { const messagesToSave = messages.filter(msg => msg.sender !== 'loading'); if (messagesToSave.length > 1 || (messagesToSave.length === 1 && messagesToSave[0].sender !== 'bot')) { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave)); } else if (messagesToSave.length === 0) { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave)); } }, [messages]);
+  useEffect(() => { const accepted = localStorage.getItem(BETA_ACCEPTED_KEY); if (accepted !== 'true') { setShowBetaNotice(true); } }, []);
   useEffect(() => { localStorage.setItem(MODEL_STORAGE_KEY, selectedModel); }, [selectedModel]);
   useEffect(() => { localStorage.setItem(STT_LANG_STORAGE_KEY, sttLang); }, [sttLang]);
   useEffect(() => { localStorage.setItem(ACCESS_KEY_STORAGE_KEY, enteredKey); }, [enteredKey]);
-  useEffect(() => { localStorage.setItem(PERSONA_STORAGE_KEY, selectedPersona); }, [selectedPersona]); // Persist persona
-
+  useEffect(() => { localStorage.setItem(PERSONA_STORAGE_KEY, selectedPersona); }, [selectedPersona]);
 
   // --- Event Handlers ---
-  const handleAcceptBeta = () => {
-    localStorage.setItem(BETA_ACCEPTED_KEY, 'true');
-    setShowBetaNotice(false);
-  };
-
-  const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => {
-      const newModel = event.target.value as GeminiModel;
-      // No need to check restriction here as disabled options prevent selection
-      if (ALL_AVAILABLE_MODELS.some(m => m.value === newModel)) {
-          setSelectedModel(newModel);
-      } else { console.error(`Attempted to select invalid model: ${newModel}`); }
-  };
-
-  const handleSttLangChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    setSttLang(event.target.value as SpeechLanguage);
-  };
-
-  const handlePersonaChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const newPersona = event.target.value as Persona;
-    // No need to check restriction here as disabled options prevent selection
-     if (AVAILABLE_PERSONAS.some(p => p.value === newPersona)) {
-        setSelectedPersona(newPersona);
-    } else { console.error(`Attempted to select invalid persona: ${newPersona}`); }
-  };
-
-  const toggleSettings = () => {
-      setIsSettingsOpen(prev => !prev);
-  };
-
-  const handleClearChat = () => {
-    if (window.confirm("Are you sure you want to clear the entire chat history? This cannot be undone.")) {
-      const welcomeTime = Date.now();
-      const welcomeMessage: Message = { id: welcomeTime, text: "Welcome! How can I help you plan your future, manage stress, or discuss college options today?", sender: 'bot', timestamp: welcomeTime };
-      setMessages([welcomeMessage]);
-      // Overwrite localStorage with just the welcome message
-      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([welcomeMessage]));
-      setIsSettingsOpen(false); // Close settings after clearing
-    }
-  };
-
-  const handleAccessKeyChange = (event: ChangeEvent<HTMLInputElement>) => {
-      setEnteredKey(event.target.value);
-  };
-
-  // Export Chat Handler
+  const handleAcceptBeta = () => { localStorage.setItem(BETA_ACCEPTED_KEY, 'true'); setShowBetaNotice(false); };
+  const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => { const newModel = event.target.value as GeminiModel; if (ALL_AVAILABLE_MODELS.some(m => m.value === newModel)) { setSelectedModel(newModel); } else { console.error(`Attempted to select invalid model: ${newModel}`); } };
+  const handleSttLangChange = (event: ChangeEvent<HTMLSelectElement>) => { setSttLang(event.target.value as SpeechLanguage); };
+  const handlePersonaChange = (event: ChangeEvent<HTMLSelectElement>) => { const newPersona = event.target.value as Persona; if (AVAILABLE_PERSONAS.some(p => p.value === newPersona)) { setSelectedPersona(newPersona); } else { console.error(`Attempted to select invalid persona: ${newPersona}`); } };
+  const toggleSettings = () => { setIsSettingsOpen(prev => !prev); };
+  const handleClearChat = () => { if (window.confirm("Are you sure you want to clear the entire chat history? This cannot be undone.")) { const welcomeTime = Date.now(); const welcomeMessage: Message = { id: welcomeTime, text: "Welcome! How can I help you plan your future, manage stress, or discuss college options today?", sender: 'bot', timestamp: welcomeTime }; setMessages([welcomeMessage]); localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([welcomeMessage])); setIsSettingsOpen(false); } };
+  const handleAccessKeyChange = (event: ChangeEvent<HTMLInputElement>) => { setEnteredKey(event.target.value); };
   const handleExportChat = () => {
-    const messagesToExport = messages.filter(msg => msg.sender !== 'loading'); // Exclude loading messages
-
-    if (messagesToExport.length === 0 || (messagesToExport.length === 1 && messagesToExport[0].sender === 'bot' && messagesToExport[0].text.startsWith('Welcome'))) {
-        alert("Chat history is empty or only contains the welcome message. Nothing to export.");
-        return;
-    }
-
-    // Format the chat messages into a string
-    let chatContent = `Chat Export\n`;
-    chatContent += `Exported At: ${new Date().toLocaleString()}\n`;
-    chatContent += `Model Used: ${selectedModel}\n`;
-    chatContent += `Persona Active: ${selectedPersona}\n`;
-    chatContent += `------------------------------------\n\n`;
-
-    messagesToExport.forEach(message => {
-        const timestampStr = new Date(message.timestamp).toLocaleString();
-        const senderLabel = message.sender === 'user' ? 'User' : 'Bot';
-        chatContent += `[${timestampStr}] ${senderLabel}:\n`;
-        chatContent += `${message.text}\n`;
-        if (message.imageUrl) {
-            chatContent += `(Image Attached by Bot: ${message.imageUrl})\n`;
-        }
-        chatContent += `\n`; // Add blank line between messages
-    });
-
-    // Create a Blob and trigger download
-    try {
-        const blob = new Blob([chatContent], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        const timestampFile = new Date().toISOString().replace(/[:.]/g, '-'); // Simple timestamp for filename
-        link.download = `project-theraphy-chat-${timestampFile}.txt`;
-        document.body.appendChild(link); // Required for Firefox
-        link.click();
-        document.body.removeChild(link); // Clean up
-        URL.revokeObjectURL(url); // Release memory
-
-        // Optional: Track export event
-        if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") {
-            ReactGA.event({ category: "Chat Action", action: "Export_Chat", label: `Message Count: ${messagesToExport.length}` });
-            console.log("GA Event Sent: Export_Chat");
-        }
-
-    } catch (error) {
-        console.error("Error exporting chat:", error);
-        alert("An error occurred while trying to export the chat.");
-    }
+    const messagesToExport = messages.filter(msg => msg.sender !== 'loading');
+    if (messagesToExport.length === 0 || (messagesToExport.length === 1 && messagesToExport[0].sender === 'bot' && messagesToExport[0].text.startsWith('Welcome'))) { alert("Chat history is empty or only contains the welcome message."); return; }
+    let chatContent = `Chat Export\nExported At: ${new Date().toLocaleString()}\nModel Used: ${selectedModel}\nPersona Active: ${selectedPersona}\n------------------------------------\n\n`;
+    messagesToExport.forEach(message => { const timestampStr = new Date(message.timestamp).toLocaleString(); const senderLabel = message.sender === 'user' ? 'User' : 'Bot'; chatContent += `[${timestampStr}] ${senderLabel}:\n${message.text}\n`; if (message.imageUrl) { chatContent += `(Image Attached by Bot: ${message.imageUrl})\n`; } chatContent += `\n`; });
+    try { const blob = new Blob([chatContent], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; const timestampFile = new Date().toISOString().replace(/[:.]/g, '-'); link.download = `project-theraphy-chat-${timestampFile}.txt`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { ReactGA.event({ category: "Chat Action", action: "Export_Chat", label: `Message Count: ${messagesToExport.length}` }); console.log("GA Event Sent: Export_Chat"); } }
+    catch (error) { console.error("Error exporting chat:", error); alert("An error occurred while trying to export the chat."); }
   };
-
-  // --- Handlers for Analysis Form ---
-  const clearAnalysisForm = () => {
-    setField1(''); setField2(''); setField3(''); setField4(''); setField5('');
-  };
-
-  const toggleAnalysisForm = () => {
-      setIsAnalysisFormVisible(prev => !prev);
-      if (isAnalysisFormVisible) { // If closing the form now
-          clearAnalysisForm();
-          setIsAnalyzing(false); // Ensure loading state is reset
-      }
-  };
-
+  const clearAnalysisForm = () => { setField1(''); setField2(''); setField3(''); setField4(''); setField5(''); };
+  const toggleAnalysisForm = () => { setIsAnalysisFormVisible(prev => !prev); if (isAnalysisFormVisible) { clearAnalysisForm(); setIsAnalyzing(false); } };
   const handleAnalysisSubmit = async (event: React.FormEvent) => {
-      event.preventDefault();
-
-      const val1 = field1.trim();
-      const val2 = field2.trim();
-      const val3 = field3.trim();
-      const val4 = field4.trim();
-      const val5 = field5.trim();
-
-      if (!val1 || isAnalyzing) return; // Only field 1 is mandatory per HTML required attribute
-
-      setIsAnalyzing(true);
-      setIsAnalysisFormVisible(false); // Close form immediately
-
-      // Track GA Event on Submit
-      if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") {
-        try {
-          ReactGA.event({
-            category: "Analysis Form",
-            action: "Submit_Analysis_Request",
-            label: `Field 1 Length: ${val1.length}` // Example label
-          });
-          console.log("GA Event Sent: Submit_Analysis_Request");
-        } catch (error) {
-          console.error("Error sending GA Event:", error);
-        }
-      }
-
-      // Construct the prompt string, labelling each field's input
-      let combinedInput = `Field 1: ${val1}\n`;
-      if (val2) combinedInput += `Field 2: ${val2}\n`;
-      if (val3) combinedInput += `Field 3: ${val3}\n`;
-      if (val4) combinedInput += `Field 4: ${val4}\n`;
-      if (val5) combinedInput += `Field 5: ${val5}\n`;
-
-      // Add a "Thinking..." message to the chat
-      const thinkingTime = Date.now();
-      // Display only the first field in the thinking message for brevity
-      const thinkingMessage: Message = { id: thinkingTime, text: `Analyzing Input (Field 1-5: "${val1.substring(0, 40)}...")...`, sender: 'loading', timestamp: thinkingTime };
-      setMessages(prev => [...prev, thinkingMessage]);
-      clearAnalysisForm(); // Clear form fields in state after grabbing values
-
-      // Call the bot for analysis (passing persona)
-      const analysisResult = await getBotResponseForAnalysis(
-        combinedInput.trim(),
-        selectedModel,
-        selectedPersona, // Pass selected persona
-        enteredKey
-      );
-
-      // Replace thinking message with the result
-      const resultTime = Date.now() + 1; // Ensure unique ID
-      const resultMessage: Message = { id: resultTime, text: analysisResult, sender: 'bot', timestamp: resultTime };
-
-      setMessages(prev => [
-          ...prev.filter(msg => msg.id !== thinkingTime), // Remove thinking message
-          resultMessage // Add result message
-      ]);
-      setIsAnalyzing(false); // Reset loading state
+      event.preventDefault(); const val1 = field1.trim(); const val2 = field2.trim(); const val3 = field3.trim(); const val4 = field4.trim(); const val5 = field5.trim(); if (!val1 || isAnalyzing) return; setIsAnalyzing(true); setIsAnalysisFormVisible(false);
+      if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { try { ReactGA.event({ category: "Analysis Form", action: "Submit_Analysis_Request", label: `Field 1 Length: ${val1.length}` }); console.log("GA Event Sent: Submit_Analysis_Request"); } catch (error) { console.error("Error sending GA Event:", error); } }
+      let combinedInput = `Field 1: ${val1}\n`; if (val2) combinedInput += `Field 2: ${val2}\n`; if (val3) combinedInput += `Field 3: ${val3}\n`; if (val4) combinedInput += `Field 4: ${val4}\n`; if (val5) combinedInput += `Field 5: ${val5}\n`;
+      const thinkingTime = Date.now(); const thinkingMessage: Message = { id: thinkingTime, text: `Analyzing Input (Field 1-5: "${val1.substring(0, 40)}...")...`, sender: 'loading', timestamp: thinkingTime }; setMessages(prev => [...prev, thinkingMessage]); clearAnalysisForm();
+      const analysisResult = await getBotResponseForAnalysis(combinedInput.trim(), selectedModel, selectedPersona, enteredKey);
+      const resultTime = Date.now() + 1; const resultMessage: Message = { id: resultTime, text: analysisResult, sender: 'bot', timestamp: resultTime }; setMessages(prev => [ ...prev.filter(msg => msg.id !== thinkingTime), resultMessage ]); setIsAnalyzing(false);
   };
-
 
   // --- JSX Return Statement ---
   return (
@@ -456,89 +191,77 @@ function App() {
         <div className="settings-menu" role="dialog" aria-modal="true" aria-labelledby="settings-title">
           <h3 id="settings-title">Settings</h3>
 
-          {/* Access Key Input */}
-          <div className="settings-option">
-             <label htmlFor="access-key-input">Access Key:</label>
-             <input
-                type="password"
-                id="access-key-input"
-                className="settings-input"
-                placeholder="Enter key for restricted features"
-                value={enteredKey}
-                onChange={handleAccessKeyChange}
-             />
-             {enteredKey && ( <span style={{ fontSize: '0.8em', marginLeft: '5px' }}>{userHasAccessToRestricted ? '✅' : '❌'}</span> )}
-          </div>
+          {/* ++ Settings Grid Layout ++ */}
+          <div className="settings-grid">
 
-          {/* Persona Selector (with Restriction) */}
-          <div className="settings-option">
-             <label htmlFor="persona-select">Persona:</label>
-             <select id="persona-select" value={selectedPersona} onChange={handlePersonaChange} className="settings-select">
-                 {AVAILABLE_PERSONAS.map((personaInfo) => {
-                    const isDisabled = personaInfo.restricted && !userHasAccessToRestricted;
-                    const style = isDisabled ? { color: '#888', fontStyle: 'italic' } : {};
-                    return (
-                        <option key={personaInfo.value} value={personaInfo.value} disabled={isDisabled} style={style}>
-                            {personaInfo.emoji} {personaInfo.label}{personaInfo.restricted ? ' (Restricted)' : ''}
-                        </option>
-                    );
-                 })}
-             </select>
-             {/* Helper text if there are restricted personas and user lacks access */}
-             {!userHasAccessToRestricted && RESTRICTED_PERSONAS_VALUES.length > 0 && (
-                <p style={{fontSize: '0.8em', color: 'var(--text-secondary)', marginTop: '5px'}}>
-                    Personas marked (Restricted) require the correct Access Key.
-                </p>
-             )}
-          </div>
+            {/* Column 1 */}
+            <div className="settings-column">
+                {/* Access Key Input */}
+                <div className="settings-option">
+                    <label htmlFor="access-key-input">Access Key:</label>
+                    <input type="password" id="access-key-input" className="settings-input" placeholder="Enter key for restricted features" value={enteredKey} onChange={handleAccessKeyChange} />
+                    {enteredKey && ( <span style={{ fontSize: '0.8em', marginLeft: '5px' }}>{userHasAccessToRestricted ? '✅' : '❌'}</span> )}
+                </div>
 
-          {/* STT Language Selector */}
-          <div className="settings-option">
-             <label htmlFor="stt-lang-select">Speak Language:</label>
-             <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select">
-                 <option value="en-US">English (US)</option>
-                 <option value="th-TH">ไทย (Thai)</option>
-                 <option value="es-ES">Español (España)</option>
-                 <option value="fr-FR">Français (France)</option>
-             </select>
-          </div>
+                {/* Persona Selector */}
+                <div className="settings-option">
+                    <label htmlFor="persona-select">Persona:</label>
+                    <select id="persona-select" value={selectedPersona} onChange={handlePersonaChange} className="settings-select">
+                        {AVAILABLE_PERSONAS.map((personaInfo) => {
+                            const isDisabled = personaInfo.restricted && !userHasAccessToRestricted;
+                            const style = isDisabled ? { color: '#888', fontStyle: 'italic' } : {};
+                            return ( <option key={personaInfo.value} value={personaInfo.value} disabled={isDisabled} style={style}> {personaInfo.emoji} {personaInfo.label}{personaInfo.restricted ? ' (Restricted)' : ''} </option> );
+                        })}
+                    </select>
+                    {!userHasAccessToRestricted && RESTRICTED_PERSONAS_VALUES.length > 0 && ( <p className="settings-helper-text"> Personas marked (Restricted) require the correct Access Key. </p> )}
+                </div>
 
-          {/* Model Selector (with Restriction) */}
-          <div className="settings-option">
-              <label htmlFor="model-select">AI Model:</label>
-              <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select">
-                  {ALL_AVAILABLE_MODELS.map((modelInfo) => {
-                      const isDisabled = modelInfo.restricted && !userHasAccessToRestricted;
-                      const style = isDisabled ? { color: '#888', fontStyle: 'italic' } : {};
-                      return (
-                        <option key={modelInfo.value} value={modelInfo.value} disabled={isDisabled} style={style}>
-                            {modelInfo.label}{modelInfo.restricted ? ' (Restricted)' : ''}
-                        </option>
-                       );
-                  })}
-              </select>
-              {/* Helper text if there are restricted models and user lacks access */}
-              {!userHasAccessToRestricted && RESTRICTED_MODELS_VALUES.length > 0 && (
-                 <p style={{fontSize: '0.8em', color: 'var(--text-secondary)', marginTop: '5px'}}>
-                    Models marked (Restricted) require the correct Access Key.
-                 </p>
-              )}
-          </div>
+                {/* Model Selector */}
+                <div className="settings-option">
+                    <label htmlFor="model-select">AI Model:</label>
+                    <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select">
+                        {ALL_AVAILABLE_MODELS.map((modelInfo) => {
+                            const isDisabled = modelInfo.restricted && !userHasAccessToRestricted;
+                            const style = isDisabled ? { color: '#888', fontStyle: 'italic' } : {};
+                            return ( <option key={modelInfo.value} value={modelInfo.value} disabled={isDisabled} style={style}> {modelInfo.label}{modelInfo.restricted ? ' (Restricted)' : ''} </option> );
+                        })}
+                    </select>
+                    {!userHasAccessToRestricted && RESTRICTED_MODELS_VALUES.length > 0 && ( <p className="settings-helper-text"> Models marked (Restricted) require the correct Access Key. </p> )}
+                </div>
+            </div>
 
-          {/* Export Chat Button (Inside Menu) */}
-           <div className="settings-option">
-             <button onClick={handleExportChat} className="export-chat-settings-button">
-               💾 Export Chat History
-             </button>
-           </div>
+            {/* Column 2 */}
+            <div className="settings-column">
+                {/* STT Language Selector */}
+                <div className="settings-option">
+                    <label htmlFor="stt-lang-select">Speak Language:</label>
+                    <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select">
+                        <option value="en-US">English (US)</option>
+                        <option value="th-TH">ไทย (Thai)</option>
+                        <option value="es-ES">Español (España)</option>
+                        <option value="fr-FR">Français (France)</option>
+                    </select>
+                </div>
 
-          {/* Clear Chat History Button */}
-          <div className="settings-option">
-             <button onClick={handleClearChat} className="clear-chat-settings-button">
-               🗑️ Clear Chat History
-             </button>
-          </div>
+                {/* Export Chat Button */}
+                <div className="settings-option">
+                    <label>Chat Actions:</label> {/* Optional label for the button group */}
+                    <button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">
+                      💾 Export Chat History
+                    </button>
+                </div>
 
+                {/* Clear Chat History Button */}
+                <div className="settings-option">
+                    <button onClick={handleClearChat} className="settings-action-button clear-chat-settings-button">
+                      🗑️ Clear Chat History
+                    </button>
+                </div>
+            </div>
+
+          </div> {/* End of settings-grid */}
+
+          {/* Close Button - Outside the grid */}
           <hr className="settings-separator" />
           <button onClick={toggleSettings} className="close-settings-button">Close</button>
         </div>

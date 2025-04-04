@@ -117,7 +117,6 @@ button, input, select, textarea {
   color: var(--text-primary);
   white-space: nowrap; /* Prevent title from wrapping */
   text-align: center;
-  /* Removed flex-grow to allow proper centering between button groups */
 }
 
 /* --- Header Buttons Styles --- */
@@ -162,10 +161,13 @@ button, input, select, textarea {
   padding: 20px;
   box-shadow: 0 5px 15px var(--settings-menu-shadow);
   z-index: 1000; /* Above other page content */
-  min-width: 280px;
+  /* Adjust width to accommodate two columns */
+  min-width: 450px; /* STARTING POINT - Adjust as needed */
+  width: max-content; /* Allow width to grow based on content */
+  max-width: 600px; /* Prevent it getting too wide */
   display: flex;
   flex-direction: column;
-  gap: 15px; /* Space between options */
+  /* Remove gap here, handle spacing within columns/grid */
   max-height: calc(100vh - 70px); /* Prevent menu from going off-screen */
   overflow-y: auto; /* Allow scrolling within menu if needed */
 }
@@ -175,20 +177,47 @@ button, input, select, textarea {
   font-weight: 600;
   color: var(--text-primary);
   margin-top: 0;
-  margin-bottom: 5px;
-  flex-shrink: 0; /* Prevent title from scrolling if menu scrolls */
+  margin-bottom: 15px; /* More space below title */
+  flex-shrink: 0;
 }
+
+/* ++ Grid Layout for Settings Options ++ */
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Create two equal columns */
+    gap: 25px; /* Adjust gap between columns */
+    align-items: start; /* Align items to the top of their grid cell */
+    margin-bottom: 15px; /* Space before separator/close button */
+}
+
+.settings-column {
+    display: flex;
+    flex-direction: column;
+    gap: 18px; /* Vertical gap between options WITHIN a column */
+}
+/* End Grid Layout */
+
+
 .settings-option {
   display: flex;
   flex-direction: column;
   gap: 6px; /* Space between label and input/select */
-  flex-shrink: 0; /* Prevent options from shrinking weirdly if menu scrolls */
+  /* flex-shrink: 0; No longer needed with grid */
 }
 .settings-option label {
   font-weight: 500;
   font-size: 0.85em;
   color: var(--settings-label-text);
 }
+/* Helper text style */
+.settings-helper-text {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    margin-top: 5px;
+    margin-bottom: 0; /* Reset bottom margin */
+    line-height: 1.4;
+}
+
 
 /* Style for inputs/selects in settings */
 .settings-select, .settings-input {
@@ -234,24 +263,26 @@ button, input, select, textarea {
 
 /* Clear Chat Button (Inside Menu) - Specific Styles */
 .clear-chat-settings-button {
-  /* No 'composes' - apply base class in HTML */
+  /* This class only adds specific styles now */
   background-color: var(--settings-clear-bg);
   color: var(--settings-clear-text);
   border-color: var(--settings-clear-border);
 }
-.clear-chat-settings-button:hover {
+/* Apply hover styles directly to the specific class */
+.settings-action-button.clear-chat-settings-button:hover {
   background-color: var(--settings-clear-hover-bg);
   border-color: var(--settings-clear-hover-border);
 }
 
 /* Export Chat Button (Inside Menu) - Specific Styles */
 .export-chat-settings-button {
-  /* No 'composes' - apply base class in HTML */
+  /* This class only adds specific styles now */
   background-color: var(--settings-export-bg);
   color: var(--settings-export-text);
   border-color: var(--settings-export-border);
 }
-.export-chat-settings-button:hover {
+/* Apply hover styles directly to the specific class */
+.settings-action-button.export-chat-settings-button:hover {
   background-color: var(--settings-export-hover-bg);
   border-color: var(--settings-export-hover-border);
 }
@@ -261,7 +292,7 @@ button, input, select, textarea {
 .settings-separator {
   border: none;
   border-top: 1px solid var(--border-color);
-  margin: 5px 0;
+  margin: 15px 0 5px 0; /* Adjusted margin */
   flex-shrink: 0;
 }
 
@@ -664,15 +695,29 @@ button, input, select, textarea {
     padding: 5px 10px;
     font-size: 0.85em;
   }
+  /* Adjust settings menu for smaller screens */
   .settings-menu {
-    min-width: 0;
+    min-width: 0; /* Allow shrinking */
     width: calc(100% - 20px); /* Nearly full width */
     padding: 15px;
     top: 50px; /* Adjust if header height changes */
     left: 10px;
     right: 10px;
     max-height: calc(100vh - 60px); /* Adjust max height */
+    /* Force single column on small screens */
+    grid-template-columns: 1fr;
   }
+   .settings-grid {
+    grid-template-columns: 1fr; /* Stack columns vertically */
+    gap: 0; /* Remove grid gap, rely on column gap */
+  }
+  .settings-column {
+      gap: 15px; /* Vertical gap between options in stacked columns */
+  }
+  .settings-column:not(:last-child) {
+      margin-bottom: 15px; /* Add space between stacked columns */
+  }
+
   .analysis-form-modal {
     padding: 20px;
     max-height: 85vh; /* Adjust max height */
