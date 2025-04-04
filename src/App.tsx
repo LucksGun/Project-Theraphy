@@ -1,7 +1,26 @@
 // src/App.tsx
 import React, { useState, useEffect, ChangeEvent } from 'react'; // Ensure React is imported
+import ReactGA from 'react-ga4';
 import './App.css'; // Ensure this CSS file is linked
 import ChatbotPage from './ChatbotPage'; // Assuming ChatbotPage component exists
+
+// --- GA Measurement ID ---
+const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
+
+// --- Initialize GA & Send Initial Pageview ---
+if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { // Basic check
+  try {
+     ReactGA.initialize(GA_MEASUREMENT_ID);
+     console.log("Google Analytics Initialized with ID:", GA_MEASUREMENT_ID);
+     // Send initial pageview right after initialization
+     ReactGA.send({ hitType: "pageview", page: window.location.pathname + window.location.search, title: "Chatbot Initial Load" });
+     console.log("Initial Pageview Sent:", window.location.pathname + window.location.search);
+  } catch (error) {
+     console.error("Error initializing Google Analytics:", error)
+  }
+} else {
+  console.warn("Google Analytics Measurement ID not set or invalid. Tracking disabled.");
+} 
 
 // --- Message interface definition ---
 export interface Message {
@@ -290,6 +309,9 @@ function App() {
       setIsAnalyzing(true);
       setIsAnalysisFormVisible(false); // Close form
 
+      // +++ Track GA Event on Submit ++
+      // ++++++++++++++++++++++++++++++
+
       // Construct the prompt string, labelling each field's input
       // You can change the labels "Field X" here to match your actual field names
       let combinedInput = `Field 1: ${val1}\n`; // Label used in prompt
@@ -297,6 +319,19 @@ function App() {
       if (val3) combinedInput += `Field 3: ${val3}\n`; // Label used in prompt
       if (val4) combinedInput += `Field 4: ${val4}\n`; // Label used in prompt
       if (val5) combinedInput += `Field 5: ${val5}\n`; // Label used in prompt
+
+      if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") {
+        try {
+            ReactGA.event({
+              category: "Analysis Form", // You can customize these
+              action: "Submit_Analysis_Request",
+              label: `Field 1 Length: ${val1.length}` // Example label (val1 needs to be defined above this line)
+            });
+            console.log("GA Event Sent: Submit_Analysis_Request");
+        } catch (error) {
+            console.error("Error sending GA Event:", error);
+        }
+      }
 
       // Add a "Thinking..." message to the chat
       const thinkingTime = Date.now();
