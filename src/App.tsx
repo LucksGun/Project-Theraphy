@@ -6,11 +6,11 @@ import ChatbotPage from './ChatbotPage'; // Assuming ChatbotPage component exist
 
 // --- GA Measurement ID ---
 // IMPORTANT: Replace "G-JX58QMMKZY" with your actual Google Analytics Measurement ID
-const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
+const GA_MEASUREMENT_ID = "G-27XPF5PJFK";
 
 // --- Initialize GA & Send Initial Pageview ---
 // Basic check to prevent initializing with the placeholder ID or example ID
-if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") {
+if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-27XPF5PJFK" && GA_MEASUREMENT_ID !== "G-27XPF5PJFK") {
   try {
     ReactGA.initialize(GA_MEASUREMENT_ID);
     console.log("Google Analytics Initialized with ID:", GA_MEASUREMENT_ID);
@@ -19,7 +19,7 @@ if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_
   } catch (error) {
     console.error("Error initializing Google Analytics:", error)
   }
-} else if (GA_MEASUREMENT_ID === "G-JX58QMMKZY") {
+} else if (GA_MEASUREMENT_ID === "G-27XPF5PJFK") {
     console.warn("Google Analytics is using the placeholder ID (G-JX58QMMKZY). Please replace it with your actual Measurement ID in App.tsx.");
 }
 else {
@@ -169,14 +169,14 @@ function App() {
     if (messagesToExport.length === 0 || (messagesToExport.length === 1 && messagesToExport[0].sender === 'bot' && messagesToExport[0].text.startsWith('Welcome'))) { alert("Chat history is empty or only contains the welcome message."); return; }
     let chatContent = `Chat Export\nExported At: ${new Date().toLocaleString()}\nModel Used: ${selectedModel}\nPersona Active: ${selectedPersona}\n------------------------------------\n\n`;
     messagesToExport.forEach(message => { const timestampStr = new Date(message.timestamp).toLocaleString(); const senderLabel = message.sender === 'user' ? 'User' : 'Bot'; chatContent += `[${timestampStr}] ${senderLabel}:\n${message.text}\n`; if (message.imageUrl) { chatContent += `(Image Attached by Bot: ${message.imageUrl})\n`; } chatContent += `\n`; });
-    try { const blob = new Blob([chatContent], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; const timestampFile = new Date().toISOString().replace(/[:.]/g, '-'); link.download = `project-theraphy-chat-${timestampFile}.txt`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { ReactGA.event({ category: "Chat Action", action: "Export_Chat", label: `Message Count: ${messagesToExport.length}` }); console.log("GA Event Sent: Export_Chat"); } }
+    try { const blob = new Blob([chatContent], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; const timestampFile = new Date().toISOString().replace(/[:.]/g, '-'); link.download = `project-theraphy-chat-${timestampFile}.txt`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-27XPF5PJFK" && GA_MEASUREMENT_ID !== "G-27XPF5PJFK") { ReactGA.event({ category: "Chat Action", action: "Export_Chat", label: `Message Count: ${messagesToExport.length}` }); console.log("GA Event Sent: Export_Chat"); } }
     catch (error) { console.error("Error exporting chat:", error); alert("An error occurred while trying to export the chat."); }
   };
   const clearAnalysisForm = () => { setField1(''); setField2(''); setField3(''); setField4(''); setField5(''); };
   const toggleAnalysisForm = () => { setIsAnalysisFormVisible(prev => !prev); if (isAnalysisFormVisible) { clearAnalysisForm(); setIsAnalyzing(false); } };
   const handleAnalysisSubmit = async (event: React.FormEvent) => {
       event.preventDefault(); const val1 = field1.trim(); const val2 = field2.trim(); const val3 = field3.trim(); const val4 = field4.trim(); const val5 = field5.trim(); if (!val1 || isAnalyzing) return; setIsAnalyzing(true); setIsAnalysisFormVisible(false);
-      if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { try { ReactGA.event({ category: "Analysis Form", action: "Submit_Analysis_Request", label: `Field 1 Length: ${val1.length}` }); console.log("GA Event Sent: Submit_Analysis_Request"); } catch (error) { console.error("Error sending GA Event:", error); } }
+      if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-27XPF5PJFK" && GA_MEASUREMENT_ID !== "G-27XPF5PJFK") { try { ReactGA.event({ category: "Analysis Form", action: "Submit_Analysis_Request", label: `Field 1 Length: ${val1.length}` }); console.log("GA Event Sent: Submit_Analysis_Request"); } catch (error) { console.error("Error sending GA Event:", error); } }
       let combinedInput = `Field 1: ${val1}\n`; if (val2) combinedInput += `Field 2: ${val2}\n`; if (val3) combinedInput += `Field 3: ${val3}\n`; if (val4) combinedInput += `Field 4: ${val4}\n`; if (val5) combinedInput += `Field 5: ${val5}\n`;
       const thinkingTime = Date.now(); const thinkingMessage: Message = { id: thinkingTime, text: `Analyzing Input (Field 1-5: "${val1.substring(0, 40)}...")...`, sender: 'loading', timestamp: thinkingTime }; setMessages(prev => [...prev, thinkingMessage]); clearAnalysisForm();
       const analysisResult = await getBotResponseForAnalysis(combinedInput.trim(), selectedModel, selectedPersona, enteredKey);
