@@ -208,7 +208,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, accessKey 
     let imageDataForApi: { type: string; dataUrl: string } | null = null;
 
     // --- Prepare History ---
-    const MAX_HISTORY_MESSAGES = 20; // Set history length
+    const MAX_HISTORY_MESSAGES = 30; // Set history length
     const relevantHistory = messages
         .filter(msg => msg.sender === 'user' || msg.sender === 'bot') // Exclude loading messages
         .slice(-MAX_HISTORY_MESSAGES); // Get the last N messages
