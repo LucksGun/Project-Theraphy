@@ -191,7 +191,7 @@ function App() {
         <div className="settings-menu" role="dialog" aria-modal="true" aria-labelledby="settings-title">
           <h3 id="settings-title">Settings</h3>
 
-          {/* ++ Settings Grid Layout ++ */}
+          {/* Settings Grid Layout */}
           <div className="settings-grid">
 
             {/* Column 1 */}
@@ -213,7 +213,7 @@ function App() {
                             return ( <option key={personaInfo.value} value={personaInfo.value} disabled={isDisabled} style={style}> {personaInfo.emoji} {personaInfo.label}{personaInfo.restricted ? ' (Restricted)' : ''} </option> );
                         })}
                     </select>
-                    {!userHasAccessToRestricted && RESTRICTED_PERSONAS_VALUES.length > 0 && ( <p className="settings-helper-text"> Personas marked (Restricted) require the correct Access Key. </p> )}
+                    {/* Helper text moved below Model selector */}
                 </div>
 
                 {/* Model Selector */}
@@ -226,7 +226,13 @@ function App() {
                             return ( <option key={modelInfo.value} value={modelInfo.value} disabled={isDisabled} style={style}> {modelInfo.label}{modelInfo.restricted ? ' (Restricted)' : ''} </option> );
                         })}
                     </select>
-                    {!userHasAccessToRestricted && RESTRICTED_MODELS_VALUES.length > 0 && ( <p className="settings-helper-text"> Models marked (Restricted) require the correct Access Key. </p> )}
+                    {/* ++ Combined Helper Text ++ */}
+                    {/* Show if user lacks access AND there's at least one restricted persona OR model */}
+                    {!userHasAccessToRestricted && (RESTRICTED_PERSONAS_VALUES.length > 0 || RESTRICTED_MODELS_VALUES.length > 0) && (
+                        <p className="settings-helper-text">
+                            Restricted Personas and AI Models require the correct Access Key.
+                        </p>
+                    )}
                 </div>
             </div>
 
@@ -245,7 +251,8 @@ function App() {
 
                 {/* Export Chat Button */}
                 <div className="settings-option">
-                    <label>Chat Actions:</label> {/* Optional label for the button group */}
+                    <label>Chat Actions:</label> {/* Optional label */}
+                    {/* Apply both base and specific classes */}
                     <button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">
                       💾 Export Chat History
                     </button>
@@ -253,6 +260,7 @@ function App() {
 
                 {/* Clear Chat History Button */}
                 <div className="settings-option">
+                     {/* Apply both base and specific classes */}
                     <button onClick={handleClearChat} className="settings-action-button clear-chat-settings-button">
                       🗑️ Clear Chat History
                     </button>
@@ -320,17 +328,16 @@ function App() {
         </div>
       )}
 
-      {/* --- Header (Export button removed) --- */}
+      {/* --- Header --- */}
       <header className="App-header">
         {/* Left Button Group */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
             <button onClick={toggleSettings} className="settings-button" title="Settings" aria-label="Open settings menu" aria-expanded={isSettingsOpen}>⚙️</button>
             <button onClick={toggleAnalysisForm} className="settings-button analysis-button" title="Submit Details for Analysis" aria-label="Open analysis form" aria-expanded={isAnalysisFormVisible}>📝</button>
-            {/* Export button is now in settings */}
         </div>
 
         <h1>Project Theraphy - Chatbot</h1>
-        <div className="header-spacer-right"></div> {/* Spacer width adjusted in CSS */}
+        <div className="header-spacer-right"></div>
       </header>
 
       {/* --- Chatbot Page --- */}
@@ -339,7 +346,7 @@ function App() {
         setMessages={setMessages}
         selectedModel={selectedModel}
         sttLang={sttLang}
-        selectedPersona={selectedPersona} // Pass potentially restricted persona
+        selectedPersona={selectedPersona}
         accessKey={enteredKey}
        />
     </div>
