@@ -26,36 +26,38 @@ function readFileAsBase64(file: File): Promise<string> {
     });
 }
 
-// Calls the Cloudflare Worker (Handles History, Image Response, and Persona)
-// UPDATE: This function now expects the worker response to potentially include 'modelUsed' and 'username'
+// Calls the Cloudflare Worker
+// Updated return type to include optional username and modelUsed
 async function getBotResponse(
     userInput: string,
     imageData: { type: string; dataUrl: string } | null,
     history: HistoryItem[],
     model: GeminiModel,
-    persona: Persona, // Added persona
+    persona: Persona,
     accessKey: string // User's unique key
-): Promise<{ text: string; imageUrl: string | null; modelUsed?: string; username?: string }> { // Added username to return type
+): Promise<{ text: string; imageUrl: string | null; modelUsed?: string; username?: string }> {
     const promptToSend = userInput || (imageData ? "Describe this image." : "");
     if (!promptToSend && !imageData) {
-        // Ensure return type matches Promise signature even on early exit
-        return { text: "Please type a message or upload an image.", imageUrl: null, modelUsed: undefined, username: undefined };
+        return { text: "Please type a message or upload an image.", imageUrl: null };
     }
 
+    // ++ Add 'action' to the type definition ++
     const requestBody: {
         prompt: string;
         model: GeminiModel;
-        persona: Persona; // Added persona
+        persona: Persona;
         imageMimeType?: string;
         imageDataUrl?: string;
         accessKey?: string;
         history?: HistoryItem[];
+        action?: 'chat' | 'validateKey'; // <-- ADDED THIS LINE
     } = {
         prompt: promptToSend,
         model: model,
-        persona: persona, // Added persona
+        persona: persona,
         accessKey: accessKey, // Pass the unique key entered by user
-        history: history
+        history: history,
+        action: 'chat' // Specify action for chat requests
     };
 
     if (imageData) {
@@ -63,7 +65,7 @@ async function getBotResponse(
         requestBody.imageDataUrl = imageData.dataUrl;
     }
 
-    console.log(`Sending Chat Request to Worker (Model: ${model}, Persona: ${persona}, History: ${history.length})`);
+    console.log(`Sending Chat Request (M: ${model}, P: ${persona}, H: ${history.length})`);
 
     try {
         const response = await fetch(WORKER_URL, {
@@ -71,55 +73,35 @@ async function getBotResponse(
             headers: { 'Content-Type': 'application/json', },
             body: JSON.stringify(requestBody),
         });
-
-        // Try to parse JSON regardless of status code to get potential error messages from worker
-        const responseData = await response.json().catch(() => ({ error: `Invalid JSON response from worker. Status: ${response.status}` })); // Catch JSON parse errors
-
-        // Handle non-OK responses (like 401, 403 from key validation, or 500)
-        if (!response.ok) {
-            // Use detailed error from worker JSON response if available
-            throw new Error(responseData?.error || `HTTP error! Status: ${response.status} ${response.statusText}`);
-        }
-
-        // Check for application-level errors returned in the JSON even with 200 OK
+        const responseData = await response.json().catch(() => ({ error: `Invalid JSON response. Status: ${response.status}` }));
+        if (!response.ok) { throw new Error(responseData?.error || `HTTP error! Status: ${response.status}`); }
         if (responseData.error) { throw new Error(responseData.error); }
-
-        console.log('Received reply object from Worker:', responseData);
-        // Return object, ensuring imageUrl is explicitly null if missing/falsy
-        return {
-            text: responseData.reply || 'Sorry, I received an empty reply.',
-            imageUrl: responseData.imageUrl || null,
-            modelUsed: responseData.modelUsed, // Pass through the modelUsed field from worker
-            username: responseData.username // Pass through the username field from worker
-        };
-
+        console.log('Received object from Worker:', responseData);
+        return { text: responseData.reply || 'No reply.', imageUrl: responseData.imageUrl || null, modelUsed: responseData.modelUsed, username: responseData.username };
     } catch (error) {
-        console.error('Error fetching bot response:', error);
-        const errorMsg = error instanceof Error ? `Error: ${error.message}` : 'Error: Could not fetch response.';
-         // Ensure return type matches Promise signature on error
-        return { text: errorMsg, imageUrl: null, modelUsed: undefined, username: undefined };
+        console.error('Fetch Err:', error);
+        const msg = error instanceof Error ? `Error: ${error.message}` : 'Fetch failed.';
+        return { text: msg, imageUrl: null };
     }
 }
 
 // Parses suggestions like [Suggestion: Text] from text
 function parseSuggestions(text: string): { mainText: string; suggestions: string[] } {
-    const suggestions: string[] = [];
-    const regex = /\[Suggestion:\s*([\s\S]+?)\s*\]/g; let lastIndex = 0; const parts: string[] = []; let match;
+    const suggestions: string[] = []; const regex = /\[Suggestion:\s*([\s\S]+?)\s*\]/g; let lastIndex = 0; const parts: string[] = []; let match;
     while ((match = regex.exec(text)) !== null) { if (match.index > lastIndex) { parts.push(text.substring(lastIndex, match.index)); } if (match[1]) { suggestions.push(match[1].trim()); } lastIndex = regex.lastIndex; }
     if (lastIndex < text.length) { parts.push(text.substring(lastIndex)); } const mainText = parts.join('').trim(); return { mainText, suggestions };
 }
 
 // Formats timestamp e.g., "16:37"
 function formatTime(timestamp: number): string {
-    if (!timestamp || typeof timestamp !== 'number') return ''; try { const date = new Date(timestamp); return date.toLocaleTimeString(navigator.language||'en-US', { hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { console.error("Time format error:", e); return ''; }
+    if (!timestamp || typeof timestamp !== 'number') return ''; try { const date = new Date(timestamp); return date.toLocaleTimeString(navigator.language||'en-US', { hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { console.error("Time fmt err:", e); return ''; }
 }
 
-// --- Speech Recognition Setup ---
-const SpeechRecognitionImpl = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
-const recognitionAvailable = !!SpeechRecognitionImpl;
-
+// --- Speech Recognition ---
+const SpeechRecognitionImpl = window.SpeechRecognition || (window as any).webkitSpeechRecognition; const recognitionAvailable = !!SpeechRecognitionImpl;
 
 // --- Component Definition ---
+// Props removed for validation feedback, as it's handled in App.tsx now
 interface ChatbotPageProps {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
@@ -127,28 +109,26 @@ interface ChatbotPageProps {
   sttLang: SpeechLanguage;
   selectedPersona: Persona;
   accessKey: string; // User's unique key
-  // ++ State setters from App ++
-  setValidUsername: React.Dispatch<React.SetStateAction<string | null>>;
-  setLastKeyError: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const SEND_COOLDOWN_MS = 3000;
 
-function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona, accessKey, setValidUsername, setLastKeyError }: ChatbotPageProps) { // Added props
-  // --- State ---
+// Component (Props updated)
+function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona, accessKey }: ChatbotPageProps) {
+  // State
   const [input, setInput] = useState<string>(''); const [isLoading, setIsLoading] = useState<boolean>(false); const [selectedImage, setSelectedImage] = useState<File | null>(null); const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null); const [isOnCooldown, setIsOnCooldown] = useState<boolean>(false); const [isRecording, setIsRecording] = useState<boolean>(false);
-  // --- Refs ---
+  // Refs
   const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null); const recognitionRef = useRef<SpeechRecognition | null>(null); const messagesEndRef = useRef<HTMLDivElement>(null); const fileInputRef = useRef<HTMLInputElement>(null);
-  // --- Effects ---
+  // Effects
   const scrollToBottom = useCallback(() => { setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, 100); }, []);
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
   useEffect(() => { return () => { if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); } }; }, [imagePreviewUrl]);
   useEffect(() => { return () => { if (cooldownTimerRef.current) { clearTimeout(cooldownTimerRef.current); } }; }, []);
   useEffect(() => { if (!recognitionAvailable) return; if (!recognitionRef.current) { try { recognitionRef.current = new SpeechRecognitionImpl(); if (!recognitionRef.current) return; recognitionRef.current.continuous = false; recognitionRef.current.interimResults = false; recognitionRef.current.onresult = (e: SpeechRecognitionEvent) => { const t = e.results[e.results.length-1]?.[0]?.transcript; if (t) setInput(t); setIsRecording(false); }; recognitionRef.current.onerror = (e: SpeechRecognitionErrorEvent) => { console.error('Speech Err:', e.error, e.message); let msg=`Speech error: ${e.error}`; if (e.error === 'no-speech') msg="No speech."; else if (e.error === 'audio-capture') msg="Mic error."; else if (e.error === 'not-allowed') msg="Mic permission denied."; else msg+=` - ${e.message||'Unknown'}`; alert(msg); setIsRecording(false); }; recognitionRef.current.onstart = () => { setIsRecording(true); }; recognitionRef.current.onend = () => { setIsRecording(false); }; console.log("Speech Rec Initialized"); } catch (err) { console.error("Fail init speech:", err); recognitionRef.current = null; } } return () => { if (recognitionRef.current?.onstart) { try { recognitionRef.current.abort(); } catch(e){ /*ignore*/ } } setIsRecording(false); }; }, []);
 
-  // --- Core Send Logic (Initialize botResponse to fix TS error) ---
+  // Core Send Logic (No longer needs to set username/error state)
   const sendMessage = useCallback(async (messageText: string, imageFile: File | null) => {
-    const textTrimmed = messageText.trim(); if ((!textTrimmed && !imageFile) || isLoading || isOnCooldown) { console.log("Send blocked"); return; }
+    const textTrimmed = messageText.trim(); if ((!textTrimmed && !imageFile) || isLoading || isOnCooldown) return;
     const currentTime = Date.now(); const imageToSend = imageFile; let imageDataForApi: { type: string; dataUrl: string } | null = null;
     const MAX_HISTORY = 30; const history = messages.filter(m => (m.sender==='user'||m.sender==='bot')&&m.text).slice(-MAX_HISTORY); const historyToSend: HistoryItem[] = history.map(m => ({ sender: m.sender as 'user'|'bot', text: m.text }));
     const userMsg: Message = { id: currentTime, text: textTrimmed+(imageToSend?' (+img)':''), sender: 'user', timestamp: currentTime }; setMessages(prev => [...prev, userMsg]);
@@ -157,54 +137,23 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
     const loadingTime = Date.now() + 1; const loadingMsg: Message = { id: loadingTime, text: 'Bot typing...', sender: 'loading', timestamp: loadingTime }; setMessages(prev => [...prev, loadingMsg]);
     if (imageToSend) { try { if (!imageToSend.type.startsWith('image/')) throw new Error("Invalid file."); const base64 = await readFileAsBase64(imageToSend); imageDataForApi = { type: imageToSend.type, dataUrl: base64 }; } catch (e) { console.error("Img read err:", e); const errTime=Date.now()+2; setMessages(prev => [ ...prev.filter(m => m.id !== loadingTime), { id: errTime, text: `Img Error: ${e instanceof Error ? e.message : 'Unknown'}`, sender: 'bot', timestamp: errTime }]); setIsLoading(false); setIsOnCooldown(false); if(cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current); return; } }
 
-    // Reset key error status optimistically before the call
-    setLastKeyError(null);
-
-    // ++ Initialize botResponse with a default structure to satisfy TypeScript ++
-    let botResponse: { text: string; imageUrl: string | null; modelUsed?: string; username?: string } = {
-        text: 'Error: Response processing failed.', // Default error text
-        imageUrl: null,
-        modelUsed: undefined,
-        username: undefined
-    };
+    let botResponse: { text: string; imageUrl: string | null; modelUsed?: string; username?: string } = { text: 'Error: Response failed.', imageUrl: null };
 
     try {
-        // Attempt to get the actual response
         botResponse = await getBotResponse(textTrimmed, imageDataForApi, historyToSend, selectedModel, selectedPersona, accessKey);
-
-        // Check if the response text indicates an error (includes worker validation errors)
-        if (botResponse.text.startsWith('Error:')) {
-            console.error("Received error message from backend/API:", botResponse.text);
-            const errorTextLower = botResponse.text.toLowerCase();
-            if (errorTextLower.includes('access key required') || errorTextLower.includes('invalid or inactive access key') || errorTextLower.includes('401') || errorTextLower.includes('403')) {
-                setLastKeyError("Invalid or missing key.");
-                setValidUsername(null);
-            } else {
-                 setLastKeyError(null); // Clear previous *key* errors on *other* errors
-                 // Don't clear username if key was valid before but Gemini failed now
-            }
-        } else {
-             // Successful response from AI
-             setLastKeyError(null);
-             if (botResponse.username) {
-                 setValidUsername(botResponse.username);
-             }
-        }
-    } catch (error) { // Catch network/fetch errors specifically
+        // Validation feedback now happens via the debounced call in App.tsx
+        // We just process the response text here. If it's an error (like invalid key), it will just display as the bot message.
+    } catch (error) {
       console.error("Network/fetch error in sendMessage:", error);
       const errorMsg = error instanceof Error ? `Error: ${error.message}` : "Network error.";
-      // Update the initialized botResponse object for the finally block
       botResponse.text = errorMsg;
-      setLastKeyError("Network or Worker error.");
-      setValidUsername(null);
     } finally {
-      setIsLoading(false); // Reset loading state regardless of outcome
+      setIsLoading(false);
       const botTime = Date.now() + 2;
-      // Now botResponse is guaranteed to have a value here
       const newBotMessage: Message = { id: botTime, text: botResponse.text, sender: 'bot', timestamp: botTime, imageUrl: botResponse.imageUrl ?? undefined };
       setMessages((prev => [ ...prev.filter(m => m.id !== loadingTime), newBotMessage ]));
     }
-  }, [messages, isLoading, isOnCooldown, input, selectedImage, setMessages, selectedModel, selectedPersona, accessKey, setValidUsername, setLastKeyError]);
+  }, [messages, isLoading, isOnCooldown, input, selectedImage, setMessages, selectedModel, selectedPersona, accessKey]); // Removed setters from dependencies
 
   // --- Event Handlers ---
   const handleSend = () => { sendMessage(input, selectedImage); };
