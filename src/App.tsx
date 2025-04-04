@@ -1,3 +1,4 @@
+// src/App.tsx
 import React, { useState, useEffect, ChangeEvent } from 'react'; // Ensure React is imported
 import './App.css'; // Ensure this CSS file is linked
 import ChatbotPage from './ChatbotPage'; // Assuming ChatbotPage component exists
@@ -149,10 +150,16 @@ function App() {
   // Settings Menu State
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
-  // +++ NEW State for Analysis Form +++
+  // --- State for Analysis Form ---
   const [isAnalysisFormVisible, setIsAnalysisFormVisible] = useState<boolean>(false);
-  const [analysisInput, setAnalysisInput] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false); // For loading state
+
+  // +++ State for the 5 Form Fields +++
+  const [field1, setField1] = useState<string>('');
+  const [field2, setField2] = useState<string>('');
+  const [field3, setField3] = useState<string>('');
+  const [field4, setField4] = useState<string>('');
+  const [field5, setField5] = useState<string>('');
 
 
   // --- Effects ---
@@ -196,11 +203,13 @@ function App() {
 
   // Persistence Effects
   useEffect(() => {
+    // Only save if there are messages beyond the initial welcome, or if explicitly cleared to empty
     if (messages.length > 1 || (messages.length === 1 && messages[0].sender !== 'bot')) {
          localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
     } else if (messages.length === 0) {
          localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages)); // Save empty array if cleared
     }
+    // Avoid saving if only the initial bot welcome message exists
   }, [messages]);
 
   useEffect(() => {
@@ -237,7 +246,7 @@ function App() {
       const welcomeTime = Date.now();
       const welcomeMessage: Message = { id: welcomeTime, text: "Welcome! How can I help you plan your future, manage stress, or discuss college options today?", sender: 'bot', timestamp: welcomeTime };
       setMessages([welcomeMessage]);
-      // Overwrite localStorage with just the welcome message or empty array
+      // Overwrite localStorage with just the welcome message
       localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([welcomeMessage]));
       setIsSettingsOpen(false);
     }
@@ -247,36 +256,57 @@ function App() {
       setEnteredKey(event.target.value);
   };
 
-  // +++ NEW Event Handlers for Analysis Form +++
+
+  // --- Handlers for Analysis Form ---
+  const clearAnalysisForm = () => {
+    setField1('');
+    setField2('');
+    setField3('');
+    setField4('');
+    setField5('');
+  };
+
   const toggleAnalysisForm = () => {
       setIsAnalysisFormVisible(prev => !prev);
       if (isAnalysisFormVisible) { // If closing
-          setAnalysisInput(''); // Clear input when closing
-          setIsAnalyzing(false); // Ensure loading state is reset if closed mid-analysis
+          clearAnalysisForm(); // Clear all fields when closing
+          setIsAnalyzing(false); // Ensure loading state is reset
       }
-  };
-
-  const handleAnalysisInputChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-      setAnalysisInput(event.target.value);
   };
 
   const handleAnalysisSubmit = async (event: React.FormEvent) => {
       event.preventDefault();
-      const textToAnalyze = analysisInput.trim();
-      if (!textToAnalyze || isAnalyzing) return;
+
+      // Trim all field values
+      const val1 = field1.trim();
+      const val2 = field2.trim();
+      const val3 = field3.trim();
+      const val4 = field4.trim();
+      const val5 = field5.trim();
+
+      // Check if required field (Field 1) is filled and not already analyzing
+      if (!val1 || isAnalyzing) return;
 
       setIsAnalyzing(true);
-      setAnalysisInput(''); // Clear input visually immediately
       setIsAnalysisFormVisible(false); // Close form
+
+      // Construct the prompt string, labelling each field's input
+      // You can change the labels "Field X" here to match your actual field names
+      let combinedInput = `Field 1: ${val1}\n`; // Label used in prompt
+      if (val2) combinedInput += `Field 2: ${val2}\n`; // Label used in prompt
+      if (val3) combinedInput += `Field 3: ${val3}\n`; // Label used in prompt
+      if (val4) combinedInput += `Field 4: ${val4}\n`; // Label used in prompt
+      if (val5) combinedInput += `Field 5: ${val5}\n`; // Label used in prompt
 
       // Add a "Thinking..." message to the chat
       const thinkingTime = Date.now();
-      const thinkingMessage: Message = { id: thinkingTime, text: `Analyzing: "${textToAnalyze.substring(0, 50)}..."`, sender: 'loading', timestamp: thinkingTime };
+      // Display only the first field in the thinking message for brevity
+      const thinkingMessage: Message = { id: thinkingTime, text: `Analyzing Input (Field 1: "${val1.substring(0, 40)}...")...`, sender: 'loading', timestamp: thinkingTime };
       setMessages(prev => [...prev, thinkingMessage]);
+      clearAnalysisForm(); // Clear form fields in state after grabbing values
 
-      // Call the bot for analysis
-      const promptForAnalysis = `Analyze the following text:\n\n${textToAnalyze}`;
-      const analysisResult = await getBotResponseForAnalysis(promptForAnalysis, selectedModel, enteredKey); // Pass necessary args
+      // Call the bot for analysis with the combined & labelled input
+      const analysisResult = await getBotResponseForAnalysis(combinedInput.trim(), selectedModel, enteredKey); // Assumes 'selectedModel' and 'enteredKey' are available
 
       // Replace thinking message with the result
       const resultTime = Date.now() + 1; // Ensure unique ID
@@ -291,14 +321,13 @@ function App() {
   };
 
 
-  // --- JSX Return ---
+  // --- JSX Return Statement ---
   return (
     <div className="App">
       {/* --- Settings Menu (Conditional) --- */}
       {isSettingsOpen && (
         <div className="settings-menu" role="dialog" aria-modal="true" aria-labelledby="settings-title">
           <h3 id="settings-title">Settings</h3>
-
            {/* Access Key Input */}
            <div className="settings-option">
             <label htmlFor="access-key-input">Access Key:</label>
@@ -312,9 +341,8 @@ function App() {
             />
             {enteredKey && ( <span style={{ fontSize: '0.8em', marginLeft: '5px' }}>{userHasAccessToRestricted ? '✅' : '❌'}</span> )}
            </div>
-
           {/* STT Language Selector */}
-          <div className="settings-option">
+           <div className="settings-option">
             <label htmlFor="stt-lang-select">Speak Language:</label>
             <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select">
                 <option value="en-US">English (US)</option>
@@ -322,10 +350,9 @@ function App() {
                 <option value="es-ES">Español (España)</option>
                 <option value="fr-FR">Français (France)</option>
             </select>
-          </div>
-
-          {/* Model Selector (Disabled/Styled based on access) */}
-          <div className="settings-option">
+           </div>
+          {/* Model Selector */}
+           <div className="settings-option">
              <label htmlFor="model-select">AI Model:</label>
              <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select">
                  {ALL_AVAILABLE_MODELS.map((modelInfo) => {
@@ -343,42 +370,112 @@ function App() {
                    Models marked (Restricted) require the correct Access Key.
                 </p>
              )}
-          </div>
-
+           </div>
           {/* Clear Chat History Button */}
-          <div className="settings-option">
+           <div className="settings-option">
              <button onClick={handleClearChat} className="clear-chat-settings-button">
                 🗑️ Clear Chat History
              </button>
-          </div>
-
+           </div>
           {/* Separator Line */}
-          <hr className="settings-separator" />
-
+           <hr className="settings-separator" />
           {/* Close Button */}
-          <button onClick={toggleSettings} className="close-settings-button">Close</button>
+           <button onClick={toggleSettings} className="close-settings-button">Close</button>
         </div>
       )}
 
-      {/* +++ NEW Analysis Form Modal +++ */}
+      {/* +++ Analysis Form Modal with 5 Fields +++ */}
       {isAnalysisFormVisible && (
-          <div className="analysis-form-overlay"> {/* Use overlay like beta notice */}
+          <div className="analysis-form-overlay">
               <div className="analysis-form-modal" role="dialog" aria-modal="true" aria-labelledby="analysis-title">
-                  <h3 id="analysis-title">Analyze Text</h3>
+                  {/* ===> EDIT FORM TITLE HERE <=== */}
+                  <h3 id="analysis-title">Submit Details for Analysis</h3>
+
                   <form onSubmit={handleAnalysisSubmit}>
-                       <div className="settings-option"> {/* Reuse styling */}
-                          <label htmlFor="analysis-textarea">Enter text to analyze:</label>
-                          <textarea
-                              id="analysis-textarea"
-                              className="settings-input" // Reuse styling
-                              rows={6}
-                              value={analysisInput}
-                              onChange={handleAnalysisInputChange}
-                              placeholder="Paste or type text here..."
+
+                      {/* === Field 1 (Required) === */}
+                      <div className="settings-option" style={{ marginBottom: '15px' }}>
+                          {/* ===> EDIT Field 1 LABEL HERE <=== */}
+                          <label htmlFor="analysis-field1">Field 1 (Required):</label>
+                          <input
+                              type="text"
+                              id="analysis-field1"
+                              className="settings-input"
+                              value={field1}
+                              onChange={(e) => setField1(e.target.value)}
+                    
+                              placeholder="Do you have any downside or concern? คุณมีปมด้อยหรือความกังวลอะไรไหม"
                               disabled={isAnalyzing}
-                              required
+                              required // HTML5 required attribute
                           />
                       </div>
+
+                      {/* === Field 2 === */}
+                      <div className="settings-option" style={{ marginBottom: '15px' }}>
+                         
+                          <label htmlFor="analysis-field2">Field 2:</label>
+                          <input
+                              type="text"
+                              id="analysis-field2"
+                              className="settings-input"
+                              value={field2}
+                              onChange={(e) => setField2(e.target.value)}
+                  
+                              placeholder="What thing you enjoy spending time with? คูณมีความสุขใช้เวลาไปกับสิ่งอะไรมากที่สุด"
+                              disabled={isAnalyzing}
+                          />
+                      </div>
+
+                      {/* === Field 3 === */}
+                      <div className="settings-option" style={{ marginBottom: '15px' }}>
+                          {/* ===> EDIT Field 3 LABEL HERE <=== */}
+                          <label htmlFor="analysis-field3">Field 3:</label>
+                          <input
+                              type="text"
+                              id="analysis-field3"
+                              className="settings-input"
+                              value={field3}
+                              onChange={(e) => setField3(e.target.value)}
+                          
+                              placeholder="How would you describe yourself? คุณอธิบายตัวคุณได้ดีที่สุดว่าเป็นอย่างไร"
+                              disabled={isAnalyzing}
+                          />
+                      </div>
+
+                      {/* === Field 4 === */}
+                      <div className="settings-option" style={{ marginBottom: '15px' }}>
+                           {/* ===> EDIT Field 4 LABEL HERE <=== */}
+                          <label htmlFor="analysis-field4">Field 4:</label>
+                          <input
+                              type="text"
+                              id="analysis-field4"
+                              className="settings-input"
+                              value={field4}
+                              onChange={(e) => setField4(e.target.value)}
+                             
+                              placeholder="What do you hate most when you study? คุณเกลียดอะไรมากที่สุดตอนเรียน"
+                              disabled={isAnalyzing}
+                          />
+                      </div>
+
+                      {/* === Field 5 === */}
+                      {/* You could change this to textarea if needed */}
+                      <div className="settings-option" style={{ marginBottom: '15px' }}>
+                          {/* ===> EDIT Field 5 LABEL HERE <=== */}
+                          <label htmlFor="analysis-field5">Field 5:</label>
+                          <input
+                              type="text" // Change to <textarea rows={3} className="settings-input"> if needed
+                              id="analysis-field5"
+                              className="settings-input"
+                              value={field5}
+                              onChange={(e) => setField5(e.target.value)} // Adjust if using textarea
+                              
+                              placeholder="GPA? เกรดเฉลี่ย"
+                              disabled={isAnalyzing}
+                          />
+                      </div>
+
+                      {/* === Form Actions (Buttons) === */}
                       <div className="analysis-form-actions">
                            <button
                                type="button"
@@ -391,9 +488,10 @@ function App() {
                           <button
                               type="submit"
                               className="beta-accept-button" // Reuse style from beta modal
-                              disabled={!analysisInput.trim() || isAnalyzing}
+                              // Disable if required field is empty or currently analyzing
+                              disabled={!field1.trim() || isAnalyzing}
                           >
-                              {isAnalyzing ? 'Analyzing...' : 'Submit for Analysis'}
+                              {isAnalyzing ? 'Submitting...' : 'Submit Analysis'}
                           </button>
                       </div>
                   </form>
@@ -401,15 +499,15 @@ function App() {
           </div>
       )}
 
-      {/* --- Beta Notice Modal --- */}
+      {/* --- Beta Notice Modal (Keep as is) --- */}
       {showBetaNotice && (
-        <div className="beta-notice-overlay">
-           <div className="beta-notice-modal">
-             <h2>⚠️ Beta Version</h2>
-             <p>Welcome! This chatbot is currently in beta. Features may change, and occasional errors might occur. Your feedback is valuable!</p>
-             <button onClick={handleAcceptBeta} className="beta-accept-button">✔️ Accept & Continue</button>
-           </div>
-        </div>
+         <div className="beta-notice-overlay">
+            <div className="beta-notice-modal">
+              <h2>⚠️ Beta Version</h2>
+              <p>Welcome! This chatbot is currently in beta. Features may change, and occasional errors might occur. Your feedback is valuable!</p>
+              <button onClick={handleAcceptBeta} className="beta-accept-button">✔️ Accept & Continue</button>
+            </div>
+         </div>
       )}
 
       {/* --- Header --- */}
@@ -425,12 +523,12 @@ function App() {
             >
                 ⚙️
             </button>
-            {/* +++ NEW Analysis Button +++ */}
+            {/* Analysis Button */}
             <button
                 onClick={toggleAnalysisForm}
-                className="settings-button analysis-button" // Reuse settings-button + add new class
-                title="Analyze Text"
-                aria-label="Open text analysis form"
+                className="settings-button analysis-button"
+                title="Submit Details for Analysis" // Updated title
+                aria-label="Open analysis form"
                 aria-expanded={isAnalysisFormVisible}
             >
                 📝 {/* Example Icon: Memo/Note */}
@@ -453,7 +551,8 @@ function App() {
         accessKey={enteredKey} // Pass the entered key
        />
     </div>
-  );
-}
+  ); // End of return statement
+
+} // End of App function
 
 export default App;
