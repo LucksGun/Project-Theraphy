@@ -28,6 +28,7 @@ export interface Message {
   text: string;
   sender: 'user' | 'bot' | 'loading';
   timestamp: number;
+  imageUrl?: string; // <--- ADD THIS LINE
 }
 
 // Define allowed model types (All possible models)
