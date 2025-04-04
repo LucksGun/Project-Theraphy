@@ -27,19 +27,19 @@ function readFileAsBase64(file: File): Promise<string> {
 }
 
 // Calls the Cloudflare Worker (Handles History, Image Response, and Persona)
-// UPDATE: This function now expects the worker response to potentially include 'modelUsed'
+// UPDATE: This function now expects the worker response to potentially include 'modelUsed' and 'username'
 async function getBotResponse(
     userInput: string,
     imageData: { type: string; dataUrl: string } | null,
     history: HistoryItem[],
     model: GeminiModel,
     persona: Persona, // Added persona
-    accessKey: string
-): Promise<{ text: string; imageUrl: string | null; modelUsed?: string }> { // Added modelUsed to return type
+    accessKey: string // User's unique key
+): Promise<{ text: string; imageUrl: string | null; modelUsed?: string; username?: string }> { // Added username to return type
     const promptToSend = userInput || (imageData ? "Describe this image." : "");
     if (!promptToSend && !imageData) {
         // Ensure return type matches Promise signature even on early exit
-        return { text: "Please type a message or upload an image.", imageUrl: null, modelUsed: undefined };
+        return { text: "Please type a message or upload an image.", imageUrl: null, modelUsed: undefined, username: undefined };
     }
 
     const requestBody: {
@@ -72,83 +72,46 @@ async function getBotResponse(
             body: JSON.stringify(requestBody),
         });
 
+        // Try to parse JSON regardless of status code to get potential error messages from worker
+        const responseData = await response.json().catch(() => ({ error: `Invalid JSON response from worker. Status: ${response.status}` })); // Catch JSON parse errors
+
         // Handle non-OK responses (like 401, 403 from key validation, or 500)
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status}` }));
-            // Use detailed error from worker if available
-            const errorMessage = errorData?.error || `HTTP error! Status: ${response.status} ${response.statusText}`;
-            // Throw specific error to be caught below
-            throw new Error(errorMessage);
+            // Use detailed error from worker JSON response if available
+            throw new Error(responseData?.error || `HTTP error! Status: ${response.status} ${response.statusText}`);
         }
 
-        const data = await response.json(); // Expects { reply: string, imageUrl?: string | null, modelUsed?: string }
-        // Check for application-level errors returned even with 200 OK
-        if (data.error) { throw new Error(data.error); }
+        // Check for application-level errors returned in the JSON even with 200 OK
+        if (responseData.error) { throw new Error(responseData.error); }
 
-        console.log('Received reply object from Worker:', data);
+        console.log('Received reply object from Worker:', responseData);
         // Return object, ensuring imageUrl is explicitly null if missing/falsy
         return {
-            text: data.reply || 'Sorry, I received an empty reply.',
-            imageUrl: data.imageUrl || null,
-            modelUsed: data.modelUsed // Pass through the modelUsed field from worker
+            text: responseData.reply || 'Sorry, I received an empty reply.',
+            imageUrl: responseData.imageUrl || null,
+            modelUsed: responseData.modelUsed, // Pass through the modelUsed field from worker
+            username: responseData.username // Pass through the username field from worker
         };
 
     } catch (error) {
         console.error('Error fetching bot response:', error);
         const errorMsg = error instanceof Error ? `Error: ${error.message}` : 'Error: Could not fetch response.';
-        // Ensure return type matches Promise signature on error
-        return { text: errorMsg, imageUrl: null, modelUsed: undefined };
+         // Ensure return type matches Promise signature on error
+        return { text: errorMsg, imageUrl: null, modelUsed: undefined, username: undefined };
     }
 }
 
 // Parses suggestions like [Suggestion: Text] from text
 function parseSuggestions(text: string): { mainText: string; suggestions: string[] } {
     const suggestions: string[] = [];
-    // Improved regex to handle potential variations in spacing
-    const regex = /\[Suggestion:\s*([\s\S]+?)\s*\]/g;
-    let lastIndex = 0;
-    const parts: string[] = [];
-
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-        // Add text before the match
-        if (match.index > lastIndex) {
-            parts.push(text.substring(lastIndex, match.index));
-        }
-        // Add the suggestion
-        if (match[1]) {
-            suggestions.push(match[1].trim());
-        }
-        // Update last index
-        lastIndex = regex.lastIndex;
-    }
-
-    // Add any remaining text after the last match
-    if (lastIndex < text.length) {
-        parts.push(text.substring(lastIndex));
-    }
-
-    // Join the non-suggestion parts back together
-    const mainText = parts.join('').trim();
-
-    return { mainText, suggestions };
+    const regex = /\[Suggestion:\s*([\s\S]+?)\s*\]/g; let lastIndex = 0; const parts: string[] = []; let match;
+    while ((match = regex.exec(text)) !== null) { if (match.index > lastIndex) { parts.push(text.substring(lastIndex, match.index)); } if (match[1]) { suggestions.push(match[1].trim()); } lastIndex = regex.lastIndex; }
+    if (lastIndex < text.length) { parts.push(text.substring(lastIndex)); } const mainText = parts.join('').trim(); return { mainText, suggestions };
 }
-
 
 // Formats timestamp e.g., "16:37"
 function formatTime(timestamp: number): string {
-    if (!timestamp || typeof timestamp !== 'number') return '';
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleTimeString(navigator.language || 'en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false // Use 24-hour format consistently
-      });
-    } catch (e) {
-      console.error("Error formatting time:", e);
-      return '';
-    }
+    if (!timestamp || typeof timestamp !== 'number') return ''; try { const date = new Date(timestamp); return date.toLocaleTimeString(navigator.language||'en-US', { hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { console.error("Time format error:", e); return ''; }
 }
 
 // --- Speech Recognition Setup ---
@@ -162,102 +125,100 @@ interface ChatbotPageProps {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   selectedModel: GeminiModel;
   sttLang: SpeechLanguage;
-  selectedPersona: Persona; // Receive selected persona
-  accessKey: string; // Receive the unique key entered by user
+  selectedPersona: Persona;
+  accessKey: string; // User's unique key
+  // ++ State setters from App ++
+  setValidUsername: React.Dispatch<React.SetStateAction<string | null>>;
+  setLastKeyError: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-const SEND_COOLDOWN_MS = 3000; // 3 seconds
+const SEND_COOLDOWN_MS = 3000;
 
-function ChatbotPage({
-    messages,
-    setMessages,
-    selectedModel,
-    sttLang,
-    selectedPersona, // Use selected persona
-    accessKey // Use the unique key
-}: ChatbotPageProps) {
+function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona, accessKey, setValidUsername, setLastKeyError }: ChatbotPageProps) { // Added props
   // --- State ---
-  const [input, setInput] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-  const [isOnCooldown, setIsOnCooldown] = useState<boolean>(false);
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-
+  const [input, setInput] = useState<string>(''); const [isLoading, setIsLoading] = useState<boolean>(false); const [selectedImage, setSelectedImage] = useState<File | null>(null); const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null); const [isOnCooldown, setIsOnCooldown] = useState<boolean>(false); const [isRecording, setIsRecording] = useState<boolean>(false);
   // --- Refs ---
-  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null); const recognitionRef = useRef<SpeechRecognition | null>(null); const messagesEndRef = useRef<HTMLDivElement>(null); const fileInputRef = useRef<HTMLInputElement>(null);
   // --- Effects ---
-  const scrollToBottom = useCallback(() => {
-      setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, 100);
-  }, []);
+  const scrollToBottom = useCallback(() => { setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, 100); }, []);
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
   useEffect(() => { return () => { if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); } }; }, [imagePreviewUrl]);
   useEffect(() => { return () => { if (cooldownTimerRef.current) { clearTimeout(cooldownTimerRef.current); } }; }, []);
-  useEffect(() => {
-      if (!recognitionAvailable) { console.warn("Speech Recognition not available."); return; }
-      if (!recognitionRef.current) {
-          try {
-              recognitionRef.current = new SpeechRecognitionImpl(); if (!recognitionRef.current) return;
-              recognitionRef.current.continuous = false; recognitionRef.current.interimResults = false;
-              recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => { const transcript = event.results[event.results.length - 1]?.[0]?.transcript; if (transcript) { setInput(transcript); } setIsRecording(false); };
-              recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => { console.error('Speech recognition error:', event.error, event.message); let errorMessage = `Speech error: ${event.error}`; if (event.error === 'no-speech') { errorMessage = "No speech detected."; } else if (event.error === 'audio-capture') { errorMessage = "Microphone error."; } else if (event.error === 'not-allowed') { errorMessage = "Microphone permission denied."; } else { errorMessage += ` - ${event.message || 'Unknown'}`; } alert(errorMessage); setIsRecording(false); };
-              recognitionRef.current.onstart = () => { setIsRecording(true); }; recognitionRef.current.onend = () => { setIsRecording(false); }; console.log("Speech Recognition Initialized");
-          } catch (error) { console.error("Failed to initialize SpeechRecognition:", error); recognitionRef.current = null; }
-      }
-      return () => { if (recognitionRef.current && recognitionRef.current.onstart) { try { recognitionRef.current.abort(); console.log("Aborted speech recognition cleanup."); } catch(e){ console.warn("Error aborting speech", e); } } setIsRecording(false); };
-  }, []);
+  useEffect(() => { if (!recognitionAvailable) return; if (!recognitionRef.current) { try { recognitionRef.current = new SpeechRecognitionImpl(); if (!recognitionRef.current) return; recognitionRef.current.continuous = false; recognitionRef.current.interimResults = false; recognitionRef.current.onresult = (e: SpeechRecognitionEvent) => { const t = e.results[e.results.length-1]?.[0]?.transcript; if (t) setInput(t); setIsRecording(false); }; recognitionRef.current.onerror = (e: SpeechRecognitionErrorEvent) => { console.error('Speech Err:', e.error, e.message); let msg=`Speech error: ${e.error}`; if (e.error === 'no-speech') msg="No speech."; else if (e.error === 'audio-capture') msg="Mic error."; else if (e.error === 'not-allowed') msg="Mic permission denied."; else msg+=` - ${e.message||'Unknown'}`; alert(msg); setIsRecording(false); }; recognitionRef.current.onstart = () => { setIsRecording(true); }; recognitionRef.current.onend = () => { setIsRecording(false); }; console.log("Speech Rec Initialized"); } catch (err) { console.error("Fail init speech:", err); recognitionRef.current = null; } } return () => { if (recognitionRef.current?.onstart) { try { recognitionRef.current.abort(); } catch(e){ /*ignore*/ } } setIsRecording(false); }; }, []);
 
-  // --- Core Send Logic ---
+  // --- Core Send Logic (Initialize botResponse to fix TS error) ---
   const sendMessage = useCallback(async (messageText: string, imageFile: File | null) => {
-    const textTrimmed = messageText.trim();
-    if ((!textTrimmed && !imageFile) || isLoading || isOnCooldown) { console.log("Send blocked:", {isLoading, isOnCooldown, textTrimmed: !!textTrimmed, imageFile: !!imageFile}); return; }
+    const textTrimmed = messageText.trim(); if ((!textTrimmed && !imageFile) || isLoading || isOnCooldown) { console.log("Send blocked"); return; }
     const currentTime = Date.now(); const imageToSend = imageFile; let imageDataForApi: { type: string; dataUrl: string } | null = null;
-    const MAX_HISTORY_MESSAGES = 30; const relevantHistory = messages .filter(msg => (msg.sender === 'user' || msg.sender === 'bot') && msg.text) .slice(-MAX_HISTORY_MESSAGES);
-    const historyToSend: HistoryItem[] = relevantHistory.map(msg => ({ sender: msg.sender as 'user' | 'bot', text: msg.text }));
-    const newUserMessage: Message = { id: currentTime, text: textTrimmed + (imageToSend ? ' (+image)' : ''), sender: 'user', timestamp: currentTime, imageUrl: undefined }; setMessages((prevMessages) => [...prevMessages, newUserMessage]);
-    if (imageToSend && imageToSend === selectedImage) { setSelectedImage(null); setImagePreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; } if (messageText === input) { setInput(''); }
-    setIsLoading(true); setIsOnCooldown(true); if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current); cooldownTimerRef.current = setTimeout(() => { setIsOnCooldown(false); }, SEND_COOLDOWN_MS);
-    const loadingTime = Date.now() + 1; const loadingMessage: Message = { id: loadingTime, text: 'Bot is typing...', sender: 'loading', timestamp: loadingTime }; setMessages((prevMessages) => [...prevMessages, loadingMessage]);
-    if (imageToSend) { try { if (!imageToSend.type.startsWith('image/')) { throw new Error("Invalid file type."); } const base64String = await readFileAsBase64(imageToSend); imageDataForApi = { type: imageToSend.type, dataUrl: base64String }; } catch (error) { console.error("Error reading image file:", error); const errorTime = Date.now() + 2; setMessages((prevMessages) => [ ...prevMessages.filter(msg => msg.id !== loadingTime), { id: errorTime, text: `Error reading image file: ${error instanceof Error ? error.message : 'Unknown Error'}`, sender: 'bot', timestamp: errorTime }]); setIsLoading(false); setIsOnCooldown(false); if(cooldownTimerRef.current){ clearTimeout(cooldownTimerRef.current); } return; } }
-    let botResponse: { text: string; imageUrl: string | null; modelUsed?: string } = { text: '', imageUrl: null, modelUsed: undefined };
-    try { botResponse = await getBotResponse(textTrimmed, imageDataForApi, historyToSend, selectedModel, selectedPersona, accessKey); } // Pass unique user key
-    catch (error) { console.error("Error during getBotResponse call:", error); const errorMsg = error instanceof Error ? `Error: ${error.message}` : "Unknown error fetching response."; botResponse = { text: errorMsg, imageUrl: null, modelUsed: undefined }; }
-    finally {
-      setIsLoading(false); // Reset loading here
+    const MAX_HISTORY = 30; const history = messages.filter(m => (m.sender==='user'||m.sender==='bot')&&m.text).slice(-MAX_HISTORY); const historyToSend: HistoryItem[] = history.map(m => ({ sender: m.sender as 'user'|'bot', text: m.text }));
+    const userMsg: Message = { id: currentTime, text: textTrimmed+(imageToSend?' (+img)':''), sender: 'user', timestamp: currentTime }; setMessages(prev => [...prev, userMsg]);
+    if (imageToSend && imageToSend===selectedImage) { setSelectedImage(null); setImagePreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; } if (messageText===input) setInput('');
+    setIsLoading(true); setIsOnCooldown(true); if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current); cooldownTimerRef.current = setTimeout(() => setIsOnCooldown(false), SEND_COOLDOWN_MS);
+    const loadingTime = Date.now() + 1; const loadingMsg: Message = { id: loadingTime, text: 'Bot typing...', sender: 'loading', timestamp: loadingTime }; setMessages(prev => [...prev, loadingMsg]);
+    if (imageToSend) { try { if (!imageToSend.type.startsWith('image/')) throw new Error("Invalid file."); const base64 = await readFileAsBase64(imageToSend); imageDataForApi = { type: imageToSend.type, dataUrl: base64 }; } catch (e) { console.error("Img read err:", e); const errTime=Date.now()+2; setMessages(prev => [ ...prev.filter(m => m.id !== loadingTime), { id: errTime, text: `Img Error: ${e instanceof Error ? e.message : 'Unknown'}`, sender: 'bot', timestamp: errTime }]); setIsLoading(false); setIsOnCooldown(false); if(cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current); return; } }
+
+    // Reset key error status optimistically before the call
+    setLastKeyError(null);
+
+    // ++ Initialize botResponse with a default structure to satisfy TypeScript ++
+    let botResponse: { text: string; imageUrl: string | null; modelUsed?: string; username?: string } = {
+        text: 'Error: Response processing failed.', // Default error text
+        imageUrl: null,
+        modelUsed: undefined,
+        username: undefined
+    };
+
+    try {
+        // Attempt to get the actual response
+        botResponse = await getBotResponse(textTrimmed, imageDataForApi, historyToSend, selectedModel, selectedPersona, accessKey);
+
+        // Check if the response text indicates an error (includes worker validation errors)
+        if (botResponse.text.startsWith('Error:')) {
+            console.error("Received error message from backend/API:", botResponse.text);
+            const errorTextLower = botResponse.text.toLowerCase();
+            if (errorTextLower.includes('access key required') || errorTextLower.includes('invalid or inactive access key') || errorTextLower.includes('401') || errorTextLower.includes('403')) {
+                setLastKeyError("Invalid or missing key.");
+                setValidUsername(null);
+            } else {
+                 setLastKeyError(null); // Clear previous *key* errors on *other* errors
+                 // Don't clear username if key was valid before but Gemini failed now
+            }
+        } else {
+             // Successful response from AI
+             setLastKeyError(null);
+             if (botResponse.username) {
+                 setValidUsername(botResponse.username);
+             }
+        }
+    } catch (error) { // Catch network/fetch errors specifically
+      console.error("Network/fetch error in sendMessage:", error);
+      const errorMsg = error instanceof Error ? `Error: ${error.message}` : "Network error.";
+      // Update the initialized botResponse object for the finally block
+      botResponse.text = errorMsg;
+      setLastKeyError("Network or Worker error.");
+      setValidUsername(null);
+    } finally {
+      setIsLoading(false); // Reset loading state regardless of outcome
       const botTime = Date.now() + 2;
-      // Add modelUsed to message if available - FOR DEBUGGING, you might display this
-      // console.log("Bot response included modelUsed:", botResponse.modelUsed);
-      const newBotMessage: Message = { id: botTime, text: botResponse.text, sender: 'bot', timestamp: botTime, imageUrl: botResponse.imageUrl ?? undefined /*, modelUsed: botResponse.modelUsed */ }; // Add modelUsed here if extending Message interface
-      setMessages((prevMessages) => [ ...prevMessages.filter(msg => msg.id !== loadingTime), newBotMessage ]);
+      // Now botResponse is guaranteed to have a value here
+      const newBotMessage: Message = { id: botTime, text: botResponse.text, sender: 'bot', timestamp: botTime, imageUrl: botResponse.imageUrl ?? undefined };
+      setMessages((prev => [ ...prev.filter(m => m.id !== loadingTime), newBotMessage ]));
     }
-  }, [messages, isLoading, isOnCooldown, input, selectedImage, setMessages, selectedModel, selectedPersona, accessKey]); // Added accessKey dependency
+  }, [messages, isLoading, isOnCooldown, input, selectedImage, setMessages, selectedModel, selectedPersona, accessKey, setValidUsername, setLastKeyError]);
 
   // --- Event Handlers ---
   const handleSend = () => { sendMessage(input, selectedImage); };
   const handleSuggestionClick = useCallback((suggestionText: string) => { sendMessage(suggestionText, null); }, [sendMessage]);
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => { setInput(event.target.value); };
   const handleKeyPress = (event: React.KeyboardEvent) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend(); } };
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file && file.type.startsWith('image/')) { const MAX_SIZE_MB = 3.8; if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert(`Image too large (Max ${MAX_SIZE_MB} MB).`); if (fileInputRef.current) fileInputRef.current.value = ""; return; } setSelectedImage(file); if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); setImagePreviewUrl(URL.createObjectURL(file)); }
-      else { setSelectedImage(null); setImagePreviewUrl(null); if (file) alert("Invalid image file type."); if (fileInputRef.current) fileInputRef.current.value = ""; }
-  };
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (file && file.type.startsWith('image/')) { const MAX=3.8; if(file.size>MAX*1024*1024){ alert(`Img too large (>${MAX}MB)`); if(fileInputRef.current)fileInputRef.current.value=""; return; } setSelectedImage(file); if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); setImagePreviewUrl(URL.createObjectURL(file)); } else { setSelectedImage(null); setImagePreviewUrl(null); if (file) alert("Invalid image type."); if (fileInputRef.current) fileInputRef.current.value = ""; } };
   const handleImageUploadClick = () => { fileInputRef.current?.click(); };
   const removeSelectedImage = () => { setSelectedImage(null); setImagePreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; };
-  const handleMicClick = () => {
-      if (!recognitionRef.current || !recognitionAvailable) { return alert("Speech recognition not available."); } if (isLoading || isOnCooldown) { console.log("Mic blocked: loading/cooldown"); return; }
-      if (isRecording) { try { recognitionRef.current.stop(); console.log("Speech recognition stopped."); } catch(e){ console.warn("Error stopping speech", e); } }
-      else { try { recognitionRef.current.lang = sttLang; recognitionRef.current.start(); console.log("Speech recognition started:", sttLang); } catch (e) { if (e instanceof DOMException && e.name === 'InvalidStateError') { alert("Wait before starting recognition again."); } else { console.error("Error starting speech:", e); alert("Cannot start recognition. Check permissions/mic."); } setIsRecording(false); } }
-  };
+  const handleMicClick = () => { if (!recognitionRef.current || !recognitionAvailable) return alert("Speech rec not available."); if (isLoading || isOnCooldown) return; if (isRecording) { try { recognitionRef.current.stop(); } catch(e){ console.warn("Stop speech err", e); } } else { try { recognitionRef.current.lang = sttLang; recognitionRef.current.start(); } catch (e) { if (e instanceof DOMException && e.name === 'InvalidStateError') { alert("Wait before starting mic again."); } else { console.error("Start speech err:", e); alert("Mic start fail."); } setIsRecording(false); } } };
 
   // --- JSX Rendering ---
   return (
       <div className="chatbot-container">
-        {/* Messages Area */}
         <div className="chatbot-messages">
           {messages.map((message: Message) => {
               let mainText = message.text; let suggestions: string[] = [];
@@ -265,37 +226,23 @@ function ChatbotPage({
               return (
                 <div key={message.id} className={`message-wrapper message-wrapper-${message.sender}`}>
                   <div className={`message ${message.sender}`}>
-                    {message.sender === 'bot' ? (
-                      <>
-                        {mainText && mainText.trim() !== '' && !mainText.startsWith('Error:') && ( <ReactMarkdown remarkPlugins={[remarkGfm]} children={mainText}/> )}
-                        {message.imageUrl && ( <img src={message.imageUrl} alt="Bot response" style={{ maxWidth: '100%', maxHeight: '350px', display: 'block', marginTop: mainText && mainText.trim() !== '' ? '8px' : '0px', borderRadius: '8px', cursor:'pointer' }} onClick={() => window.open(message.imageUrl, '_blank')} onError={(e) => { console.warn("Image load fail:", message.imageUrl); e.currentTarget.style.display = 'none'; }} /> )}
-                        {!(mainText && mainText.trim() !== '') && !message.imageUrl && !(message.text && message.text.startsWith('Error:')) && ( <i>[Empty response]</i> )}
-                        {message.text && message.text.startsWith('Error:') && ( <p style={{color: 'var(--remove-button-bg, red)'}}>{message.text}</p> )}
-                      </>
-                    ) : message.sender === 'loading' ? ( <i>{message.text}</i> ) : ( <p style={{ whiteSpace: 'pre-wrap' }}>{message.text}</p> )}
+                    {message.sender === 'bot' ? (<> {mainText && mainText.trim() !== '' && !mainText.startsWith('Error:') && ( <ReactMarkdown remarkPlugins={[remarkGfm]} children={mainText}/> )} {message.imageUrl && ( <img src={message.imageUrl} alt="Bot response" style={{ maxWidth:'100%',maxHeight:'350px',display:'block',marginTop:mainText&&mainText.trim()!==''?'8px':'0px',borderRadius:'8px',cursor:'pointer' }} onClick={() => window.open(message.imageUrl, '_blank')} onError={(e) => { e.currentTarget.style.display = 'none'; }} /> )} {!(mainText && mainText.trim()!=='') && !message.imageUrl && !(message.text && message.text.startsWith('Error:')) && (<i>[Empty]</i>)} {message.text && message.text.startsWith('Error:') && (<p style={{color:'var(--remove-button-bg,red)'}}>{message.text}</p>)} </>)
+                     : message.sender === 'loading' ? (<i>{message.text}</i>)
+                     : (<p style={{whiteSpace:'pre-wrap'}}>{message.text}</p>)}
                   </div>
                   {message.sender !== 'loading' && message.timestamp && ( <span className="message-timestamp">{formatTime(message.timestamp)}</span> )}
-                  {suggestions.length > 0 && (
-                    <div className="suggestions-container">
-                      {suggestions.map((suggestion, index) => ( <button key={`${message.id}-sugg-${index}`} className="suggestion-button" onClick={() => handleSuggestionClick(suggestion)} disabled={isLoading || isOnCooldown}> {suggestion} </button> ))}
-                    </div>
-                  )}
-                </div>
-              );
+                  {suggestions.length > 0 && ( <div className="suggestions-container"> {suggestions.map((s, i)=>( <button key={`${message.id}-s-${i}`} className="suggestion-button" onClick={()=>handleSuggestionClick(s)} disabled={isLoading || isOnCooldown}> {s} </button> ))} </div> )}
+                </div> );
           })}
           <div ref={messagesEndRef} style={{ height: '1px' }} />
         </div>
-
-        {/* Image Preview Area */}
-        {imagePreviewUrl && ( <div className="image-preview-area"> <img src={imagePreviewUrl} alt="Preview" style={{maxHeight: '50px', maxWidth: '50px', objectFit: 'cover', marginRight: '10px', borderRadius: '4px'}} /> <button onClick={removeSelectedImage} title="Remove image" className="remove-image-button">X</button> </div> )}
-
-        {/* Input Area */}
+        {imagePreviewUrl && ( <div className="image-preview-area"> <img src={imagePreviewUrl} alt="Preview" style={{maxHeight:'50px',maxWidth:'50px',objectFit:'cover',marginRight:'10px',borderRadius:'4px'}}/> <button onClick={removeSelectedImage} title="Remove image" className="remove-image-button">X</button> </div> )}
         <div className="chatbot-input-area">
-          <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/png, image/jpeg, image/gif, image/webp" style={{ display: 'none' }} />
-          <button onClick={handleImageUploadClick} className="upload-button" title="Upload Image" disabled={isLoading || isOnCooldown} aria-label="Upload image"> 📎 </button>
-          <input type="text" value={input} onChange={handleInputChange} onKeyPress={handleKeyPress} placeholder="Type message or speak..." disabled={isLoading || isOnCooldown} aria-label="Chat input" />
-          {recognitionAvailable && ( <button onClick={handleMicClick} className={`mic-button ${isRecording ? 'recording' : ''}`} title={isRecording ? "Stop Recording" : `Start Recording (${sttLang})`} disabled={isLoading || isOnCooldown} aria-label={isRecording ? "Stop voice recording" : "Start voice recording"}> {isRecording ? '■' : '🎙️'} </button> )}
-          <button onClick={handleSend} disabled={isLoading || isOnCooldown || (!input.trim() && !selectedImage)} title="Send message" aria-label="Send message"> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="1.2em" height="1.2em" aria-hidden="true"> <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" /> </svg> </button>
+          <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/png, image/jpeg, image/gif, image/webp" style={{display:'none'}} />
+          <button onClick={handleImageUploadClick} className="upload-button" title="Upload Image" disabled={isLoading || isOnCooldown} aria-label="Upload image">📎</button>
+          <input type="text" value={input} onChange={handleInputChange} onKeyPress={handleKeyPress} placeholder="Type or speak..." disabled={isLoading || isOnCooldown} aria-label="Chat input" />
+          {recognitionAvailable && ( <button onClick={handleMicClick} className={`mic-button ${isRecording?'recording':''}`} title={isRecording?"Stop":"Record"} disabled={isLoading || isOnCooldown} aria-label={isRecording?"Stop":"Record"}> {isRecording?'■':'🎙️'} </button> )}
+          <button onClick={handleSend} disabled={isLoading || isOnCooldown || (!input.trim() && !selectedImage)} title="Send" aria-label="Send message"> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="1.2em" height="1.2em" aria-hidden="true"> <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" /> </svg> </button>
         </div>
       </div>
     );

@@ -56,11 +56,14 @@
   --settings-close-text: var(--text-primary);
   --settings-close-hover-bg: var(--button-secondary-hover-bg);
   /* Export Button Colors (Example) */
-  --settings-export-bg: #e0f2fe; /* Light blue */
-  --settings-export-text: #0c5464; /* Darker blue/teal */
+  --settings-export-bg: #e0f2fe;
+  --settings-export-text: #0c5464;
   --settings-export-border: #bee5eb;
   --settings-export-hover-bg: #c1e8ff;
   --settings-export-hover-border: #a6d9f5;
+  /* Key Validation Colors */
+  --key-valid-color: #198754; /* Bootstrap success green */
+  --key-invalid-color: var(--remove-button-bg); /* Use existing error red */
 }
 
 /* Basic Reset & Font */
@@ -70,7 +73,7 @@ html, body, #root {
   padding: 0;
   font-family: 'Inter', sans-serif;
   background-color: var(--page-bg);
-  overflow: hidden; /* Prevent scrolling on body */
+  overflow: hidden;
   color: var(--text-primary);
 }
 
@@ -78,19 +81,19 @@ button, input, select, textarea {
   font-family: inherit;
   color: inherit;
   background-color: transparent;
-  box-sizing: border-box; /* Include padding and border in element's total width/height */
+  box-sizing: border-box;
 }
 
 .App {
   display: flex;
   flex-direction: column;
-  align-items: stretch; /* Make children stretch */
+  align-items: stretch;
   height: 100vh;
-  max-height: 100vh; /* Ensure it doesn't exceed viewport height */
+  max-height: 100vh;
   box-sizing: border-box;
-  overflow: hidden; /* Prevent App container from scrolling */
+  overflow: hidden;
   background-color: var(--page-bg);
-  position: relative; /* For positioning children like settings menu */
+  position: relative;
 }
 
 /* --- Header Styles --- */
@@ -99,15 +102,15 @@ button, input, select, textarea {
   background-color: var(--header-bg);
   border-bottom: 1px solid var(--border-color);
   text-align: center;
-  flex-shrink: 0; /* Prevent header from shrinking */
+  flex-shrink: 0;
   box-shadow: 0 1px 3px var(--shadow-color);
   display: flex;
-  justify-content: space-between; /* Space items horizontally */
-  align-items: center; /* Center items vertically */
+  justify-content: space-between;
+  align-items: center;
   position: relative;
   box-sizing: border-box;
-  z-index: 10; /* Keep header above chat messages area visually */
-  min-height: 50px; /* Ensure minimum height */
+  z-index: 10;
+  min-height: 50px;
 }
 
 .App-header h1 {
@@ -115,606 +118,160 @@ button, input, select, textarea {
   font-size: 1.15em;
   font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap; /* Prevent title from wrapping */
+  white-space: nowrap;
   text-align: center;
 }
 
 /* --- Header Buttons Styles --- */
 .settings-button {
-  background: none;
-  border: none;
-  padding: 5px;
-  font-size: 22px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  opacity: 0.9;
-  transition: opacity 0.2s ease;
-  line-height: 1; /* Ensure icon is centered vertically */
-  flex-shrink: 0; /* Prevent buttons from shrinking */
+  background: none; border: none; padding: 5px; font-size: 22px; cursor: pointer;
+  color: var(--text-secondary); opacity: 0.9; transition: opacity 0.2s ease;
+  line-height: 1; flex-shrink: 0;
 }
-.settings-button:hover {
-  opacity: 1;
-}
+.settings-button:hover { opacity: 1; }
+.analysis-button { margin-left: 5px; }
 
-/* Specific spacing for adjacent header buttons */
-.analysis-button {
-    margin-left: 5px;
-}
-
-/* Spacer for header layout (adjusted for 2 buttons) */
-.header-spacer-right {
-    /* Approx width = (button_width * 2) + (margin * 1) */
-    /* Adjust 32px if default button size + padding changes */
-    width: calc(32px * 2 + 5px);
-    flex-shrink: 0;
-}
+/* Spacer for header layout (2 buttons) */
+.header-spacer-right { width: calc(32px * 2 + 5px); flex-shrink: 0; }
 
 
 /* --- Settings Menu --- */
 .settings-menu {
-  position: fixed; /* Position relative to viewport */
-  top: 55px; /* Below header */
-  left: 15px;
-  background-color: var(--settings-menu-bg);
-  border: 1px solid var(--settings-menu-border);
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 5px 15px var(--settings-menu-shadow);
-  z-index: 1000; /* Above other page content */
-  /* Adjust width to accommodate two columns */
-  min-width: 450px; /* STARTING POINT - Adjust as needed */
-  width: max-content; /* Allow width to grow based on content */
-  max-width: 600px; /* Prevent it getting too wide */
-  display: flex;
-  flex-direction: column;
-  /* Remove gap here, handle spacing within columns/grid */
-  max-height: calc(100vh - 70px); /* Prevent menu from going off-screen */
-  overflow-y: auto; /* Allow scrolling within menu if needed */
+  position: fixed; top: 55px; left: 15px; background-color: var(--settings-menu-bg);
+  border: 1px solid var(--settings-menu-border); border-radius: 8px; padding: 20px;
+  box-shadow: 0 5px 15px var(--settings-menu-shadow); z-index: 1000;
+  min-width: 450px; width: max-content; max-width: 600px;
+  display: flex; flex-direction: column;
+  max-height: calc(100vh - 70px); overflow-y: auto;
 }
 .settings-menu h3 {
-  text-align: center;
-  font-size: 1.1em;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-top: 0;
-  margin-bottom: 15px; /* More space below title */
-  flex-shrink: 0;
+  text-align: center; font-size: 1.1em; font-weight: 600; color: var(--text-primary);
+  margin-top: 0; margin-bottom: 15px; flex-shrink: 0;
 }
 
-/* Grid Layout for Settings Options */
+/* Grid Layout for Settings */
 .settings-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); /* Create two equal columns */
-    gap: 25px; /* Adjust gap between columns */
-    align-items: start; /* Align items to the top of their grid cell */
-    margin-bottom: 15px; /* Space before separator/close button */
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px;
+    align-items: start; margin-bottom: 15px;
 }
+.settings-column { display: flex; flex-direction: column; gap: 18px; }
 
-.settings-column {
-    display: flex;
-    flex-direction: column;
-    gap: 18px; /* Vertical gap between options WITHIN a column */
-}
+.settings-option { display: flex; flex-direction: column; gap: 6px; }
+.settings-option label { font-weight: 500; font-size: 0.85em; color: var(--settings-label-text); }
+.settings-helper-text { font-size: 0.8em; color: var(--text-secondary); margin-top: 5px; margin-bottom: 0; line-height: 1.4; }
 
-.settings-option {
-  display: flex;
-  flex-direction: column;
-  gap: 6px; /* Space between label and input/select */
-}
-.settings-option label {
+/* ++ Key Validation Status Styles ++ */
+.settings-key-status {
+  font-size: 0.8em;
+  margin-top: 6px; /* Space below input */
+  height: 1.2em; /* Reserve space to prevent layout jump */
   font-weight: 500;
-  font-size: 0.85em;
-  color: var(--settings-label-text);
 }
-/* Helper text style */
-.settings-helper-text {
-    font-size: 0.8em;
-    color: var(--text-secondary);
-    margin-top: 5px;
-    margin-bottom: 0; /* Reset bottom margin */
-    line-height: 1.4;
-}
+.key-valid { color: var(--key-valid-color); }
+.key-invalid { color: var(--key-invalid-color); }
+/* End Key Validation Styles */
 
-
-/* Style for inputs/selects in settings */
 .settings-select, .settings-input {
-  padding: 8px 10px;
-  border: 1px solid var(--settings-select-border);
-  border-radius: 4px;
-  font-size: 0.9em;
-  background-color: var(--settings-select-bg);
-  color: var(--text-primary);
-  width: 100%; /* Ensure they take full width of container */
+  padding: 8px 10px; border: 1px solid var(--settings-select-border); border-radius: 4px;
+  font-size: 0.9em; background-color: var(--settings-select-bg); color: var(--text-primary); width: 100%;
 }
-.settings-select {
-  cursor: pointer; /* Only select needs cursor pointer */
-}
-.settings-select:focus, .settings-input:focus {
-  outline: none;
-  border-color: var(--input-focus-border-color);
-  box-shadow: 0 0 0 2px var(--input-focus-shadow);
-}
-/* Style for disabled options in selects */
-.settings-select option:disabled {
-  color: #aaa; /* Lighter color for disabled options */
-  font-style: italic;
-  background-color: #eee; /* Optional: slightly different background */
-}
+.settings-select { cursor: pointer; }
+.settings-select:focus, .settings-input:focus { outline: none; border-color: var(--input-focus-border-color); box-shadow: 0 0 0 2px var(--input-focus-shadow); }
+.settings-select option:disabled { color: #aaa; font-style: italic; background-color: #eee; }
 
-
-/* Base button style for actions within settings */
+/* Settings Action Buttons */
 .settings-action-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: left;
-  font-weight: 500;
-  font-size: 0.9em;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-  border: 1px solid transparent; /* Base border */
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px;
+  border-radius: 4px; cursor: pointer; text-align: left; font-weight: 500; font-size: 0.9em;
+  transition: background-color 0.2s ease, border-color 0.2s ease; border: 1px solid transparent;
 }
+.clear-chat-settings-button { background-color: var(--settings-clear-bg); color: var(--settings-clear-text); border-color: var(--settings-clear-border); }
+.settings-action-button.clear-chat-settings-button:hover { background-color: var(--settings-clear-hover-bg); border-color: var(--settings-clear-hover-border); }
+.export-chat-settings-button { background-color: var(--settings-export-bg); color: var(--settings-export-text); border-color: var(--settings-export-border); }
+.settings-action-button.export-chat-settings-button:hover { background-color: var(--settings-export-hover-bg); border-color: var(--settings-export-hover-border); }
 
-/* Clear Chat Button (Inside Menu) - Specific Styles */
-.clear-chat-settings-button {
-  /* This class only adds specific styles now */
-  background-color: var(--settings-clear-bg);
-  color: var(--settings-clear-text);
-  border-color: var(--settings-clear-border);
-}
-/* Apply hover styles directly to the specific class */
-.settings-action-button.clear-chat-settings-button:hover {
-  background-color: var(--settings-clear-hover-bg);
-  border-color: var(--settings-clear-hover-border);
-}
-
-/* Export Chat Button (Inside Menu) - Specific Styles */
-.export-chat-settings-button {
-  /* This class only adds specific styles now */
-  background-color: var(--settings-export-bg);
-  color: var(--settings-export-text);
-  border-color: var(--settings-export-border);
-}
-/* Apply hover styles directly to the specific class */
-.settings-action-button.export-chat-settings-button:hover {
-  background-color: var(--settings-export-hover-bg);
-  border-color: var(--settings-export-hover-border);
-}
-
-
-/* Optional Separator Line */
-.settings-separator {
-  border: none;
-  border-top: 1px solid var(--border-color);
-  margin: 15px 0 5px 0; /* Adjusted margin */
-  flex-shrink: 0;
-}
-
-/* Close Settings Button */
+.settings-separator { border: none; border-top: 1px solid var(--border-color); margin: 15px 0 5px 0; flex-shrink: 0; }
 .close-settings-button {
-  display: block; /* Or inline-block if needed */
-  width: 100%; /* Make it full width */
-  padding: 9px 15px;
-  margin-top: 5px;
-  background-color: var(--settings-close-bg);
-  color: var(--settings-close-text);
-  border: 1px solid var(--settings-menu-border); /* Match menu border */
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: center;
-  font-weight: 500;
-  font-size: 0.9em;
-  transition: background-color 0.2s ease;
-  flex-shrink: 0; /* Prevent shrinking if menu content overflows */
+  display: block; width: 100%; padding: 9px 15px; margin-top: 5px; background-color: var(--settings-close-bg);
+  color: var(--settings-close-text); border: 1px solid var(--settings-menu-border); border-radius: 4px;
+  cursor: pointer; text-align: center; font-weight: 500; font-size: 0.9em;
+  transition: background-color 0.2s ease; flex-shrink: 0;
 }
-.close-settings-button:hover {
-  background-color: var(--settings-close-hover-bg);
-}
+.close-settings-button:hover { background-color: var(--settings-close-hover-bg); }
 
+/* --- Analysis Form --- */
+.analysis-form-overlay { position: fixed; top:0;left:0;right:0;bottom:0; background-color:var(--beta-overlay-bg); display:flex; align-items:center; justify-content:center; z-index:1050; padding:15px; box-sizing:border-box; }
+.analysis-form-modal { background-color:var(--settings-menu-bg); padding:25px 30px; border-radius:8px; border:1px solid var(--settings-menu-border); box-shadow:0 5px 15px var(--settings-menu-shadow); max-width:600px; width:100%; box-sizing:border-box; max-height:90vh; overflow-y:auto; }
+.analysis-form-modal h3 { text-align:center; font-size:1.1em; font-weight:600; color:var(--text-primary); margin-top:0; margin-bottom:15px; flex-shrink:0; }
+.analysis-form-modal form { display:flex; flex-direction:column; gap:0; }
+.analysis-form-modal textarea.settings-input { min-height:100px; resize:vertical; line-height:1.5; }
+.analysis-form-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; flex-shrink:0; }
+.analysis-form-actions .close-settings-button, .analysis-form-actions .beta-accept-button { width:auto; margin-top:0; }
+.beta-accept-button:disabled { background-color:var(--button-disabled-bg) !important; color:var(--button-disabled-text) !important; cursor:default; opacity:0.7; }
 
-/* --- Styles for Analysis Form --- */
-.analysis-form-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: var(--beta-overlay-bg, rgba(0, 0, 0, 0.6));
-    display: flex; align-items: center; justify-content: center;
-    z-index: 1050; padding: 15px; box-sizing: border-box;
-}
-.analysis-form-modal {
-    background-color: var(--settings-menu-bg, #ffffff);
-    padding: 25px 30px; border-radius: 8px; border: 1px solid var(--settings-menu-border);
-    box-shadow: 0 5px 15px var(--settings-menu-shadow);
-    max-width: 600px; width: 100%; box-sizing: border-box;
-    max-height: 90vh; /* Prevent modal being too tall */
-    overflow-y: auto; /* Allow scrolling within modal if needed */
-}
-.analysis-form-modal h3 {
-    text-align: center; font-size: 1.1em; font-weight: 600;
-    color: var(--text-primary); margin-top: 0; margin-bottom: 15px;
-    flex-shrink: 0;
-}
-.analysis-form-modal form {
-    display: flex;
-    flex-direction: column;
-    gap: 0; /* Remove gap from form if settings-option provides it */
-}
-.analysis-form-modal textarea.settings-input { /* Target specific textareas if needed */
-    min-height: 100px; resize: vertical; line-height: 1.5;
-}
-.analysis-form-actions {
-    display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;
-    flex-shrink: 0;
-}
-/* Reuse styles, adjust width for form buttons */
-.analysis-form-actions .close-settings-button,
-.analysis-form-actions .beta-accept-button {
-    width: auto; /* Override width: 100% */
-    margin-top: 0; /* Reset margin-top from base */
-}
-/* Disabled state for reused beta button (Submit) */
-.beta-accept-button:disabled {
-    background-color: var(--button-disabled-bg) !important;
-    color: var(--button-disabled-text) !important;
-    cursor: default; opacity: 0.7;
-}
+/* --- Beta Notice --- */
+.beta-notice-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--beta-overlay-bg); display: flex; align-items: center; justify-content: center; z-index: 1050; padding: 15px; box-sizing: border-box; }
+.beta-notice-modal { background-color: var(--beta-modal-bg); padding: 25px 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); max-width: 500px; width: 100%; text-align: center; box-sizing: border-box; }
+.beta-notice-modal h2 { margin-top: 0; color: var(--beta-heading-color); font-size: 1.3em; margin-bottom: 10px; }
+.beta-notice-modal p { margin-bottom: 15px; line-height: 1.6; color: var(--beta-text-color); font-size: 0.95em; }
+.beta-notice-modal p:last-of-type { margin-bottom: 25px; }
+.beta-accept-button { padding: 10px 20px; border: none; background-color: var(--beta-button-bg); color: var(--beta-button-text); border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: background-color 0.2s ease; }
+.beta-accept-button:hover { background-color: var(--beta-button-hover-bg); }
 
+/* --- ChatbotPage --- */
+.chatbot-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; background-color: var(--messages-bg); }
+.chatbot-messages { flex-grow: 1; overflow-y: auto; padding: 25px 15px; display: flex; flex-direction: column; gap: 20px; font-size: 1rem; }
+.message-wrapper { display: flex; flex-direction: column; max-width: 100%; }
+.message-wrapper-user { align-items: flex-end; }
+.message-wrapper-bot, .message-wrapper-loading { align-items: flex-start; }
+.message { padding: 12px 18px; border-radius: 16px; max-width: 78%; word-wrap: break-word; line-height: 1.6; box-shadow: 0 1px 3px var(--shadow-color); position: relative; }
+.message p { margin: 0 0 0.6em 0; } .message p:last-child { margin-bottom: 0; }
+.message ul, .message ol { margin: 0.6em 0; padding-left: 25px; } .message li { margin-bottom: 0.3em; }
+.message.user { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; border-bottom-right-radius: 6px; }
+.message.bot, .message.loading { background-color: var(--bot-bubble-bg); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 6px; }
+.message.loading i { font-style: normal; color: var(--text-secondary); }
+.message-timestamp { font-size: 0.75em; color: var(--text-secondary); margin-top: 4px; margin-right: 5px; margin-left: 5px; align-self: flex-end; display: block; text-align: right; }
+.message-wrapper-bot .message-timestamp, .message-wrapper-loading .message-timestamp { align-self: flex-start; text-align: left; }
+.chatbot-input-area { display: flex; align-items: center; padding: 12px 15px; border-top: 1px solid var(--border-color); background-color: var(--input-bg); flex-shrink: 0; gap: 8px; }
+.chatbot-input-area input[type="text"] { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--input-border-color); border-radius: 16px; font-size: 1rem; outline: none; background-color: #ffffff; color: var(--text-primary); box-shadow: none; min-height: 46px; box-sizing: border-box; }
+.chatbot-input-area input[type="text"]::placeholder { color: var(--text-secondary); opacity: 0.9; }
+.chatbot-input-area input[type="text"]:focus { border-color: var(--input-focus-border-color); box-shadow: 0 0 0 2px var(--input-focus-shadow); }
+.chatbot-input-area button { padding: 10px; width: 42px; height: 42px; border: none; border-radius: 16px; cursor: pointer; font-size: 1.3em; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; }
+.chatbot-input-area button[title="Send"] { background-color: var(--button-primary-bg); color: white; }
+.chatbot-input-area button[title="Send"]:hover { background-color: var(--button-primary-hover-bg); }
+.chatbot-input-area button[title="Send"]:disabled { background-color: var(--button-disabled-bg); color: var(--button-disabled-text); cursor: default; opacity: 0.7; }
+.upload-button, .mic-button { background-color: var(--button-secondary-bg); color: var(--text-secondary); border: 1px solid var(--input-border-color) !important; margin-right: 0; }
+.upload-button:hover, .mic-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg) !important; border-color: #adb5bd !important; }
+.upload-button:disabled, .mic-button:disabled { background-color: #e9ecef !important; color: #adb5bd !important; border-color: #dee2e6 !important; cursor: default; opacity: 0.7; }
+.mic-button.recording { background-color: var(--mic-recording-bg, #dc3545) !important; color: white; border-color: var(--mic-recording-hover-bg, #bb2d3b) !important; }
+.mic-button.recording:hover { background-color: var(--mic-recording-hover-bg, #bb2d3b) !important; }
+.image-preview-area { display: flex; align-items: center; padding: 5px 15px; background-color: var(--image-preview-bg); border-top: 1px solid var(--border-color); flex-shrink: 0; }
+.remove-image-button { background: var(--remove-button-bg); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; line-height: 18px; text-align: center; cursor: pointer; font-size: 12px; font-weight: bold; flex-shrink: 0; margin-left: 8px; }
+.remove-image-button:hover { background: var(--remove-button-hover-bg); }
+.suggestions-container { display: flex; flex-wrap: wrap; gap: 8px; margin-left: 0; margin-top: 8px; max-width: 100%; justify-content: flex-start; }
+.suggestion-button { padding: 6px 14px; border: 1px solid var(--suggestion-border); background-color: var(--suggestion-bg); color: var(--suggestion-text); border-radius: 18px; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s ease; white-space: nowrap; }
+.suggestion-button:hover:not(:disabled) { background-color: var(--suggestion-hover-bg); border-color: #adb5bd; }
+.suggestion-button:disabled { color: #adb5bd; border-color: var(--input-border-color); cursor: default; background-color: var(--suggestion-bg); opacity: 0.7; }
 
-/* --- Beta Notice Modal --- */
-.beta-notice-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background-color: var(--beta-overlay-bg, rgba(0, 0, 0, 0.6));
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1050; padding: 15px; box-sizing: border-box;
-}
-.beta-notice-modal {
-  background-color: var(--beta-modal-bg, #ffffff); padding: 25px 30px;
-  border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  max-width: 500px; width: 100%; text-align: center; box-sizing: border-box;
-}
-.beta-notice-modal h2 {
-  margin-top: 0; color: var(--beta-heading-color, #dc3545);
-  font-size: 1.3em; margin-bottom: 10px;
-}
-.beta-notice-modal p {
-  margin-bottom: 15px; line-height: 1.6;
-  color: var(--beta-text-color, #333); font-size: 0.95em;
-}
-.beta-notice-modal p:last-of-type {
-  margin-bottom: 25px;
-}
-.beta-accept-button {
-  padding: 10px 20px; border: none;
-  background-color: var(--beta-button-bg, var(--user-bubble-bg));
-  color: var(--beta-button-text, #ffffff); border-radius: 5px; cursor: pointer;
-  font-size: 1rem; font-weight: 500; transition: background-color 0.2s ease;
-}
-.beta-accept-button:hover {
-  background-color: var(--beta-button-hover-bg, var(--button-primary-hover-bg));
-}
-
-
-/* --- ChatbotPage Styles --- */
-.chatbot-container {
-  flex-grow: 1; /* Take remaining vertical space */
-  display: flex;
-  flex-direction: column;
-  overflow: hidden; /* Important to contain scrolling */
-  background-color: var(--messages-bg); /* Match message area background */
-}
-.chatbot-messages {
-  flex-grow: 1; /* Allow this area to grow and scroll */
-  overflow-y: auto; /* Enable vertical scrolling */
-  padding: 25px 15px;
-  /* background-color: var(--messages-bg); Removed, set on container */
-  display: flex;
-  flex-direction: column;
-  gap: 20px; /* Space between message wrappers */
-  font-size: 1rem;
-}
-.message-wrapper {
-  display: flex;
-  flex-direction: column;
-  max-width: 100%; /* Ensure wrapper doesn't exceed container */
-}
-.message-wrapper-user {
-  align-items: flex-end; /* Align user messages right */
-}
-.message-wrapper-bot, .message-wrapper-loading {
-  align-items: flex-start; /* Align bot/loading messages left */
-}
-.message {
-  padding: 12px 18px;
-  border-radius: 16px;
-  max-width: 78%; /* Limit message width */
-  word-wrap: break-word; /* Break long words */
-  line-height: 1.6;
-  box-shadow: 0 1px 3px var(--shadow-color);
-  position: relative; /* For potential absolute elements inside later */
-}
-.message p {
-  margin: 0 0 0.6em 0; /* Space below paragraphs */
-}
-.message p:last-child {
-  margin-bottom: 0; /* No space below last paragraph */
-}
-.message ul, .message ol {
-  margin: 0.6em 0;
-  padding-left: 25px; /* Indent lists */
-}
-.message li {
-  margin-bottom: 0.3em; /* Space between list items */
-}
-.message.user {
-  background-color: var(--user-bubble-bg);
-  color: white;
-  align-self: flex-end;
-  border-bottom-right-radius: 6px; /* Tail effect */
-}
-.message.bot, .message.loading {
-  background-color: var(--bot-bubble-bg);
-  color: var(--text-primary);
-  align-self: flex-start;
-  border-bottom-left-radius: 6px; /* Tail effect */
-}
-.message.loading i {
-  font-style: normal; /* Make loading text non-italic if desired */
-  color: var(--text-secondary);
-}
-/* Timestamp Styling */
-.message-timestamp {
-  font-size: 0.75em;
-  color: var(--text-secondary);
-  margin-top: 4px;
-  margin-right: 5px; /* Align with bubble edge */
-  margin-left: 5px; /* Align with bubble edge */
-  align-self: flex-end; /* Default right align */
-  display: block; /* Ensure it takes its own line visually */
-  text-align: right; /* Ensure text aligns right */
-}
-/* Align bot timestamp left */
-.message-wrapper-bot .message-timestamp, .message-wrapper-loading .message-timestamp {
-  align-self: flex-start;
-  text-align: left;
-}
-
-/* Input Area Styling */
-.chatbot-input-area {
-  display: flex;
-  align-items: center;
-  padding: 12px 15px;
-  border-top: 1px solid var(--border-color);
-  background-color: var(--input-bg);
-  flex-shrink: 0; /* Prevent input area from shrinking */
-  gap: 8px; /* Space between input elements */
-}
-.chatbot-input-area input[type="text"] {
-  flex-grow: 1; /* Allow input to take available space */
-  padding: 12px 18px;
-  border: 1px solid var(--input-border-color);
-  border-radius: 16px;
-  font-size: 1rem;
-  outline: none;
-  background-color: #ffffff; /* Ensure white background */
-  color: var(--text-primary);
-  box-shadow: none; /* Remove default browser shadow */
-  min-height: 46px; /* Match button height roughly */
-  box-sizing: border-box; /* Include padding in height */
-}
-.chatbot-input-area input[type="text"]::placeholder {
-  color: var(--text-secondary);
-  opacity: 0.9;
-}
-.chatbot-input-area input[type="text"]:focus {
-  border-color: var(--input-focus-border-color);
-  box-shadow: 0 0 0 2px var(--input-focus-shadow);
-}
-
-/* Input Area Buttons */
-.chatbot-input-area button {
-  padding: 10px;
-  width: 42px; /* Fixed width */
-  height: 42px; /* Fixed height */
-  border: none;
-  border-radius: 16px;
-  cursor: pointer;
-  font-size: 1.3em;
-  font-weight: 500;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1; /* Center icon/text vertically */
-  flex-shrink: 0; /* Prevent buttons from shrinking */
-}
-.chatbot-input-area button[title="Send"] {
-  background-color: var(--button-primary-bg);
-  color: white;
-}
-.chatbot-input-area button[title="Send"]:hover {
-  background-color: var(--button-primary-hover-bg);
-}
-.chatbot-input-area button[title="Send"]:disabled {
-  background-color: var(--button-disabled-bg);
-  color: var(--button-disabled-text); /* Use disabled text color */
-  cursor: default;
-  opacity: 0.7;
-}
-
-/* Upload and Mic Buttons */
-.upload-button, .mic-button {
-  background-color: var(--button-secondary-bg);
-  color: var(--text-secondary);
-  border: 1px solid var(--input-border-color) !important; /* Ensure border visible */
-  margin-right: 0; /* Reset any browser default margin */
-}
-.upload-button:hover, .mic-button:hover:not(:disabled) {
-  background-color: var(--button-secondary-hover-bg) !important;
-  border-color: #adb5bd !important; /* Slightly darker border on hover */
-}
-.upload-button:disabled, .mic-button:disabled {
-  background-color: #e9ecef !important; /* Match non-hover */
-  color: #adb5bd !important; /* Grey out icon */
-  border-color: #dee2e6 !important; /* Match non-hover border */
-  cursor: default;
-  opacity: 0.7;
-}
-.mic-button.recording {
-  background-color: var(--mic-recording-bg, #dc3545) !important;
-  color: white;
-  border-color: var(--mic-recording-hover-bg, #bb2d3b) !important;
-}
-.mic-button.recording:hover {
-  background-color: var(--mic-recording-hover-bg, #bb2d3b) !important;
-}
-
-/* Image Preview Area */
-.image-preview-area {
-  display: flex;
-  align-items: center;
-  padding: 5px 15px;
-  background-color: var(--image-preview-bg);
-  border-top: 1px solid var(--border-color);
-  flex-shrink: 0; /* Prevent shrinking */
-}
-.remove-image-button {
-  background: var(--remove-button-bg);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  line-height: 18px; /* Adjust for vertical centering */
-  text-align: center;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: bold;
-  flex-shrink: 0;
-  margin-left: 8px; /* Space it from the image preview */
-}
-.remove-image-button:hover {
-  background: var(--remove-button-hover-bg);
-}
-
-/* Suggestion Buttons */
-.suggestions-container {
-  display: flex;
-  flex-wrap: wrap; /* Allow buttons to wrap */
-  gap: 8px; /* Space between buttons */
-  margin-left: 0; /* Align with bot message */
-  margin-top: 8px; /* Space below message text */
-  max-width: 100%; /* Prevent overflow */
-  justify-content: flex-start; /* Align buttons left */
-}
-.suggestion-button {
-  padding: 6px 14px;
-  border: 1px solid var(--suggestion-border);
-  background-color: var(--suggestion-bg);
-  color: var(--suggestion-text);
-  border-radius: 18px; /* Pill shape */
-  cursor: pointer;
-  font-size: 0.9em;
-  transition: background-color 0.2s ease;
-  white-space: nowrap; /* Keep button text on one line */
-}
-.suggestion-button:hover:not(:disabled) {
-  background-color: var(--suggestion-hover-bg);
-  border-color: #adb5bd; /* Slightly darker border */
-}
-.suggestion-button:disabled {
-  color: #adb5bd; /* Grey out text */
-  border-color: var(--input-border-color); /* Match input border */
-  cursor: default;
-  background-color: var(--suggestion-bg); /* Keep background */
-  opacity: 0.7;
-}
-
-
-/* Responsive Styles */
+/* Responsive */
 @media (max-width: 900px) {
-  .App-header {
-    padding: 8px 10px;
-    min-height: 0; /* Allow header to shrink */
-  }
-  .App-header h1 {
-    font-size: 1.0em;
-  }
-  .settings-button {
-    font-size: 20px;
-    padding: 4px;
-  }
-  /* Adjust spacer width for smaller screens (2 buttons) */
-  .header-spacer-right {
-    width: calc(28px * 2 + 3px); /* Approx width of 2 small buttons + margin */
-  }
-  .analysis-button {
-    margin-left: 3px; /* Adjust margin for smaller buttons */
-  }
-
-  .chatbot-messages {
-    padding: 15px 10px;
-    gap: 15px;
-    font-size: 0.95rem;
-  }
-  .chatbot-input-area {
-    padding: 10px 10px;
-    gap: 5px;
-  }
-  .message {
-    max-width: 85%; /* Allow messages slightly wider */
-    border-radius: 14px;
-  }
-  .chatbot-input-area input[type="text"] {
-    padding: 10px 15px;
-    font-size: 0.95rem;
-    border-radius: 16px;
-    min-height: 42px; /* Match button height */
-  }
-  .chatbot-input-area button {
-    width: 40px; /* Slightly smaller buttons */
-    height: 40px;
-    font-size: 1.1em;
-    border-radius: 16px;
-  }
-  .image-preview-area {
-    padding: 5px 10px;
-  }
-  .upload-button {
-    font-size: 1.2em; /* Maintain reasonable size */
-  }
-  .suggestions-container {
-    max-width: 100%;
-    gap: 6px;
-  }
-  .suggestion-button {
-    padding: 5px 10px;
-    font-size: 0.85em;
-  }
-  /* Adjust settings menu for smaller screens */
-  .settings-menu {
-    min-width: 0; /* Allow shrinking */
-    width: calc(100% - 20px); /* Nearly full width */
-    padding: 15px;
-    top: 50px; /* Adjust if header height changes */
-    left: 10px;
-    right: 10px;
-    max-height: calc(100vh - 60px); /* Adjust max height */
-  }
-   .settings-grid {
-    grid-template-columns: 1fr; /* Stack columns vertically */
-    gap: 0; /* Remove grid gap, rely on column gap */
-  }
-  .settings-column {
-      gap: 15px; /* Vertical gap between options in stacked columns */
-  }
-  .settings-column:not(:last-child) {
-      margin-bottom: 15px; /* Add space between stacked columns */
-  }
-
-  .analysis-form-modal {
-    padding: 20px;
-    max-height: 85vh; /* Adjust max height */
-  }
+  .App-header { padding: 8px 10px; min-height: 0; }
+  .App-header h1 { font-size: 1.0em; }
+  .settings-button { font-size: 20px; padding: 4px; }
+  .header-spacer-right { width: calc(28px * 2 + 3px); }
+  .analysis-button { margin-left: 3px; }
+  .chatbot-messages { padding: 15px 10px; gap: 15px; font-size: 0.95rem; }
+  .chatbot-input-area { padding: 10px 10px; gap: 5px; }
+  .message { max-width: 85%; border-radius: 14px; }
+  .chatbot-input-area input[type="text"] { padding: 10px 15px; font-size: 0.95rem; border-radius: 16px; min-height: 42px; }
+  .chatbot-input-area button { width: 40px; height: 40px; font-size: 1.1em; border-radius: 16px; }
+  .image-preview-area { padding: 5px 10px; }
+  .upload-button { font-size: 1.2em; }
+  .suggestions-container { max-width: 100%; gap: 6px; }
+  .suggestion-button { padding: 5px 10px; font-size: 0.85em; }
+  .settings-menu { min-width: 0; width: calc(100% - 20px); padding: 15px; top: 50px; left: 10px; right: 10px; max-height: calc(100vh - 60px); }
+  .settings-grid { grid-template-columns: 1fr; gap: 0; } /* Stack columns */
+  .settings-column { gap: 15px; }
+  .settings-column:not(:last-child) { margin-bottom: 15px; }
+  .analysis-form-modal { padding: 20px; max-height: 85vh; }
 }
