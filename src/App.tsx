@@ -6,11 +6,11 @@ import ChatbotPage from './ChatbotPage'; // Assuming ChatbotPage component exist
 
 // --- GA Measurement ID ---
 // IMPORTANT: Replace "G-JX58QMMKZY" with your actual Google Analytics Measurement ID
-const GA_MEASUREMENT_ID = "G-27XPF5PJFK";
+const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
 
 // --- Initialize GA & Send Initial Pageview ---
 // Basic check to prevent initializing with the placeholder ID or example ID
-if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-27XPF5PJFK" && GA_MEASUREMENT_ID !== "G-27XPF5PJFK") {
+if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") {
   try {
     ReactGA.initialize(GA_MEASUREMENT_ID);
     console.log("Google Analytics Initialized with ID:", GA_MEASUREMENT_ID);
@@ -19,7 +19,7 @@ if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-27XPF5PJFK" && GA_MEASUREMENT_
   } catch (error) {
     console.error("Error initializing Google Analytics:", error)
   }
-} else if (GA_MEASUREMENT_ID === "G-27XPF5PJFK") {
+} else if (GA_MEASUREMENT_ID === "G-JX58QMMKZY") {
     console.warn("Google Analytics is using the placeholder ID (G-JX58QMMKZY). Please replace it with your actual Measurement ID in App.tsx.");
 }
 else {
@@ -49,7 +49,7 @@ const CHAT_STORAGE_KEY = 'chatMessages';
 const BETA_ACCEPTED_KEY = 'betaAccepted';
 const MODEL_STORAGE_KEY = 'selectedApiModel';
 const STT_LANG_STORAGE_KEY = 'selectedSttLang';
-const ACCESS_KEY_STORAGE_KEY = 'userAccessKey';
+const ACCESS_KEY_STORAGE_KEY = 'userAccessKey'; // Stores the unique key entered by user
 const PERSONA_STORAGE_KEY = 'selectedPersona';
 
 // --- Model Configuration ---
@@ -73,8 +73,8 @@ const AVAILABLE_PERSONAS: PersonaInfo[] = [
 const RESTRICTED_PERSONAS_VALUES: Persona[] = AVAILABLE_PERSONAS.filter(p => p.restricted).map(p => p.value);
 const DEFAULT_UNRESTRICTED_PERSONA: Persona = 'university_master'; // The default if access denied
 
-// The actual secret key required
-const REQUIRED_ACCESS_KEY = "super_secret_password_321"; // Replace with your actual key
+// No longer using a single shared REQUIRED_ACCESS_KEY for validation logic here
+// const REQUIRED_ACCESS_KEY = "super_secret_password_321";
 
 // --- API Call Logic ---
 const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
@@ -86,6 +86,7 @@ async function getBotResponseForAnalysis(
 ): Promise<string> {
     const promptToSend = userInput;
     if (!promptToSend) { return "Error: No text provided for analysis."; }
+    // Pass the enteredKey (user's unique key) as accessKey
     const requestBody: ApiRequestBody = { prompt: promptToSend, model: model, persona: persona, accessKey: accessKey };
     console.log(`Sending Analysis Request (Model: ${model}, Persona: ${persona}):`, {
          promptLength: promptToSend.length, model: requestBody.model, persona: requestBody.persona, accessKey: requestBody.accessKey ? 'present' : 'none'
@@ -95,16 +96,19 @@ async function getBotResponseForAnalysis(
             method: 'POST', headers: { 'Content-Type': 'application/json', }, body: JSON.stringify(requestBody),
         });
         if (!response.ok) {
+            // Try to get error message from backend response
             const errorData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status} ${response.statusText}` }));
+            // Use backend error message if available, otherwise generic HTTP error
             throw new Error(errorData?.error || `HTTP error! Status: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
+        // Check for application-level errors returned in the JSON
         if (data.error) { throw new Error(data.error); }
         console.log('Received analysis reply from Worker:', data.reply);
         return data.reply || 'Sorry, I received an empty reply.';
     } catch (error) {
         console.error('Error fetching bot response for analysis:', error);
-        if (error instanceof Error) { return `Error: ${error.message}`; }
+        if (error instanceof Error) { return `Error: ${error.message}`; } // Return specific error message
         return 'Error: Could not fetch response.';
     }
 }
@@ -123,7 +127,8 @@ function App() {
   });
   const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
   const [enteredKey, setEnteredKey] = useState<string>(() => localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '');
-  const userHasAccessToRestricted = enteredKey === REQUIRED_ACCESS_KEY;
+  // This variable now only reflects if *any* key is entered, not if it's the *correct* single shared key
+  const hasEnteredKey = !!enteredKey.trim();
   const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash');
   const [sttLang, setSttLang] = useState<SpeechLanguage>(() => {
     const savedLang = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null; if (savedLang && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(savedLang) ) { return savedLang; } return 'en-US';
@@ -135,20 +140,38 @@ function App() {
   const [field1, setField1] = useState<string>(''); const [field2, setField2] = useState<string>(''); const [field3, setField3] = useState<string>(''); const [field4, setField4] = useState<string>(''); const [field5, setField5] = useState<string>('');
 
   // --- Effects ---
+  // Effect to load initial settings (could potentially validate key here if needed)
   useEffect(() => {
-    const currentAccess = enteredKey === REQUIRED_ACCESS_KEY;
-    // Model Logic
-    const savedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null; let initialModel: GeminiModel = 'gemini-2.0-flash';
-    if (savedModel && ALL_AVAILABLE_MODELS.some(m => m.value === savedModel)) { if (RESTRICTED_MODELS_VALUES.includes(savedModel)) { if (currentAccess) { initialModel = savedModel; } else { console.warn(`Saved model ${savedModel} restricted, falling back.`); } } else { initialModel = savedModel; } }
-    if (RESTRICTED_MODELS_VALUES.includes(initialModel) && !currentAccess) { initialModel = 'gemini-2.0-flash'; }
-     setSelectedModel(currentModel => { if (RESTRICTED_MODELS_VALUES.includes(currentModel) && !currentAccess) { console.warn(`Current model ${currentModel} restricted, access lost. Falling back.`); return 'gemini-2.0-flash'; } return currentModel !== initialModel ? initialModel : currentModel; });
-    // Persona Logic
-    const savedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null; let initialPersona: Persona = DEFAULT_UNRESTRICTED_PERSONA;
-     if (savedPersona && AVAILABLE_PERSONAS.some(p => p.value === savedPersona)) { if (RESTRICTED_PERSONAS_VALUES.includes(savedPersona)) { if (currentAccess) { initialPersona = savedPersona; } else { console.warn(`Saved persona ${savedPersona} restricted, falling back.`); } } else { initialPersona = savedPersona; } }
-    if (RESTRICTED_PERSONAS_VALUES.includes(initialPersona) && !currentAccess) { initialPersona = DEFAULT_UNRESTRICTED_PERSONA; }
-    setSelectedPersona(currentPersona => { if (RESTRICTED_PERSONAS_VALUES.includes(currentPersona) && !currentAccess) { console.warn(`Current persona ${currentPersona} restricted, access lost. Falling back.`); return DEFAULT_UNRESTRICTED_PERSONA; } return currentPersona !== initialPersona ? initialPersona : currentPersona; });
-  }, [enteredKey]);
+    // Load saved model, default to public if restricted one saved without key later
+    const savedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null;
+    if (savedModel && ALL_AVAILABLE_MODELS.some(m => m.value === savedModel)) {
+      // Check restriction status based on whether a key is entered *now*
+      // Backend validation is the source of truth, but UI can reflect possibility
+      if (!RESTRICTED_MODELS_VALUES.includes(savedModel) || hasEnteredKey) {
+         setSelectedModel(savedModel);
+      } else {
+         console.warn(`Saved model ${savedModel} is restricted, no key entered. Falling back.`);
+         setSelectedModel('gemini-2.0-flash'); // Fallback to public default
+      }
+    } else {
+       setSelectedModel('gemini-2.0-flash'); // Default if nothing saved or invalid
+    }
 
+    // Load saved persona, default to unrestricted if restricted one saved without key
+    const savedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null;
+    if (savedPersona && AVAILABLE_PERSONAS.some(p => p.value === savedPersona)) {
+        if (!RESTRICTED_PERSONAS_VALUES.includes(savedPersona) || hasEnteredKey) {
+            setSelectedPersona(savedPersona);
+        } else {
+            console.warn(`Saved persona ${savedPersona} is restricted, no key entered. Falling back.`);
+            setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); // Fallback to unrestricted default
+        }
+    } else {
+        setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); // Default if nothing saved or invalid
+    }
+  }, [hasEnteredKey]); // Rerun when key presence changes
+
+  // Persistence Effects
   useEffect(() => { const messagesToSave = messages.filter(msg => msg.sender !== 'loading'); if (messagesToSave.length > 1 || (messagesToSave.length === 1 && messagesToSave[0].sender !== 'bot')) { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave)); } else if (messagesToSave.length === 0) { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave)); } }, [messages]);
   useEffect(() => { const accepted = localStorage.getItem(BETA_ACCEPTED_KEY); if (accepted !== 'true') { setShowBetaNotice(true); } }, []);
   useEffect(() => { localStorage.setItem(MODEL_STORAGE_KEY, selectedModel); }, [selectedModel]);
@@ -169,16 +192,17 @@ function App() {
     if (messagesToExport.length === 0 || (messagesToExport.length === 1 && messagesToExport[0].sender === 'bot' && messagesToExport[0].text.startsWith('Welcome'))) { alert("Chat history is empty or only contains the welcome message."); return; }
     let chatContent = `Chat Export\nExported At: ${new Date().toLocaleString()}\nModel Used: ${selectedModel}\nPersona Active: ${selectedPersona}\n------------------------------------\n\n`;
     messagesToExport.forEach(message => { const timestampStr = new Date(message.timestamp).toLocaleString(); const senderLabel = message.sender === 'user' ? 'User' : 'Bot'; chatContent += `[${timestampStr}] ${senderLabel}:\n${message.text}\n`; if (message.imageUrl) { chatContent += `(Image Attached by Bot: ${message.imageUrl})\n`; } chatContent += `\n`; });
-    try { const blob = new Blob([chatContent], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; const timestampFile = new Date().toISOString().replace(/[:.]/g, '-'); link.download = `project-theraphy-chat-${timestampFile}.txt`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-27XPF5PJFK" && GA_MEASUREMENT_ID !== "G-27XPF5PJFK") { ReactGA.event({ category: "Chat Action", action: "Export_Chat", label: `Message Count: ${messagesToExport.length}` }); console.log("GA Event Sent: Export_Chat"); } }
+    try { const blob = new Blob([chatContent], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; const timestampFile = new Date().toISOString().replace(/[:.]/g, '-'); link.download = `project-theraphy-chat-${timestampFile}.txt`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { ReactGA.event({ category: "Chat Action", action: "Export_Chat", label: `Message Count: ${messagesToExport.length}` }); console.log("GA Event Sent: Export_Chat"); } }
     catch (error) { console.error("Error exporting chat:", error); alert("An error occurred while trying to export the chat."); }
   };
   const clearAnalysisForm = () => { setField1(''); setField2(''); setField3(''); setField4(''); setField5(''); };
   const toggleAnalysisForm = () => { setIsAnalysisFormVisible(prev => !prev); if (isAnalysisFormVisible) { clearAnalysisForm(); setIsAnalyzing(false); } };
   const handleAnalysisSubmit = async (event: React.FormEvent) => {
       event.preventDefault(); const val1 = field1.trim(); const val2 = field2.trim(); const val3 = field3.trim(); const val4 = field4.trim(); const val5 = field5.trim(); if (!val1 || isAnalyzing) return; setIsAnalyzing(true); setIsAnalysisFormVisible(false);
-      if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-27XPF5PJFK" && GA_MEASUREMENT_ID !== "G-27XPF5PJFK") { try { ReactGA.event({ category: "Analysis Form", action: "Submit_Analysis_Request", label: `Field 1 Length: ${val1.length}` }); console.log("GA Event Sent: Submit_Analysis_Request"); } catch (error) { console.error("Error sending GA Event:", error); } }
+      if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { try { ReactGA.event({ category: "Analysis Form", action: "Submit_Analysis_Request", label: `Field 1 Length: ${val1.length}` }); console.log("GA Event Sent: Submit_Analysis_Request"); } catch (error) { console.error("Error sending GA Event:", error); } }
       let combinedInput = `Field 1: ${val1}\n`; if (val2) combinedInput += `Field 2: ${val2}\n`; if (val3) combinedInput += `Field 3: ${val3}\n`; if (val4) combinedInput += `Field 4: ${val4}\n`; if (val5) combinedInput += `Field 5: ${val5}\n`;
       const thinkingTime = Date.now(); const thinkingMessage: Message = { id: thinkingTime, text: `Analyzing Input (Field 1-5: "${val1.substring(0, 40)}...")...`, sender: 'loading', timestamp: thinkingTime }; setMessages(prev => [...prev, thinkingMessage]); clearAnalysisForm();
+      // Pass the actual entered key for backend validation
       const analysisResult = await getBotResponseForAnalysis(combinedInput.trim(), selectedModel, selectedPersona, enteredKey);
       const resultTime = Date.now() + 1; const resultMessage: Message = { id: resultTime, text: analysisResult, sender: 'bot', timestamp: resultTime }; setMessages(prev => [ ...prev.filter(msg => msg.id !== thinkingTime), resultMessage ]); setIsAnalyzing(false);
   };
@@ -198,9 +222,9 @@ function App() {
             <div className="settings-column">
                 {/* Access Key Input */}
                 <div className="settings-option">
-                    <label htmlFor="access-key-input">Access Key:</label>
-                    <input type="password" id="access-key-input" className="settings-input" placeholder="Enter key for restricted features" value={enteredKey} onChange={handleAccessKeyChange} />
-                    {enteredKey && ( <span style={{ fontSize: '0.8em', marginLeft: '5px' }}>{userHasAccessToRestricted ? '✅' : '❌'}</span> )}
+                    <label htmlFor="access-key-input">Your Unique Access Key:</label>
+                    <input type="password" id="access-key-input" className="settings-input" placeholder="Enter your assigned key" value={enteredKey} onChange={handleAccessKeyChange} />
+                    {/* Removed the checkmark/cross based on single shared key */}
                 </div>
 
                 {/* Persona Selector */}
@@ -208,12 +232,12 @@ function App() {
                     <label htmlFor="persona-select">Persona:</label>
                     <select id="persona-select" value={selectedPersona} onChange={handlePersonaChange} className="settings-select">
                         {AVAILABLE_PERSONAS.map((personaInfo) => {
-                            const isDisabled = personaInfo.restricted && !userHasAccessToRestricted;
+                            // UI disable only if restricted AND no key is entered at all
+                            const isDisabled = personaInfo.restricted && !hasEnteredKey;
                             const style = isDisabled ? { color: '#888', fontStyle: 'italic' } : {};
                             return ( <option key={personaInfo.value} value={personaInfo.value} disabled={isDisabled} style={style}> {personaInfo.emoji} {personaInfo.label}{personaInfo.restricted ? ' (Restricted)' : ''} </option> );
                         })}
                     </select>
-                    {/* Helper text moved below Model selector */}
                 </div>
 
                 {/* Model Selector */}
@@ -221,16 +245,16 @@ function App() {
                     <label htmlFor="model-select">AI Model:</label>
                     <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select">
                         {ALL_AVAILABLE_MODELS.map((modelInfo) => {
-                            const isDisabled = modelInfo.restricted && !userHasAccessToRestricted;
+                             // UI disable only if restricted AND no key is entered at all
+                            const isDisabled = modelInfo.restricted && !hasEnteredKey;
                             const style = isDisabled ? { color: '#888', fontStyle: 'italic' } : {};
                             return ( <option key={modelInfo.value} value={modelInfo.value} disabled={isDisabled} style={style}> {modelInfo.label}{modelInfo.restricted ? ' (Restricted)' : ''} </option> );
                         })}
                     </select>
-                    {/* ++ Combined Helper Text ++ */}
-                    {/* Show if user lacks access AND there's at least one restricted persona OR model */}
-                    {!userHasAccessToRestricted && (RESTRICTED_PERSONAS_VALUES.length > 0 || RESTRICTED_MODELS_VALUES.length > 0) && (
+                    {/* Combined Helper Text (Show if ANY key isn't entered AND restricted items exist) */}
+                    {!hasEnteredKey && (RESTRICTED_PERSONAS_VALUES.length > 0 || RESTRICTED_MODELS_VALUES.length > 0) && (
                         <p className="settings-helper-text">
-                            Restricted Personas and AI Models require the correct Access Key.
+                            Enter your Access Key to enable restricted Personas and AI Models.
                         </p>
                     )}
                 </div>
@@ -347,7 +371,7 @@ function App() {
         selectedModel={selectedModel}
         sttLang={sttLang}
         selectedPersona={selectedPersona}
-        accessKey={enteredKey}
+        accessKey={enteredKey} // Pass the user-entered unique key
        />
     </div>
   );

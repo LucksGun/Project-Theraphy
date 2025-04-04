@@ -181,7 +181,7 @@ button, input, select, textarea {
   flex-shrink: 0;
 }
 
-/* ++ Grid Layout for Settings Options ++ */
+/* Grid Layout for Settings Options */
 .settings-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr); /* Create two equal columns */
@@ -195,14 +195,11 @@ button, input, select, textarea {
     flex-direction: column;
     gap: 18px; /* Vertical gap between options WITHIN a column */
 }
-/* End Grid Layout */
-
 
 .settings-option {
   display: flex;
   flex-direction: column;
   gap: 6px; /* Space between label and input/select */
-  /* flex-shrink: 0; No longer needed with grid */
 }
 .settings-option label {
   font-weight: 500;
@@ -704,8 +701,6 @@ button, input, select, textarea {
     left: 10px;
     right: 10px;
     max-height: calc(100vh - 60px); /* Adjust max height */
-    /* Force single column on small screens */
-    grid-template-columns: 1fr;
   }
    .settings-grid {
     grid-template-columns: 1fr; /* Stack columns vertically */
