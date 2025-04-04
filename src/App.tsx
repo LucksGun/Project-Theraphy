@@ -301,7 +301,7 @@ function App() {
       // Add a "Thinking..." message to the chat
       const thinkingTime = Date.now();
       // Display only the first field in the thinking message for brevity
-      const thinkingMessage: Message = { id: thinkingTime, text: `Analyzing Input (Field 1: "${val1.substring(0, 40)}...")...`, sender: 'loading', timestamp: thinkingTime };
+      const thinkingMessage: Message = { id: thinkingTime, text: `Analyzing Input (Field 1-5: "${val1.substring(0, 40)}...")...`, sender: 'loading', timestamp: thinkingTime };
       setMessages(prev => [...prev, thinkingMessage]);
       clearAnalysisForm(); // Clear form fields in state after grabbing values
 
@@ -413,7 +413,7 @@ function App() {
                       {/* === Field 2 === */}
                       <div className="settings-option" style={{ marginBottom: '15px' }}>
                          
-                          <label htmlFor="analysis-field2">Field 2:</label>
+                          <label htmlFor="analysis-field2">Field 2 (Required):</label>
                           <input
                               type="text"
                               id="analysis-field2"
@@ -430,7 +430,7 @@ function App() {
                       {/* === Field 3 === */}
                       <div className="settings-option" style={{ marginBottom: '15px' }}>
                           {/* ===> EDIT Field 3 LABEL HERE <=== */}
-                          <label htmlFor="analysis-field3">Field 3:</label>
+                          <label htmlFor="analysis-field3">Field 3 (Required):</label>
                           <input
                               type="text"
                               id="analysis-field3"
@@ -447,7 +447,7 @@ function App() {
                       {/* === Field 4 === */}
                       <div className="settings-option" style={{ marginBottom: '15px' }}>
                            {/* ===> EDIT Field 4 LABEL HERE <=== */}
-                          <label htmlFor="analysis-field4">Field 4:</label>
+                          <label htmlFor="analysis-field4">Field 4 (Required):</label>
                           <input
                               type="text"
                               id="analysis-field4"
@@ -465,7 +465,7 @@ function App() {
                       {/* You could change this to textarea if needed */}
                       <div className="settings-option" style={{ marginBottom: '15px' }}>
                           {/* ===> EDIT Field 5 LABEL HERE <=== */}
-                          <label htmlFor="analysis-field5">Field 5:</label>
+                          <label htmlFor="analysis-field5">Field 5 (Required):</label>
                           <input
                               type="text" // Change to <textarea rows={3} className="settings-input"> if needed
                               id="analysis-field5"
