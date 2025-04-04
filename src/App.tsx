@@ -423,6 +423,7 @@ function App() {
                   
                               placeholder="What thing you enjoy spending time with? คูณมีความสุขใช้เวลาไปกับสิ่งอะไรมากที่สุด"
                               disabled={isAnalyzing}
+                              required
                           />
                       </div>
 
@@ -439,6 +440,7 @@ function App() {
                           
                               placeholder="How would you describe yourself? คุณอธิบายตัวคุณได้ดีที่สุดว่าเป็นอย่างไร"
                               disabled={isAnalyzing}
+                              required
                           />
                       </div>
 
@@ -455,6 +457,7 @@ function App() {
                              
                               placeholder="What do you hate most when you study? คุณเกลียดอะไรมากที่สุดตอนเรียน"
                               disabled={isAnalyzing}
+                              required
                           />
                       </div>
 
@@ -472,6 +475,7 @@ function App() {
                               
                               placeholder="GPA? เกรดเฉลี่ย"
                               disabled={isAnalyzing}
+                              required
                           />
                       </div>
 
