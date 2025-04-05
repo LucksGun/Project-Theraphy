@@ -1,4 +1,4 @@
-// src/App.tsx - Fixed ProtectedRoute children type
+// src/App.tsx - Removed redundant Staff Login button from header
 import React, { useState, useEffect, ChangeEvent, useRef } from 'react';
 import ReactGA from 'react-ga4';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
@@ -39,16 +39,13 @@ async function getBotResponseForAnalysis(userInput: string, model: GeminiModel, 
 const VALIDATION_DEBOUNCE_MS = 600;
 
 // --- Component for Protected Route ---
-// Use React.ReactNode for children type
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const keyFromSession = sessionStorage.getItem('staffKey');
     const location = useLocation();
-
     if (!keyFromSession) {
         console.log("ProtectedRoute: No staff key found, redirecting from", location.pathname);
         return <Navigate to="/" replace />;
     }
-    // AdminPage reads key from session storage itself
     return <>{children}</>;
 };
 
@@ -67,7 +64,6 @@ function App() {
     const [field1, setField1] = useState(''); const [field2, setField2] = useState(''); const [field3, setField3] = useState(''); const [field4, setField4] = useState(''); const [field5, setField5] = useState('');
     const [keyStatus, setKeyStatus] = useState<KeyValidationStatus>({ isValid: null, username: null, loading: false, error: null });
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    // Staff Login Modal State
     const [isStaffLoginModalVisible, setIsStaffLoginModalVisible] = useState<boolean>(false);
     const [enteredStaffKey, setEnteredStaffKey] = useState<string>('');
     const [isStaffLoginLoading, setIsStaffLoginLoading] = useState<boolean>(false);
@@ -98,8 +94,28 @@ function App() {
             {isStaffLoginModalVisible && ( <div className="staff-panel-overlay"> <div className="staff-panel-modal" style={{ maxWidth: '400px' }}> <h3 id="staff-login-title">Staff Login</h3> <button onClick={toggleStaffLoginModal} className="close-staff-panel-button" title="Close Login">×</button> <form onSubmit={(e)=>{e.preventDefault(); handleStaffLogin();}} className="staff-login-section"> <div className="settings-option"> <label htmlFor="staff-key-modal-input">Staff Key:</label> <input type="password" id="staff-key-modal-input" className="settings-input" value={enteredStaffKey} onChange={handleStaffKeyChange} placeholder="Enter staff access key" disabled={isStaffLoginLoading} autoFocus/> </div> <button type="submit" className="staff-login-button" disabled={isStaffLoginLoading || !enteredStaffKey.trim()}> {isStaffLoginLoading ? 'Verifying...' : 'Login & Enter Admin'} </button> {staffLoginError && <p className="staff-error">{staffLoginError}</p>} <p className="staff-security-warning">Enter key to access admin page.</p> </form> </div> </div> )}
 
             <Routes>
-                <Route path="/" element={ <> <header className="App-header"> <div style={{ display: 'flex', alignItems: 'center' }}> <button onClick={toggleSettings} className="settings-button" title="Settings">⚙️</button> <button onClick={toggleAnalysisForm} className="settings-button analysis-button" title="University Advice Form">📝</button> <button onClick={toggleStaffLoginModal} className="settings-button" title="Staff Login">🔑</button> </div> <h1>Project Theraphy</h1> <div className="header-spacer-right"></div> </header> <ChatbotPage messages={messages} setMessages={setMessages} selectedModel={selectedModel} sttLang={sttLang} selectedPersona={selectedPersona} accessKey={enteredKey} /> </> } />
-                 <Route path="/admin" element={ <ProtectedRoute> <AdminPage /> </ProtectedRoute> } />
+                <Route path="/" element={
+                    <>
+                        <header className="App-header">
+                             <div style={{ display: 'flex', alignItems: 'center' }}>
+                                 <button onClick={toggleSettings} className="settings-button" title="Settings">⚙️</button>
+                                 <button onClick={toggleAnalysisForm} className="settings-button analysis-button" title="University Advice Form">📝</button>
+                                 {/* Staff Login button removed from here, only in Settings now */}
+                             </div>
+                             <h1>Project Theraphy</h1>
+                             <div className="header-spacer-right"></div>
+                         </header>
+                        <ChatbotPage
+                            messages={messages} setMessages={setMessages} selectedModel={selectedModel}
+                            sttLang={sttLang} selectedPersona={selectedPersona} accessKey={enteredKey}
+                        />
+                    </>
+                } />
+                 <Route path="/admin" element={
+                    <ProtectedRoute>
+                        <AdminPage />
+                     </ProtectedRoute>
+                 } />
                  <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </div>
