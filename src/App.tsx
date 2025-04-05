@@ -22,13 +22,13 @@ const CHAT_STORAGE_KEY='chatMessages'; const BETA_ACCEPTED_KEY='betaAccepted'; c
 // --- Configurations ---
 interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
 const ALL_AVAILABLE_MODELS_FRONTEND: ModelInfo[] = [ {value:'gemini-2.0-flash-lite',label:'Gemini 2.0 Flash Lite',restricted:false}, {value:'gemini-2.0-flash',label:'Gemini 2.0 Flash',restricted:false}, {value:'gemini-2.0-flash-thinking-exp-01-21',label:'Gemini 2.0 Flash Thinking Exp',restricted:true}, {value:'gemini-2.0-flash-exp-image-generation',label:'Gemini 2.0 Flash Image Gen Exp',restricted:true}, {value:'gemini-2.5-pro-exp-03-25',label:'Gemini 2.5 Pro Exp',restricted:true} ];
-const RESTRICTED_MODELS_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.filter(m=>m.restricted).map(m=>m.value);
-const ALL_MODEL_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.map(m => m.value); // Correct name for list of values
+const RESTRICTED_MODELS_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.filter(m=>m.restricted).map(m=>m.value); // DEFINED HERE
+const ALL_MODEL_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.map(m => m.value);
 
 interface PersonaInfo { value: Persona; label: string; emoji: string; restricted: boolean; }
 const AVAILABLE_PERSONAS: PersonaInfo[] = [ {value:'university_master',label:'University Master',emoji:'🎓',restricted:false}, {value:'normal',label:'Normal Bot',emoji:'🤖',restricted:true}, {value:'therapist',label:'Therapist',emoji:'🧠',restricted:true} ];
-const RESTRICTED_PERSONAS_VALUES: Persona[] = AVAILABLE_PERSONAS.filter(p=>p.restricted).map(p=>p.value);
-const ALL_PERSONAS: Persona[] = AVAILABLE_PERSONAS.map(p => p.value); // Correct name for list of values
+const RESTRICTED_PERSONAS_VALUES: Persona[] = AVAILABLE_PERSONAS.filter(p=>p.restricted).map(p=>p.value); // DEFINED HERE
+const ALL_PERSONAS: Persona[] = AVAILABLE_PERSONAS.map(p => p.value);
 const DEFAULT_UNRESTRICTED_PERSONA: Persona = 'university_master';
 
 // --- API ---
@@ -70,7 +70,7 @@ function App() {
   // --- Effects ---
   useEffect(() => { // Debounced Key Validation
     const keyTrimmed = enteredKey.trim(); if (debounceTimeoutRef.current) { clearTimeout(debounceTimeoutRef.current); }
-    if (!keyTrimmed) { setKeyStatus({ isValid: null, username: null, loading: false, error: null }); if(ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted){ setSelectedModel('gemini-2.0-flash'); } if(AVAILABLE_PERSONAS.find(p=>p.value===selectedPersona)?.restricted){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } return; }
+    if (!keyTrimmed) { setKeyStatus({ isValid: null, username: null, loading: false, error: null }); if(RESTRICTED_MODELS_VALUES.includes(selectedModel)){ setSelectedModel('gemini-2.0-flash'); } if(RESTRICTED_PERSONAS_VALUES.includes(selectedPersona)){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } return; } // Use constants defined above
     setKeyStatus(prev => ({ ...prev, loading: true, isValid: null, error: null, username: null }));
     debounceTimeoutRef.current = setTimeout(async () => {
       console.log("Validating key:", keyTrimmed);
@@ -79,10 +79,10 @@ function App() {
         const data = await res.json().catch(()=>({ error: `Invalid JSON`})); if (!res.ok) throw new Error(data?.error || `Validation fail: ${res.status}`);
         if (data.isValid) {
           setKeyStatus({ isValid: true, username: data.username || 'User', loading: false, error: null });
-          const savedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null; if (savedModel && ALL_MODEL_VALUES.includes(savedModel)) { setSelectedModel(savedModel); } // Use correct constant
-          const savedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null; if (savedPersona && ALL_PERSONAS.includes(savedPersona)) { setSelectedPersona(savedPersona); } // Use correct constant
-        } else { setKeyStatus({ isValid: false, username: null, loading: false, error: 'Invalid/inactive key.' }); if(ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted){ setSelectedModel('gemini-2.0-flash'); } if(AVAILABLE_PERSONAS.find(p=>p.value===selectedPersona)?.restricted){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } }
-      } catch (error) { console.error("Key validation fail:", error); const msg = error instanceof Error ? error.message : "Validation request fail."; setKeyStatus({ isValid: false, username: null, loading: false, error: msg }); if(ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted){ setSelectedModel('gemini-2.0-flash'); } if(AVAILABLE_PERSONAS.find(p=>p.value===selectedPersona)?.restricted){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } }
+          const savedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null; if (savedModel && ALL_MODEL_VALUES.includes(savedModel)) { setSelectedModel(savedModel); } // Use constant defined above
+          const savedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null; if (savedPersona && ALL_PERSONAS.includes(savedPersona)) { setSelectedPersona(savedPersona); } // Use constant defined above
+        } else { setKeyStatus({ isValid: false, username: null, loading: false, error: 'Invalid/inactive key.' }); if(RESTRICTED_MODELS_VALUES.includes(selectedModel)){ setSelectedModel('gemini-2.0-flash'); } if(RESTRICTED_PERSONAS_VALUES.includes(selectedPersona)){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } // Use constants defined above
+      } catch (error) { console.error("Key validation fail:", error); const msg = error instanceof Error ? error.message : "Validation request fail."; setKeyStatus({ isValid: false, username: null, loading: false, error: msg }); if(RESTRICTED_MODELS_VALUES.includes(selectedModel)){ setSelectedModel('gemini-2.0-flash'); } if(RESTRICTED_PERSONAS_VALUES.includes(selectedPersona)){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } // Use constants defined above
     }, VALIDATION_DEBOUNCE_MS);
     return () => { if (debounceTimeoutRef.current) { clearTimeout(debounceTimeoutRef.current); } };
   }, [enteredKey, selectedModel, selectedPersona]);
@@ -90,13 +90,13 @@ function App() {
   useEffect(() => { // Initial Load
     const initialKey = localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '';
     const savedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null; const savedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null;
-    let initialModel: GeminiModel = 'gemini-2.0-flash'; if (savedModel && ALL_MODEL_VALUES.includes(savedModel)) { initialModel = savedModel; } setSelectedModel(initialModel); // Use correct constant
-    let initialPersona: Persona = DEFAULT_UNRESTRICTED_PERSONA; if (savedPersona && ALL_PERSONAS.includes(savedPersona)) { initialPersona = savedPersona; } setSelectedPersona(initialPersona); // Use correct constant
+    let initialModel: GeminiModel = 'gemini-2.0-flash'; if (savedModel && ALL_MODEL_VALUES.includes(savedModel)) { initialModel = savedModel; } setSelectedModel(initialModel); // Use constant defined above
+    let initialPersona: Persona = DEFAULT_UNRESTRICTED_PERSONA; if (savedPersona && ALL_PERSONAS.includes(savedPersona)) { initialPersona = savedPersona; } setSelectedPersona(initialPersona); // Use constant defined above
     const accepted = localStorage.getItem(BETA_ACCEPTED_KEY); if (accepted !== 'true') { setShowBetaNotice(true); }
     if (initialKey.trim()) {
         const validateInitialKey = async (key: string) => {
-             setKeyStatus(prev => ({ ...prev, loading: true })); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'validateKey', accessKey: key }) }); const data = await res.json().catch(()=>({error:'Invalid JSON'})); if (res.ok && data.isValid) { setKeyStatus({ isValid: true, username: data.username || 'User', loading: false, error: null }); if (ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===initialModel)?.restricted) setSelectedModel(initialModel); if (AVAILABLE_PERSONAS.find(p=>p.value===initialPersona)?.restricted) setSelectedPersona(initialPersona); } else { setKeyStatus({ isValid: false, username: null, loading: false, error: data?.error || 'Invalid Key on load' }); if(ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===initialModel)?.restricted){ setSelectedModel('gemini-2.0-flash'); } if(AVAILABLE_PERSONAS.find(p=>p.value===initialPersona)?.restricted){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } }
-             catch (error) { const msg = error instanceof Error ? error.message : 'Validation failed'; setKeyStatus({ isValid: false, username: null, loading: false, error: msg }); if(ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===initialModel)?.restricted){ setSelectedModel('gemini-2.0-flash'); } if(AVAILABLE_PERSONAS.find(p=>p.value===initialPersona)?.restricted){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } };
+             setKeyStatus(prev => ({ ...prev, loading: true })); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'validateKey', accessKey: key }) }); const data = await res.json().catch(()=>({error:'Invalid JSON'})); if (res.ok && data.isValid) { setKeyStatus({ isValid: true, username: data.username || 'User', loading: false, error: null }); if (RESTRICTED_MODELS_VALUES.includes(initialModel)) setSelectedModel(initialModel); if (RESTRICTED_PERSONAS_VALUES.includes(initialPersona)) setSelectedPersona(initialPersona); } else { setKeyStatus({ isValid: false, username: null, loading: false, error: data?.error || 'Invalid Key on load' }); if(RESTRICTED_MODELS_VALUES.includes(initialModel)){ setSelectedModel('gemini-2.0-flash'); } if(RESTRICTED_PERSONAS_VALUES.includes(initialPersona)){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } } // Use constants defined above
+             catch (error) { const msg = error instanceof Error ? error.message : 'Validation failed'; setKeyStatus({ isValid: false, username: null, loading: false, error: msg }); if(RESTRICTED_MODELS_VALUES.includes(initialModel)){ setSelectedModel('gemini-2.0-flash'); } if(RESTRICTED_PERSONAS_VALUES.includes(initialPersona)){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } }; // Use constants defined above
         validateInitialKey(initialKey);
     }
   }, []);
@@ -110,25 +110,9 @@ function App() {
 
   // --- Event Handlers ---
   const handleAcceptBeta = () => { localStorage.setItem(BETA_ACCEPTED_KEY, 'true'); setShowBetaNotice(false); };
-  const handleModelChange = (e: ChangeEvent<HTMLSelectElement>) => {
-      const m = e.target.value as GeminiModel;
-      // Use the correct constant holding just the string values
-      if (ALL_MODEL_VALUES.includes(m)) {
-          setSelectedModel(m);
-      } else {
-          console.error("Invalid model selected:", m);
-      }
-  };
+  const handleModelChange = (e: ChangeEvent<HTMLSelectElement>) => { const m = e.target.value as GeminiModel; if (ALL_MODEL_VALUES.includes(m)) setSelectedModel(m); else console.error("Invalid model selected:", m); }; // Use correct constant
   const handleSttLangChange = (e: ChangeEvent<HTMLSelectElement>) => { setSttLang(e.target.value as SpeechLanguage); };
-  const handlePersonaChange = (e: ChangeEvent<HTMLSelectElement>) => {
-      const p = e.target.value as Persona;
-      // Use the correct constant holding just the string values
-      if (ALL_PERSONAS.includes(p)) {
-          setSelectedPersona(p);
-      } else {
-          console.error("Invalid persona selected:", p);
-      }
-  };
+  const handlePersonaChange = (e: ChangeEvent<HTMLSelectElement>) => { const p = e.target.value as Persona; if (ALL_PERSONAS.includes(p)) setSelectedPersona(p); else console.error("Invalid persona selected:", p);}; // Use correct constant
   const toggleSettings = () => { setIsSettingsOpen(prev => !prev); if (isStaffPanelVisible) { setIsStaffPanelVisible(false); setIsStaffAuthenticated(false); setEnteredStaffKey(''); setAdminError(null);} };
   const handleClearChat = () => { if (window.confirm("Clear chat?")) { const ts=Date.now(); const msg:Message={id:ts, text:"Welcome! ...", sender:'bot', timestamp:ts}; setMessages([msg]); localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([msg])); setIsSettingsOpen(false); } };
   const handleAccessKeyChange = (event: ChangeEvent<HTMLInputElement>) => { setEnteredKey(event.target.value); };
@@ -143,82 +127,26 @@ function App() {
   const handleStaffLogin = async () => { if (!enteredStaffKey) { setAdminError("Staff Key empty."); return; } setIsAdminLoading(true); setAdminError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'staffLogin', staffKey: enteredStaffKey }) }); const data = await res.json().catch(()=>({error: 'Invalid JSON'})); if (!res.ok || !data.isValid) { throw new Error(data?.error || `Staff Login Fail: ${res.status}`); } setIsStaffAuthenticated(true); setAdminError(null); fetchAdminData(); } catch (e) { console.error("Staff login fail:", e); setIsStaffAuthenticated(false); setAdminError(e instanceof Error ? e.message : "Staff login failed."); } finally { setIsAdminLoading(false); } };
   const fetchAdminData = async () => { setIsAdminLoading(true); setAdminError(null); try { const [keysRes, restrictRes] = await Promise.all([ fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminListKeys' }) }), fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminGetRestrictions' }) }) ]); const keysData = await keysRes.json().catch(()=>({error:'Invalid JSON'})); if (!keysRes.ok || !keysData.success) throw new Error(keysData?.error || 'Failed keys'); setAdminUserKeysList(keysData.keys || []); const restrictData = await restrictRes.json().catch(()=>({error:'Invalid JSON'})); if (!restrictRes.ok || !restrictData.success) throw new Error(restrictData?.error || 'Failed restrictions'); setAdminRestrictedModelsList(restrictData.restrictedModels || []); } catch (e) { console.error("Fetch admin err:", e); setAdminError(e instanceof Error ? e.message : "Load failed."); } finally { setIsAdminLoading(false); } };
   const handleToggleUserKeyStatus = async (key: string, currentStatus: 'active' | 'inactive') => { const newStatus = currentStatus === 'active' ? 'inactive' : 'active'; if (!window.confirm(`Set key "${key.substring(0,8)}..." to ${newStatus}?`)) return; setIsAdminLoading(true); setAdminError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminUpdateKeyStatus', key: key, newStatus: newStatus }) }); const data = await res.json().catch(()=>({error: 'Invalid JSON'})); if (!res.ok || !data.success) throw new Error(data?.error || `Update fail: ${res.status}`); fetchAdminData(); /* Refresh list */ } catch (e) { console.error("Key update fail:", e); setAdminError(e instanceof Error ? e.message : "Update fail."); setIsAdminLoading(false); } };
-  const handleToggleModelRestriction = async (modelValue: GeminiModel) => {
-      const isCurrentlyRestricted = adminRestrictedModelsList.includes(modelValue); const optimisticNewList = isCurrentlyRestricted ? adminRestrictedModelsList.filter(m => m !== modelValue) : [...adminRestrictedModelsList, modelValue];
-      setAdminRestrictedModelsList(optimisticNewList); setIsAdminLoading(true); setAdminError(null);
-      try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminSetRestrictedModels', models: optimisticNewList }) }); const data = await res.json().catch(()=>({error: 'Invalid JSON'})); if (!res.ok || !data.success) { setAdminRestrictedModelsList(adminRestrictedModelsList); throw new Error(data?.error || `Save fail: ${res.status}`); } console.log("Restricted models updated."); }
-      catch (error) { console.error("Save restrictions fail:", error); setAdminError(error instanceof Error ? error.message : "Save fail."); setAdminRestrictedModelsList(adminRestrictedModelsList); } finally { setIsAdminLoading(false); }
-  };
-   useEffect(() => { if (isStaffPanelVisible && isStaffAuthenticated) { fetchAdminData(); } }, [isStaffPanelVisible, isStaffAuthenticated]);
+  const handleToggleModelRestriction = async (modelValue: GeminiModel) => { const isCurrentlyRestricted = adminRestrictedModelsList.includes(modelValue); const optimisticNewList = isCurrentlyRestricted ? adminRestrictedModelsList.filter(m => m !== modelValue) : [...adminRestrictedModelsList, modelValue]; setAdminRestrictedModelsList(optimisticNewList); setIsAdminLoading(true); setAdminError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminSetRestrictedModels', models: optimisticNewList }) }); const data = await res.json().catch(()=>({error: 'Invalid JSON'})); if (!res.ok || !data.success) { setAdminRestrictedModelsList(adminRestrictedModelsList); throw new Error(data?.error || `Save fail: ${res.status}`); } console.log("Restricted models updated."); fetchAdminData(); /* Refresh list */ } catch (error) { console.error("Save restrictions fail:", error); setAdminError(error instanceof Error ? error.message : "Save fail."); setAdminRestrictedModelsList(adminRestrictedModelsList); } finally { setIsAdminLoading(false); } };
+  useEffect(() => { if (isStaffPanelVisible && isStaffAuthenticated) { fetchAdminData(); } }, [isStaffPanelVisible, isStaffAuthenticated]);
 
   // --- JSX ---
   return (
     <div className="App">
       {/* Settings Menu */}
-      {isSettingsOpen && (
-        <div className="settings-menu" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-          <h3 id="settings-title">Settings</h3>
-          <div className="settings-grid">
-            {/* Column 1 */}
-            <div className="settings-column">
-                <div className="settings-option">
-                    <label htmlFor="access-key-input">Your Unique Access Key:</label>
-                    <input type="password" id="access-key-input" className="settings-input" placeholder="Enter your assigned key" value={enteredKey} onChange={handleAccessKeyChange} />
-                    <div className="settings-key-status"> {keyStatus.loading && ( <span className="key-loading">Validating...</span> )} {!keyStatus.loading && keyStatus.isValid === true && keyStatus.username && ( <span className="key-valid">✅ Welcome, {keyStatus.username}!</span> )} {!keyStatus.loading && keyStatus.isValid === false && ( <span className="key-invalid">❌ {keyStatus.error || "Invalid Key"}</span> )} </div>
-                </div>
-                <div className="settings-option">
-                    <label htmlFor="persona-select">Persona:</label>
-                    <select id="persona-select" value={selectedPersona} onChange={handlePersonaChange} className="settings-select">
-                        {AVAILABLE_PERSONAS.map((p) => { const dis = p.restricted && keyStatus.isValid !== true; const sty = dis?{color:'#888',fontStyle:'italic'}:{}; return ( <option key={p.value} value={p.value} disabled={dis} style={sty}> {p.emoji} {p.label}{p.restricted?' (R)':''} </option> ); })}
-                    </select>
-                </div>
-                <div className="settings-option">
-                    <label htmlFor="model-select">AI Model:</label>
-                    <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select">
-                        {ALL_AVAILABLE_MODELS_FRONTEND.map((m) => { const dis = m.restricted && keyStatus.isValid !== true; const sty = dis?{color:'#888',fontStyle:'italic'}:{}; return ( <option key={m.value} value={m.value} disabled={dis} style={sty}> {m.label}{m.restricted?' (R)':''} </option> ); })}
-                    </select>
-                    {keyStatus.isValid !== true && (RESTRICTED_PERSONAS_VALUES.length > 0 || RESTRICTED_MODELS_VALUES.length > 0) && ( <p className="settings-helper-text"> Enter a valid Access Key to enable restricted features. </p> )}
-                </div>
-            </div>
-            {/* Column 2 */}
-            <div className="settings-column">
-                <div className="settings-option">
-                    <label htmlFor="stt-lang-select">Speak Language:</label>
-                    <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"> <option value="en-US">English</option> <option value="th-TH">ไทย</option> <option value="es-ES">Español</option> <option value="fr-FR">Français</option> </select>
-                </div>
-                <div className="settings-option">
-                    <label>Chat Actions:</label>
-                    <button onClick={handleExportChat} className="settings-action-button export-chat-settings-button"> 💾 Export History </button>
-                </div>
-                <div className="settings-option">
-                    <button onClick={handleClearChat} className="settings-action-button clear-chat-settings-button"> 🗑️ Clear History </button>
-                </div>
-                <div className="settings-option">
-                    <button onClick={toggleStaffPanel} className="settings-action-button staff-area-button"> 🔑 Staff Area </button>
-                </div>
-            </div>
-          </div> {/* End Grid */}
-          <hr className="settings-separator"/>
-          <button onClick={toggleSettings} className="close-settings-button">Close</button>
-        </div>
-      )}
-
+      {isSettingsOpen && ( <div className="settings-menu"> <h3 id="settings-title">Settings</h3> <div className="settings-grid"> <div className="settings-column"> <div className="settings-option"> <label htmlFor="access-key-input">Your Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter key" value={enteredKey} onChange={handleAccessKeyChange} /> <div className="settings-key-status"> {keyStatus.loading && (<span className="key-loading">Validating...</span>)} {!keyStatus.loading&&keyStatus.isValid===true&&keyStatus.username&&(<span className="key-valid">✅ Welcome, {keyStatus.username}!</span>)} {!keyStatus.loading&&keyStatus.isValid===false&&(<span className="key-invalid">❌ {keyStatus.error||"Invalid"}</span>)} </div> </div> <div className="settings-option"> <label htmlFor="persona-select">Persona:</label> <select id="persona-select" value={selectedPersona} onChange={handlePersonaChange} className="settings-select"> {AVAILABLE_PERSONAS.map((p)=>{const dis=p.restricted&&keyStatus.isValid!==true; const sty=dis?{color:'#888',fontStyle:'italic'}:{}; return(<option key={p.value} value={p.value} disabled={dis} style={sty}>{p.emoji} {p.label}{p.restricted?' (R)':''}</option>);})} </select> </div> <div className="settings-option"> <label htmlFor="model-select">AI Model:</label> <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select"> {ALL_AVAILABLE_MODELS_FRONTEND.map((m)=>{const dis=m.restricted&&keyStatus.isValid!==true; const sty=dis?{color:'#888',fontStyle:'italic'}:{}; return(<option key={m.value} value={m.value} disabled={dis} style={sty}>{m.label}{m.restricted?' (R)':''}</option>);})} </select> {keyStatus.isValid!==true&&(RESTRICTED_PERSONAS_VALUES.length>0||RESTRICTED_MODELS_VALUES.length>0)&&(<p className="settings-helper-text">Enter valid Key for (R) features.</p>)} </div> </div> <div className="settings-column"> <div className="settings-option"> <label htmlFor="stt-lang-select">Speak Lang:</label> <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"> <option value="en-US">English</option> <option value="th-TH">ไทย</option> <option value="es-ES">Español</option> <option value="fr-FR">Français</option> </select> </div> <div className="settings-option"> <label>Chat Actions:</label> <button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export</button> </div> <div className="settings-option"> <button onClick={handleClearChat} className="settings-action-button clear-chat-settings-button">🗑️ Clear</button> </div> <div className="settings-option"> <button onClick={toggleStaffPanel} className="settings-action-button staff-area-button">🔑 Staff</button> </div> </div> </div> <hr className="settings-separator"/> <button onClick={toggleSettings} className="close-settings-button">Close</button> </div> )}
       {/* Staff Panel Modal */}
-       {isStaffPanelVisible && ( <div className="staff-panel-overlay"> <div className="staff-panel-modal"> <h3 id="staff-panel-title">Staff Panel</h3> <button onClick={toggleStaffPanel} className="close-staff-panel-button">×</button> {!isStaffAuthenticated ? ( <div className="staff-login-section"> <div className="settings-option"> <label htmlFor="staff-key-input">Staff Key:</label> <input type="password" id="staff-key-input" className="settings-input" value={enteredStaffKey} onChange={handleStaffKeyChange} placeholder="Enter staff key" disabled={isAdminLoading} /> </div> <button onClick={handleStaffLogin} className="staff-login-button" disabled={isAdminLoading}> {isAdminLoading ? 'Logging In...' : 'Login'} </button> {adminError && <p className="staff-error">{adminError}</p>} <p className="staff-security-warning">Warn: Shared staff key is insecure.</p> </div> ) : ( <div className="staff-admin-section"> <h4>User Keys</h4> {isAdminLoading && <p>Loading Keys...</p>} {adminError && !isAdminLoading && <p className="staff-error">{adminError}</p>} <div className="user-keys-list"> {adminUserKeysList.length > 0 ? ( <table><thead><tr><th>Key(Start)</th><th>User</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody> {adminUserKeysList.map(k => (<tr key={k.key}><td>{k.key.substring(0, 8)}...</td><td>{k.username || '-'}</td><td>{k.status}</td><td>{new Date(k.created_at).toLocaleDateString()}</td><td> <button onClick={() => handleToggleUserKeyStatus(k.key, k.status)} className={`key-status-toggle-button ${k.status === 'active' ? 'deactivate' : 'activate'}`} disabled={isAdminLoading}> {k.status === 'active' ? 'Deact.' : 'Act.'} </button> </td></tr>))}</tbody></table> ) : ( !isAdminLoading && <p>No keys.</p> )} </div> <hr className="staff-separator" /> <h4>Manage Restricted Models</h4> {isAdminLoading && !adminUserKeysList.length && <p>Loading Models...</p>} {adminError && !isAdminLoading && <p className="staff-error">{adminError}</p>} <div className="restricted-models-list"> {ALL_MODEL_VALUES.map(modelValue => { const isRestricted = adminRestrictedModelsList.includes(modelValue); return ( <div key={modelValue} className="restriction-item"> <span>{modelValue}</span> <button onClick={() => handleToggleModelRestriction(modelValue)} className={`restriction-toggle-button ${isRestricted ? 'activate' : 'deactivate'}`} disabled={isAdminLoading} title={isRestricted ? `Make Public` : `Make Restricted`}> {isRestricted ? 'Restricted (Deactivate)' : 'Public (Activate)'} </button> </div> ); })} </div> </div> )} </div> </div> )}
-
+      {isStaffPanelVisible && ( <div className="staff-panel-overlay"> <div className="staff-panel-modal"> <h3 id="staff-panel-title">Staff Panel</h3> <button onClick={toggleStaffPanel} className="close-staff-panel-button">×</button> {!isStaffAuthenticated ? ( <div className="staff-login-section"> <div className="settings-option"> <label htmlFor="staff-key-input">Staff Key:</label> <input type="password" id="staff-key-input" className="settings-input" value={enteredStaffKey} onChange={handleStaffKeyChange} placeholder="Enter staff key" disabled={isAdminLoading} /> </div> <button onClick={handleStaffLogin} className="staff-login-button" disabled={isAdminLoading}> {isAdminLoading ? 'Logging In...' : 'Login'} </button> {adminError && <p className="staff-error">{adminError}</p>} <p className="staff-security-warning">Warn: Shared staff key is insecure.</p> </div> ) : ( <div className="staff-admin-section"> <h4>User Keys</h4> {isAdminLoading && <p>Loading Keys...</p>} {adminError && !isAdminLoading && <p className="staff-error">{adminError}</p>} <div className="user-keys-list"> {adminUserKeysList.length > 0 ? ( <table><thead><tr><th>Key(Start)</th><th>User</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody> {adminUserKeysList.map(k => (<tr key={k.key}><td>{k.key.substring(0, 8)}...</td><td>{k.username || '-'}</td><td>{k.status}</td><td>{new Date(k.created_at).toLocaleDateString()}</td><td> <button onClick={() => handleToggleUserKeyStatus(k.key, k.status)} className={`key-status-toggle-button ${k.status === 'active' ? 'deactivate' : 'activate'}`} disabled={isAdminLoading}> {k.status === 'active' ? 'Deact.' : 'Act.'} </button> </td></tr>))}</tbody></table> ) : ( !isAdminLoading && <p>No keys.</p> )} </div> <hr className="staff-separator" /> <h4>Manage Restricted Models</h4> {isAdminLoading && !adminUserKeysList.length && <p>Loading Models...</p>} {adminError && !isAdminLoading && <p className="staff-error">{adminError}</p>} <div className="restricted-models-list"> {ALL_MODEL_VALUES.map(modelValue => { const isRestricted = adminRestrictedModelsList.includes(modelValue as GeminiModel); return ( <div key={modelValue} className="restriction-item"> <span>{modelValue}</span> <button onClick={() => handleToggleModelRestriction(modelValue)} className={`restriction-toggle-button ${isRestricted ? 'deactivate' : 'activate'}`} disabled={isAdminLoading} title={isRestricted ? `Make Public` : `Make Restricted`}> {isRestricted ? 'Restricted (Deactivate)' : 'Public (Activate)'} </button> </div> ); })} </div> </div> )} </div> </div> )}
       {/* Analysis Form Modal */}
       {isAnalysisFormVisible && ( <div className="analysis-form-overlay"> <div className="analysis-form-modal"> <h3 id="analysis-title">Submit Details</h3> <form onSubmit={handleAnalysisSubmit}> <div className="settings-option" style={{marginBottom:'15px'}}> <label htmlFor="analysis-field1">Field 1 (Req):</label> <input type="text" id="analysis-field1" className="settings-input" value={field1} onChange={(e)=>setField1(e.target.value)} placeholder="Downside/Concern?" disabled={isAnalyzing} required /> </div> <div className="settings-option" style={{marginBottom:'15px'}}> <label htmlFor="analysis-field2">Field 2 (Req):</label> <input type="text" id="analysis-field2" className="settings-input" value={field2} onChange={(e)=>setField2(e.target.value)} placeholder="Enjoy spending time with?" disabled={isAnalyzing} required /> </div> <div className="settings-option" style={{marginBottom:'15px'}}> <label htmlFor="analysis-field3">Field 3 (Req):</label> <input type="text" id="analysis-field3" className="settings-input" value={field3} onChange={(e)=>setField3(e.target.value)} placeholder="Describe yourself?" disabled={isAnalyzing} required /> </div> <div className="settings-option" style={{marginBottom:'15px'}}> <label htmlFor="analysis-field4">Field 4 (Req):</label> <input type="text" id="analysis-field4" className="settings-input" value={field4} onChange={(e)=>setField4(e.target.value)} placeholder="Hate most when studying?" disabled={isAnalyzing} required /> </div> <div className="settings-option" style={{marginBottom:'15px'}}> <label htmlFor="analysis-field5">Field 5 (Req):</label> <input type="text" id="analysis-field5" className="settings-input" value={field5} onChange={(e)=>setField5(e.target.value)} placeholder="GPA?" disabled={isAnalyzing} required /> </div> <div className="analysis-form-actions"> <button type="button" onClick={toggleAnalysisForm} className="close-settings-button" disabled={isAnalyzing}>Cancel</button> <button type="submit" className="beta-accept-button" disabled={!field1.trim() || isAnalyzing}>{isAnalyzing ? 'Submitting...' : 'Submit Analysis'}</button> </div> </form> </div> </div> )}
-
       {/* Beta Notice Modal */}
       {showBetaNotice && ( <div className="beta-notice-overlay"> <div className="beta-notice-modal"> <h2>⚠️ Beta</h2> <p>Welcome! ...</p> <button onClick={handleAcceptBeta} className="beta-accept-button">✔️ Accept</button> </div> </div> )}
-
       {/* Header */}
       <header className="App-header"> <div style={{ display: 'flex', alignItems: 'center' }}> <button onClick={toggleSettings} className="settings-button" title="Settings">⚙️</button> <button onClick={toggleAnalysisForm} className="settings-button analysis-button" title="Submit Details">📝</button> </div> <h1>Project Theraphy</h1> <div className="header-spacer-right"></div> </header>
-
       {/* Chatbot Page */}
       <ChatbotPage messages={messages} setMessages={setMessages} selectedModel={selectedModel} sttLang={sttLang} selectedPersona={selectedPersona} accessKey={enteredKey} />
     </div>
-  ); // End of main return
+  );
 }
 
 export default App;
