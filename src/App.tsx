@@ -1,4 +1,4 @@
-// src/App.tsx - Includes Persona Restriction Management
+// src/App.tsx - Includes Persona Restriction Management & Instant Refresh Fix
 import React, { useState, useEffect, ChangeEvent, useRef } from 'react';
 import ReactGA from 'react-ga4';
 import './App.css';
@@ -9,47 +9,31 @@ const GA_MEASUREMENT_ID = "G-JX58QMMKZY"; // Replace with your actual Measuremen
 if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "YOUR_GA_ID_HERE") { try { ReactGA.initialize(GA_MEASUREMENT_ID); console.log("GA Init:", GA_MEASUREMENT_ID); ReactGA.send({ hitType: "pageview", page: window.location.pathname + window.location.search, title: "Initial Load" }); } catch (e) { console.error("GA Init Err:", e); } } else { console.warn("GA ID missing/invalid/placeholder. GA not initialized."); }
 
 // --- Types & Interfaces ---
-export interface Message {
-    id: number; text: string; sender: 'user' | 'bot' | 'loading'; timestamp: number; imageUrl?: string; modelUsed?: string;
-}
+export interface Message { id: number; text: string; sender: 'user' | 'bot' | 'loading'; timestamp: number; imageUrl?: string; modelUsed?: string; }
 export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.0-flash-lite' | 'gemini-2.5-pro-exp-03-25' | 'gemini-2.0-flash-thinking-exp-01-21' | 'gemini-2.0-flash-exp-image-generation';
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR';
 export type Persona = 'normal' | 'therapist' | 'university_master';
-interface KeyValidationStatus {
-    isValid: boolean | null; username: string | null; loading: boolean; error?: string | null;
-}
-interface UserKeyInfo {
-    key: string; username: string | null; status: 'active' | 'inactive'; created_at: string;
-}
+interface KeyValidationStatus { isValid: boolean | null; username: string | null; loading: boolean; error?: string | null; }
+interface UserKeyInfo { key: string; username: string | null; status: 'active' | 'inactive'; created_at: string; }
 
 // --- localStorage Keys ---
 const CHAT_STORAGE_KEY = 'chatMessages'; const BETA_ACCEPTED_KEY = 'betaAccepted'; const MODEL_STORAGE_KEY = 'selectedApiModel'; const STT_LANG_STORAGE_KEY = 'selectedSttLang'; const ACCESS_KEY_STORAGE_KEY = 'userAccessKey'; const PERSONA_STORAGE_KEY = 'selectedPersona';
 
 // --- Configurations ---
 interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
-const ALL_AVAILABLE_MODELS_FRONTEND: ModelInfo[] = [
-    { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', restricted: false }, { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', restricted: false }, { value: 'gemini-2.0-flash-thinking-exp-01-21', label: 'Gemini 2.0 Flash Thinking Exp', restricted: true }, { value: 'gemini-2.0-flash-exp-image-generation', label: 'Gemini 2.0 Flash Image Gen Exp', restricted: true }, { value: 'gemini-2.5-pro-exp-03-25', label: 'Gemini 2.5 Pro Exp', restricted: true }
-];
+const ALL_AVAILABLE_MODELS_FRONTEND: ModelInfo[] = [ { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', restricted: false }, { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', restricted: false }, { value: 'gemini-2.0-flash-thinking-exp-01-21', label: 'Gemini 2.0 Flash Thinking Exp', restricted: true }, { value: 'gemini-2.0-flash-exp-image-generation', label: 'Gemini 2.0 Flash Image Gen Exp', restricted: true }, { value: 'gemini-2.5-pro-exp-03-25', label: 'Gemini 2.5 Pro Exp', restricted: true } ];
 const ALL_MODEL_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.map(m => m.value);
-
 interface PersonaInfo { value: Persona; label: string; emoji: string; restricted: boolean; }
-const AVAILABLE_PERSONAS: PersonaInfo[] = [
-    { value: 'university_master', label: 'University Master', emoji: '🎓', restricted: false }, { value: 'normal', label: 'Normal Bot', emoji: '🤖', restricted: true }, { value: 'therapist', label: 'Therapist', emoji: '🧠', restricted: true }
-];
+const AVAILABLE_PERSONAS: PersonaInfo[] = [ { value: 'university_master', label: 'University Master', emoji: '🎓', restricted: false }, { value: 'normal', label: 'Normal Bot', emoji: '🤖', restricted: true }, { value: 'therapist', label: 'Therapist', emoji: '🧠', restricted: true } ];
 const ALL_PERSONAS: Persona[] = AVAILABLE_PERSONAS.map(p => p.value);
 const DEFAULT_UNRESTRICTED_PERSONA: Persona = 'university_master';
-
 const RESTRICTED_MODELS_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.filter(m => m.restricted).map(m => m.value);
 const RESTRICTED_PERSONAS_VALUES: Persona[] = AVAILABLE_PERSONAS.filter(p => p.restricted).map(p => p.value);
 
 // --- API ---
 const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
-interface ApiRequestBody {
-    prompt?: string; model?: GeminiModel; persona?: Persona; imageMimeType?: string; imageDataUrl?: string; accessKey?: string; action: string; staffKey?: string; key?: string; newStatus?: 'active' | 'inactive'; models?: GeminiModel[]; personas?: Persona[];
-}
-async function getBotResponseForAnalysis(userInput: string, model: GeminiModel, persona: Persona, accessKey: string): Promise<string> {
-    const promptToSend = userInput; if (!promptToSend) return "Error: No text provided for analysis."; const requestBody: ApiRequestBody = { action: 'chat', prompt: promptToSend, model: model, persona: persona, accessKey: accessKey }; console.log(`Sending Analysis Request (Model: ${model}, Persona: ${persona})`); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); if (!res.ok) { const errData = await res.json().catch(() => ({ error: `HTTP Error ${res.status}: ${res.statusText}` })); throw new Error(errData?.error || `HTTP Error ${res.status}`); } const data = await res.json(); if (data.error) throw new Error(data.error); return data.reply || 'No reply received.'; } catch (e) { console.error('Analysis API Error:', e); if (e instanceof Error) { if (e.message.includes("Access Key required") || e.message.includes("Invalid or inactive")) return "Error: Access Key required or invalid/inactive."; return `Error: ${e.message}`; } return 'Error: Could not fetch analysis response.'; }
-}
+interface ApiRequestBody { prompt?: string; model?: GeminiModel; persona?: Persona; imageMimeType?: string; imageDataUrl?: string; accessKey?: string; action: string; staffKey?: string; key?: string; newStatus?: 'active' | 'inactive'; models?: GeminiModel[]; personas?: Persona[]; }
+async function getBotResponseForAnalysis(userInput: string, model: GeminiModel, persona: Persona, accessKey: string): Promise<string> { const promptToSend = userInput; if (!promptToSend) return "Error: No text provided for analysis."; const requestBody: ApiRequestBody = { action: 'chat', prompt: promptToSend, model: model, persona: persona, accessKey: accessKey }; console.log(`Sending Analysis Request (Model: ${model}, Persona: ${persona})`); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); if (!res.ok) { const errData = await res.json().catch(() => ({ error: `HTTP Error ${res.status}: ${res.statusText}` })); throw new Error(errData?.error || `HTTP Error ${res.status}`); } const data = await res.json(); if (data.error) throw new Error(data.error); return data.reply || 'No reply received.'; } catch (e) { console.error('Analysis API Error:', e); if (e instanceof Error) { if (e.message.includes("Access Key required") || e.message.includes("Invalid or inactive")) return "Error: Access Key required or invalid/inactive."; return `Error: ${e.message}`; } return 'Error: Could not fetch analysis response.'; } }
 const VALIDATION_DEBOUNCE_MS = 600;
 
 function App() {
@@ -66,13 +50,12 @@ function App() {
     const [field1, setField1] = useState(''); const [field2, setField2] = useState(''); const [field3, setField3] = useState(''); const [field4, setField4] = useState(''); const [field5, setField5] = useState('');
     const [keyStatus, setKeyStatus] = useState<KeyValidationStatus>({ isValid: null, username: null, loading: false, error: null });
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    // Staff Panel State
     const [isStaffPanelVisible, setIsStaffPanelVisible] = useState<boolean>(false);
     const [enteredStaffKey, setEnteredStaffKey] = useState<string>('');
     const [isStaffAuthenticated, setIsStaffAuthenticated] = useState<boolean>(false);
     const [adminUserKeysList, setAdminUserKeysList] = useState<UserKeyInfo[]>([]);
     const [adminRestrictedModelsList, setAdminRestrictedModelsList] = useState<GeminiModel[]>([]);
-    const [adminRestrictedPersonasList, setAdminRestrictedPersonasList] = useState<Persona[]>([]); // Added
+    const [adminRestrictedPersonasList, setAdminRestrictedPersonasList] = useState<Persona[]>([]);
     const [isAdminLoading, setIsAdminLoading] = useState<boolean>(false);
     const [adminError, setAdminError] = useState<string | null>(null);
 
@@ -116,9 +99,26 @@ function App() {
     };
     useEffect(() => { if (isStaffPanelVisible && isStaffAuthenticated) fetchAdminData(); }, [isStaffPanelVisible, isStaffAuthenticated]);
 
-    const handleToggleUserKeyStatus = async (key: string, currentStatus: 'active' | 'inactive') => { const newStatus = currentStatus === 'active' ? 'inactive' : 'active'; const keySnippet = key.substring(0, 8); if (!window.confirm(`Set key "${keySnippet}..." to ${newStatus}?`)) return; setIsAdminLoading(true); setAdminError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminUpdateKeyStatus', staffKey: enteredStaffKey, key: key, newStatus: newStatus }) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) throw new Error(data?.error || `Update failed: ${res.status}`); fetchAdminData(); } catch (e) { console.error("Key status update fail:", e); setAdminError(e instanceof Error ? e.message : "Failed update."); setIsAdminLoading(false); } };
-    const handleToggleModelRestriction = async (modelValue: GeminiModel) => { const isRestricted = adminRestrictedModelsList.includes(modelValue); const actionText = isRestricted ? "make public" : "make restricted"; if (!window.confirm(`Make model "${modelValue}" ${actionText}?`)) return; const newList = isRestricted ? adminRestrictedModelsList.filter(m => m !== modelValue) : [...adminRestrictedModelsList, modelValue]; setIsAdminLoading(true); setAdminError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminSetRestrictedModels', staffKey: enteredStaffKey, models: newList }) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) throw new Error(data?.error || `Save failed: ${res.status}`); fetchAdminData(); } catch (error) { console.error("Save model restrictions fail:", error); setAdminError(error instanceof Error ? error.message : "Failed save."); setIsAdminLoading(false); } };
-    const handleTogglePersonaRestriction = async (personaValue: Persona) => { const isRestricted = adminRestrictedPersonasList.includes(personaValue); const pInfo = AVAILABLE_PERSONAS.find(p => p.value === personaValue); const pLabel = pInfo ? pInfo.label : personaValue; const actionText = isRestricted ? "make public" : "make restricted"; if (!window.confirm(`Make persona "${pLabel}" ${actionText}?`)) return; const newList = isRestricted ? adminRestrictedPersonasList.filter(p => p !== personaValue) : [...adminRestrictedPersonasList, personaValue]; setIsAdminLoading(true); setAdminError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminSetRestrictedPersonas', staffKey: enteredStaffKey, personas: newList }) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) throw new Error(data?.error || `Save failed: ${res.status}`); fetchAdminData(); } catch (error) { console.error("Save persona restrictions fail:", error); setAdminError(error instanceof Error ? error.message : "Failed save."); setIsAdminLoading(false); } };
+    const handleToggleUserKeyStatus = async (key: string, currentStatus: 'active' | 'inactive') => {
+        const newStatus = currentStatus === 'active' ? 'inactive' : 'active'; const keySnippet = key.substring(0, 8); if (!window.confirm(`Set key "${keySnippet}..." to ${newStatus}?`)) return; setIsAdminLoading(true); setAdminError(null);
+        try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminUpdateKeyStatus', staffKey: enteredStaffKey, key: key, newStatus: newStatus }) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) throw new Error(data?.error || `Update failed: ${res.status}`); }
+        catch (e) { console.error("Key status update fail:", e); setAdminError(e instanceof Error ? e.message : "Failed update."); }
+        finally { fetchAdminData(); } // Refresh ALWAYS after attempt
+    };
+
+    const handleToggleModelRestriction = async (modelValue: GeminiModel) => {
+        const isCurrentlyRestricted = adminRestrictedModelsList.includes(modelValue); const actionText = isCurrentlyRestricted ? "make public" : "make restricted"; if (!window.confirm(`Make model "${modelValue}" ${actionText}?`)) return; const newList = isCurrentlyRestricted ? adminRestrictedModelsList.filter(m => m !== modelValue) : [...adminRestrictedModelsList, modelValue]; setIsAdminLoading(true); setAdminError(null);
+        try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminSetRestrictedModels', staffKey: enteredStaffKey, models: newList }) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) throw new Error(data?.error || `Save failed: ${res.status}`); }
+        catch (error) { console.error("Save model restrictions fail:", error); setAdminError(error instanceof Error ? error.message : "Failed save."); }
+        finally { fetchAdminData(); } // Refresh ALWAYS after attempt
+    };
+
+    const handleTogglePersonaRestriction = async (personaValue: Persona) => {
+        const isCurrentlyRestricted = adminRestrictedPersonasList.includes(personaValue); const pInfo = AVAILABLE_PERSONAS.find(p => p.value === personaValue); const pLabel = pInfo ? pInfo.label : personaValue; const actionText = isCurrentlyRestricted ? "make public" : "make restricted"; if (!window.confirm(`Make persona "${pLabel}" ${actionText}?`)) return; const newList = isCurrentlyRestricted ? adminRestrictedPersonasList.filter(p => p !== personaValue) : [...adminRestrictedPersonasList, personaValue]; setIsAdminLoading(true); setAdminError(null);
+        try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminSetRestrictedPersonas', staffKey: enteredStaffKey, personas: newList }) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) throw new Error(data?.error || `Save failed: ${res.status}`); }
+        catch (error) { console.error("Save persona restrictions fail:", error); setAdminError(error instanceof Error ? error.message : "Failed save."); }
+        finally { fetchAdminData(); } // Refresh ALWAYS after attempt
+    };
 
     // --- JSX ---
     return (
@@ -127,15 +127,29 @@ function App() {
                 <div className="settings-menu">
                     <h3 id="settings-title">Settings</h3>
                     <div className="settings-grid">
-                        <div className="settings-column">
-                            <div className="settings-option"> <label htmlFor="access-key-input">Access Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/> <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid===true&&keyStatus.username?<span>✅ Valid. Welcome, {keyStatus.username}!</span>:keyStatus.isValid===false?<span>❌ {keyStatus.error||"Invalid key."}</span>:!enteredKey.trim()?<span>Enter key for restricted features.</span>:<span>Validation pending...</span>}</div> </div>
-                            <div className="settings-option"> <label htmlFor="persona-select">Persona:</label> <select id="persona-select" value={selectedPersona} onChange={handlePersonaChange} className="settings-select" disabled={AVAILABLE_PERSONAS.find(p=>p.value===selectedPersona)?.restricted&&keyStatus.isValid!==true}>{AVAILABLE_PERSONAS.map((p)=>{const isDisabled=p.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={p.value} value={p.value} disabled={isDisabled} style={style}>{p.emoji} {p.label}{p.restricted?' (Key) ':''}</option>);})}</select> </div>
-                            <div className="settings-option"> <label htmlFor="model-select">AI Model:</label> <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select" disabled={ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted&&keyStatus.isValid!==true}>{ALL_AVAILABLE_MODELS_FRONTEND.map((m)=>{const isDisabled=m.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={m.value} value={m.value} disabled={isDisabled} style={style}>{m.label}{m.restricted?' (Key)':''}</option>);})}</select> {keyStatus.isValid!==true&&(RESTRICTED_PERSONAS_VALUES.length>0||RESTRICTED_MODELS_VALUES.length>0)&&(<p className="settings-helper-text">Enter valid key for restricted options.</p>)} </div>
+                        <div className="settings-column">{/* Access Key, Persona, Model Selectors */}
+                            <div className="settings-option">{/* Access Key Input + Status */}
+                                <label htmlFor="access-key-input">Access Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/>
+                                <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid===true&&keyStatus.username?<span>✅ Valid. Welcome, {keyStatus.username}!</span>:keyStatus.isValid===false?<span>❌ {keyStatus.error||"Invalid key."}</span>:!enteredKey.trim()?<span>Enter key for restricted features.</span>:<span>Validation pending...</span>}</div>
+                            </div>
+                            <div className="settings-option">{/* Persona Selector */}
+                                <label htmlFor="persona-select">Persona:</label> <select id="persona-select" value={selectedPersona} onChange={handlePersonaChange} className="settings-select" disabled={AVAILABLE_PERSONAS.find(p=>p.value===selectedPersona)?.restricted&&keyStatus.isValid!==true}>{AVAILABLE_PERSONAS.map((p)=>{const isDisabled=p.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={p.value} value={p.value} disabled={isDisabled} style={style}>{p.emoji} {p.label}{p.restricted?' (Key) ':''}</option>);})}</select>
+                            </div>
+                            <div className="settings-option">{/* Model Selector */}
+                                <label htmlFor="model-select">AI Model:</label> <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select" disabled={ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted&&keyStatus.isValid!==true}>{ALL_AVAILABLE_MODELS_FRONTEND.map((m)=>{const isDisabled=m.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={m.value} value={m.value} disabled={isDisabled} style={style}>{m.label}{m.restricted?' (Key)':''}</option>);})}</select>
+                                {keyStatus.isValid!==true&&(RESTRICTED_PERSONAS_VALUES.length>0||RESTRICTED_MODELS_VALUES.length>0)&&(<p className="settings-helper-text">Enter valid key for restricted options.</p>)}
+                            </div>
                         </div>
-                        <div className="settings-column">
-                            <div className="settings-option"> <label htmlFor="stt-lang-select">Speech Lang:</label> <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"><option value="en-US">English (US)</option><option value="th-TH">ไทย (Thai)</option><option value="es-ES">Español</option><option value="fr-FR">Français</option></select> </div>
-                            <div className="settings-option"> <label>Chat Actions:</label> <div><button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button><button onClick={handleClearChat} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat</button></div> </div>
-                            <div className="settings-option"> <label>Admin Area:</label> <button onClick={toggleStaffPanel} className="settings-action-button staff-area-button">🔑 Staff Panel</button> </div>
+                        <div className="settings-column">{/* STT Lang, Chat Actions, Staff Panel */}
+                            <div className="settings-option">{/* STT Lang Selector */}
+                                <label htmlFor="stt-lang-select">Speech Lang:</label> <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"><option value="en-US">English (US)</option><option value="th-TH">ไทย (Thai)</option><option value="es-ES">Español</option><option value="fr-FR">Français</option></select>
+                            </div>
+                            <div className="settings-option">{/* Chat Actions */}
+                                <label>Chat Actions:</label> <div><button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button><button onClick={handleClearChat} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat</button></div>
+                            </div>
+                            <div className="settings-option">{/* Staff Panel Button */}
+                                <label>Admin Area:</label> <button onClick={toggleStaffPanel} className="settings-action-button staff-area-button">🔑 Staff Panel</button>
+                            </div>
                         </div>
                     </div>
                     <hr className="settings-separator" />
@@ -161,39 +175,11 @@ function App() {
                                 <div className="admin-data-section">
                                     {isAdminLoading && !adminRestrictedModelsList.length && <p>Loading models...</p>} {adminError && !isAdminLoading && <p className="staff-error">{adminError}</p>} {!isAdminLoading && !adminError && ALL_AVAILABLE_MODELS_FRONTEND.length > 0 && ( <div className="restricted-models-list"> <p style={{fontSize: '0.9em', color: '#666', marginBottom: '10px', padding: '0 12px'}}>Toggle models requiring access key.</p> {ALL_AVAILABLE_MODELS_FRONTEND.map(mInfo => { const isRestricted = adminRestrictedModelsList.includes(mInfo.value); return ( <div key={mInfo.value} className="restriction-item"> <span>{mInfo.label} (<code>{mInfo.value}</code>)</span> <button onClick={()=>handleToggleModelRestriction(mInfo.value)} className={`restriction-toggle-button ${isRestricted?'deactivate':'activate'}`} disabled={isAdminLoading}>{isRestricted ? 'Restricted ✔':'Public'}</button> </div> ); })} </div> )}
                                 </div>
-
-                                {/* --- Added Persona Management Section --- */}
                                 <hr className="staff-separator" />
                                 <h4>Manage Restricted Personas</h4>
                                 <div className="admin-data-section">
-                                    {isAdminLoading && !adminRestrictedPersonasList.length && <p>Loading personas...</p>}
-                                    {adminError && !isAdminLoading && <p className="staff-error">{adminError}</p>}
-                                    {!isAdminLoading && !adminError && AVAILABLE_PERSONAS.length === 0 && <p>No personas defined.</p>}
-                                    {!isAdminLoading && !adminError && AVAILABLE_PERSONAS.length > 0 && (
-                                        <div className="restricted-models-list"> {/* Reuse class */}
-                                            <p style={{fontSize: '0.9em', color: '#666', marginBottom: '10px', padding: '0 12px'}}>
-                                                Toggle personas requiring access key.
-                                            </p>
-                                            {AVAILABLE_PERSONAS.map(pInfo => {
-                                                const isRestricted = adminRestrictedPersonasList.includes(pInfo.value);
-                                                return (
-                                                    <div key={pInfo.value} className="restriction-item">
-                                                        <span>{pInfo.emoji} {pInfo.label} (<code>{pInfo.value}</code>)</span>
-                                                        <button
-                                                            onClick={() => handleTogglePersonaRestriction(pInfo.value)}
-                                                            className={`restriction-toggle-button ${isRestricted ? 'deactivate' : 'activate'}`}
-                                                            disabled={isAdminLoading}
-                                                            title={isRestricted ? `Make '${pInfo.label}' public` : `Make '${pInfo.label}' restricted`}
-                                                        >
-                                                            {isRestricted ? 'Restricted ✔' : 'Public'}
-                                                        </button>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
+                                    {isAdminLoading && !adminRestrictedPersonasList.length && <p>Loading personas...</p>} {adminError && !isAdminLoading && <p className="staff-error">{adminError}</p>} {!isAdminLoading && !adminError && AVAILABLE_PERSONAS.length === 0 && <p>No personas defined.</p>} {!isAdminLoading && !adminError && AVAILABLE_PERSONAS.length > 0 && ( <div className="restricted-models-list"> <p style={{fontSize: '0.9em', color: '#666', marginBottom: '10px', padding: '0 12px'}}>Toggle personas requiring access key.</p> {AVAILABLE_PERSONAS.map(pInfo => { const isRestricted = adminRestrictedPersonasList.includes(pInfo.value); return ( <div key={pInfo.value} className="restriction-item"> <span>{pInfo.emoji} {pInfo.label} (<code>{pInfo.value}</code>)</span> <button onClick={()=>handleTogglePersonaRestriction(pInfo.value)} className={`restriction-toggle-button ${isRestricted ? 'deactivate' : 'activate'}`} disabled={isAdminLoading}>{isRestricted ? 'Restricted ✔' : 'Public'}</button> </div> ); })} </div> )}
                                 </div>
-                                {/* --- End Added Section --- */}
                             </div>
                         )}
                     </div>
