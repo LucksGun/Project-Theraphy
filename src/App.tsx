@@ -56,7 +56,7 @@ const ALL_AVAILABLE_MODELS: ModelInfo[] = [ {value:'gemini-2.0-flash-lite',label
 const RESTRICTED_MODELS_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS.filter(m=>m.restricted).map(m=>m.value);
 
 interface PersonaInfo { value: Persona; label: string; emoji: string; restricted: boolean; }
-const AVAILABLE_PERSONAS: PersonaInfo[] = [ {value:'university_master',label:'University Master',emoji:'🎓',restricted:false}, {value:'normal',label:'Normal Bot',emoji:'🤖',restricted:true}, {value:'therapist',label:'Therapist',emoji:'🧠',restricted:true} ];
+const AVAILABLE_PERSONAS: PersonaInfo[] = [ {value:'university_master',label:'University Master',emoji:'🎓',restricted:true}, {value:'normal',label:'Normal Bot',emoji:'🤖',restricted:false}, {value:'therapist',label:'Therapist',emoji:'🧠',restricted:true} ];
 const RESTRICTED_PERSONAS_VALUES: Persona[] = AVAILABLE_PERSONAS.filter(p=>p.restricted).map(p=>p.value);
 const DEFAULT_UNRESTRICTED_PERSONA: Persona = 'university_master';
 
