@@ -199,6 +199,107 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
    opacity: 0.6;
    cursor: not-allowed;
 }
+.feedback-modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--beta-overlay-bg, rgba(0, 0, 0, 0.6));
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1050; padding: 15px;
+  box-sizing: border-box;
+}
+
+.feedback-modal {
+  background-color: var(--settings-menu-bg, #ffffff);
+  padding: 25px 35px; /* More padding */
+  border-radius: 8px;
+  border: 1px solid var(--settings-menu-border, #dee2e6);
+  box-shadow: 0 5px 15px var(--settings-menu-shadow, rgba(0, 0, 0, 0.1));
+  max-width: 550px; width: 100%;
+  box-sizing: border-box; max-height: 90vh;
+  overflow-y: auto; position: relative;
+}
+
+.feedback-modal h3 {
+  text-align: center; font-size: 1.3em; font-weight: 600;
+  color: var(--text-primary, #212529); margin-top: 0; margin-bottom: 25px;
+}
+
+.close-feedback-button {
+  position: absolute; top: 12px; right: 15px; background: none; border: none;
+  font-size: 1.8em; line-height: 1; cursor: pointer;
+  color: var(--text-secondary, #6c757d); padding: 5px;
+}
+.close-feedback-button:hover { color: var(--text-primary, #212529); }
+
+/* Feedback Form Styling */
+.feedback-form { display: flex; flex-direction: column; gap: 20px; } /* Increased gap */
+.feedback-field { display: flex; flex-direction: column; gap: 8px; } /* Increased gap */
+.feedback-field label { font-weight: 500; font-size: 0.9em; color: var(--settings-label-text, #6c757d); }
+.feedback-field textarea.settings-input { /* Reuse input style */
+    min-height: 100px;
+    resize: vertical;
+    line-height: 1.5;
+    font-size: 0.95em;
+}
+.feedback-field input.settings-input {
+    font-size: 0.95em;
+}
+
+/* Star Rating */
+.star-rating { display: flex; gap: 5px; }
+.star-button {
+  background: none; border: none; font-size: 2em; /* Larger stars */
+   padding: 0 2px;
+  color: #ccc; /* Default star color */
+  cursor: pointer; transition: color 0.2s ease;
+  line-height: 1; /* Prevent extra spacing */
+}
+.star-button.selected { color: #ffc107; /* Filled star color */ }
+.star-button:hover { opacity: 0.8; }
+.star-button:disabled { cursor: default; opacity: 0.6; }
+.feedback-field label span { /* Style the required asterisk */
+    color: var(--key-invalid-color, #dc3545);
+    margin-left: 3px;
+}
+
+
+/* Feedback Action Buttons */
+.feedback-actions {
+  display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;
+}
+.cancel-feedback-button, .submit-feedback-button {
+  padding: 10px 20px; /* Larger buttons */
+  border-radius: 5px; font-weight: 500;
+  cursor: pointer; transition: background-color 0.2s ease; font-size: 0.95em;
+}
+.cancel-feedback-button {
+   background-color: var(--button-secondary-bg, #e9ecef);
+   color: var(--text-primary, #212529);
+   border: 1px solid var(--border-color, #dee2e6);
+}
+.cancel-feedback-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg, #dee2e6); }
+
+.submit-feedback-button {
+   background-color: var(--beta-button-bg, #0d6efd);
+   color: var(--beta-button-text, #fff);
+   border: none;
+}
+.submit-feedback-button:hover:not(:disabled) { background-color: var(--beta-button-hover-bg, #0b5ed7); }
+.submit-feedback-button:disabled { opacity: 0.6; cursor: default; background-color: var(--button-disabled-bg) !important; color: var(--button-disabled-text) !important; }
+
+/* Feedback Success/Error Messages within modal */
+.feedback-message {
+    text-align: center; padding: 10px; margin-bottom: 15px;
+    border-radius: 4px; font-size: 0.95em; font-weight: 500;
+}
+.feedback-message.success { color: var(--key-valid-color); background-color: #d1e7dd; }
+.feedback-message.error { color: var(--key-invalid-color); background-color: #f8d7da; }
+
+/* Responsive adjustments for feedback modal if needed */
+@media (max-width: 600px) {
+    .feedback-modal { padding: 20px 25px; }
+    .feedback-modal h3 { font-size: 1.15em; }
+    .feedback-actions { justify-content: space-between; }
+}
 
 /* Responsive adjustments for restriction list */
 @media (max-width: 500px) {
