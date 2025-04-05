@@ -268,6 +268,81 @@
    padding: 5px 8px !important; /* Adjust padding */
 }
 
+.prompt-editing-section {
+  margin-top: 10px;
+}
+
+.admin-prompt-warning {
+  background-color: #fff3cd; /* Light yellow */
+  border: 1px solid #ffeeba;
+  color: #856404; /* Dark yellow text */
+  padding: 15px 20px;
+  border-radius: 6px;
+  margin-bottom: 25px;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.admin-prompt-warning code {
+  background-color: rgba(0,0,0,0.05);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.95em;
+}
+
+.prompt-edit-area {
+  margin-bottom: 25px;
+}
+
+.prompt-edit-area label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  font-size: 1em;
+}
+
+.prompt-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--input-border-color, #ced4da);
+  border-radius: 4px;
+  font-family: monospace; /* Use monospace for prompts */
+  font-size: 0.9em;
+  line-height: 1.5;
+  background-color: #fff;
+  color: var(--text-primary);
+  resize: vertical; /* Allow vertical resize */
+  min-height: 150px; /* Default min height */
+}
+.prompt-textarea:focus {
+  outline: none;
+  border-color: var(--input-focus-border-color, #0d6efd);
+  box-shadow: 0 0 0 2px var(--input-focus-shadow, rgba(13, 110, 253, 0.2));
+}
+.prompt-textarea:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.persona-textarea {
+  min-height: 100px; /* Slightly smaller default for persona prompts */
+}
+
+.prompt-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end; /* Align buttons to the right */
+}
+.prompt-actions button {
+   padding: 8px 16px; /* Reuse button styles if possible */
+}
+.prompt-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Responsive adjustments for feedback table */
 @media (max-width: 768px) {
     .feedback-list th,
