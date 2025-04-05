@@ -6,11 +6,11 @@ import ChatbotPage from './ChatbotPage'; // Assuming ChatbotPage component exist
 
 // --- GA Measurement ID ---
 // IMPORTANT: Replace "G-JX58QMMKZY" with your actual Google Analytics Measurement ID
-const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
+const GA_MEASUREMENT_ID = "G-D8KTRHMFTJ";
 
 // --- Initialize GA & Send Initial Pageview ---
 // Basic check to prevent initializing with the placeholder ID or example ID
-if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") {
+if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-D8KTRHMFTJ" && GA_MEASUREMENT_ID !== "G-D8KTRHMFTJ") {
   try {
     ReactGA.initialize(GA_MEASUREMENT_ID);
     console.log("Google Analytics Initialized with ID:", GA_MEASUREMENT_ID);
@@ -19,8 +19,8 @@ if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_
   } catch (error) {
     console.error("Error initializing Google Analytics:", error)
   }
-} else if (GA_MEASUREMENT_ID === "G-JX58QMMKZY") {
-    console.warn("Google Analytics is using the placeholder ID (G-JX58QMMKZY). Please replace it with your actual Measurement ID in App.tsx.");
+} else if (GA_MEASUREMENT_ID === "G-D8KTRHMFTJ") {
+    console.warn("Google Analytics is using the placeholder ID (G-D8KTRHMFTJ). Please replace it with your actual Measurement ID in App.tsx.");
 }
 else {
   console.warn("Google Analytics Measurement ID not set or invalid. Tracking disabled.");
@@ -206,12 +206,12 @@ function App() {
   const toggleSettings = () => { setIsSettingsOpen(prev => !prev); };
   const handleClearChat = () => { if (window.confirm("Clear chat?")) { const ts=Date.now(); const msg:Message={id:ts, text:"Welcome! ...", sender:'bot', timestamp:ts}; setMessages([msg]); localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([msg])); setIsSettingsOpen(false); } };
   const handleAccessKeyChange = (event: ChangeEvent<HTMLInputElement>) => { setEnteredKey(event.target.value); }; // useEffect handles validation
-  const handleExportChat = () => { const msgs = messages.filter(m => m.sender !== 'loading'); if (msgs.length === 0 || (msgs.length === 1 && msgs[0].sender==='bot')) { alert("Empty chat."); return; } let content = `Chat Export\nAt: ${new Date().toLocaleString()}\nModel: ${selectedModel}\nPersona: ${selectedPersona}\n------------------------------------\n\n`; msgs.forEach(m => { const ts=new Date(m.timestamp).toLocaleString(); const sl = m.sender==='user' ? 'User' : 'Bot'; content += `[${ts}] ${sl}:\n${m.text}\n`; if (m.imageUrl) content += `(Image: ${m.imageUrl})\n`; content += `\n`; }); try { const blob = new Blob([content], {type:'text/plain;charset=utf-8'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; const tf = new Date().toISOString().replace(/[:.]/g, '-'); a.download = `chat-${tf}.txt`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID!=="G-JX58QMMKZY" && GA_MEASUREMENT_ID!=="G-JX58QMMKZY") { ReactGA.event({ category: "Chat", action: "Export", label: `Count: ${msgs.length}` }); } } catch (e) { console.error("Export fail:", e); alert("Export failed."); } };
+  const handleExportChat = () => { const msgs = messages.filter(m => m.sender !== 'loading'); if (msgs.length === 0 || (msgs.length === 1 && msgs[0].sender==='bot')) { alert("Empty chat."); return; } let content = `Chat Export\nAt: ${new Date().toLocaleString()}\nModel: ${selectedModel}\nPersona: ${selectedPersona}\n------------------------------------\n\n`; msgs.forEach(m => { const ts=new Date(m.timestamp).toLocaleString(); const sl = m.sender==='user' ? 'User' : 'Bot'; content += `[${ts}] ${sl}:\n${m.text}\n`; if (m.imageUrl) content += `(Image: ${m.imageUrl})\n`; content += `\n`; }); try { const blob = new Blob([content], {type:'text/plain;charset=utf-8'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; const tf = new Date().toISOString().replace(/[:.]/g, '-'); a.download = `chat-${tf}.txt`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID!=="G-D8KTRHMFTJ" && GA_MEASUREMENT_ID!=="G-D8KTRHMFTJ") { ReactGA.event({ category: "Chat", action: "Export", label: `Count: ${msgs.length}` }); } } catch (e) { console.error("Export fail:", e); alert("Export failed."); } };
   const clearAnalysisForm = () => { setField1(''); setField2(''); setField3(''); setField4(''); setField5(''); };
   const toggleAnalysisForm = () => { setIsAnalysisFormVisible(prev => !prev); if (isAnalysisFormVisible) { clearAnalysisForm(); setIsAnalyzing(false); } };
   const handleAnalysisSubmit = async (event: React.FormEvent) => {
       event.preventDefault(); const v1=field1.trim(), v2=field2.trim(), v3=field3.trim(), v4=field4.trim(), v5=field5.trim(); if (!v1 || isAnalyzing) return; setIsAnalyzing(true); setIsAnalysisFormVisible(false);
-      if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID!=="G-JX58QMMKZY" && GA_MEASUREMENT_ID!=="G-JX58QMMKZY") { try { ReactGA.event({ category:"Analysis", action:"Submit", label:`F1 Len: ${v1.length}` }); } catch (e) { console.error("GA fail:", e); } }
+      if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID!=="G-D8KTRHMFTJ" && GA_MEASUREMENT_ID!=="G-D8KTRHMFTJ") { try { ReactGA.event({ category:"Analysis", action:"Submit", label:`F1 Len: ${v1.length}` }); } catch (e) { console.error("GA fail:", e); } }
       let input = `Field 1: ${v1}\n`; if (v2) input+=`Field 2: ${v2}\n`; if (v3) input+=`Field 3: ${v3}\n`; if (v4) input+=`Field 4: ${v4}\n`; if (v5) input+=`Field 5: ${v5}\n`;
       const t0=Date.now(); const thinkMsg:Message={id:t0, text:`Analyzing (${v1.substring(0,40)}...)...`, sender:'loading', timestamp:t0}; setMessages(prev => [...prev, thinkMsg]); clearAnalysisForm();
       const result = await getBotResponseForAnalysis(input.trim(), selectedModel, selectedPersona, enteredKey);
