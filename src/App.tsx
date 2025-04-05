@@ -5,7 +5,7 @@ import './App.css';
 import ChatbotPage from './ChatbotPage';
 
 // --- GA ---
-const GA_MEASUREMENT_ID = "G-JX58QMMKZY"; // Replace
+const GA_MEASUREMENT_ID = "G-JX58QMMKZY"; // Replace with your actual ID
 if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { try { ReactGA.initialize(GA_MEASUREMENT_ID); console.log("GA Init:",GA_MEASUREMENT_ID); ReactGA.send({ hitType: "pageview", page: window.location.pathname+window.location.search, title: "Initial Load" }); } catch (e) { console.error("GA Err:", e); } } else console.warn("GA ID missing/invalid/placeholder.");
 
 // --- Types & Interfaces ---
@@ -47,7 +47,7 @@ const VALIDATION_DEBOUNCE_MS = 600;
 
 function App() {
   // --- State ---
-  const [messages, setMessages] = useState<Message[]>(() => { const s=localStorage.getItem(CHAT_STORAGE_KEY); let i:Message[]=[]; try{i=s&&s!=='[]'?JSON.parse(s):[];if(!Array.isArray(i))throw new Error();}catch(e){localStorage.removeItem(CHAT_STORAGE_KEY);i=[];} if(i.length===0){const t=Date.now();return[{id:t,text:"Welcome!...",sender:'bot',timestamp:t}];}else{return i.filter(m=>m.sender!=='loading');} });
+  const [messages, setMessages] = useState<Message[]>(() => { const s=localStorage.getItem(CHAT_STORAGE_KEY); let i:Message[]=[]; try{i=s&&s!=='[]'?JSON.parse(s):[];if(!Array.isArray(i))throw new Error("Bad Format");}catch(e){localStorage.removeItem(CHAT_STORAGE_KEY);i=[];} if(i.length===0){const t=Date.now();return[{id:t,text:"Welcome!...",sender:'bot',timestamp:t}];}else{return i.filter(m=>m.sender!=='loading');} });
   const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
   const [enteredKey, setEnteredKey] = useState<string>(() => localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '');
   const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash');
@@ -71,7 +71,17 @@ function App() {
   // --- Effects ---
   useEffect(() => { // Debounced User Key Validation
     const keyTrimmed = enteredKey.trim(); if (debounceTimeoutRef.current) { clearTimeout(debounceTimeoutRef.current); }
-    if (!keyTrimmed) { setKeyStatus({ isValid: null, username: null, loading: false, error: null }); if(ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted){ setSelectedModel('gemini-2.0-flash'); } if(AVAILABLE_PERSONAS.find(p=>p.value===selectedPersona)?.restricted){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } return; }
+    // Need current model/persona info inside the timeout for fallback logic
+    const currentSelectedModel = selectedModel;
+    const currentSelectedPersona = selectedPersona;
+
+    if (!keyTrimmed) {
+        setKeyStatus({ isValid: null, username: null, loading: false, error: null });
+        // Reset selections if needed
+        if(RESTRICTED_MODELS_VALUES.includes(currentSelectedModel)){ setSelectedModel('gemini-2.0-flash'); }
+        if(RESTRICTED_PERSONAS_VALUES.includes(currentSelectedPersona)){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); }
+        return;
+     }
     setKeyStatus(prev => ({ ...prev, loading: true, isValid: null, error: null, username: null }));
     debounceTimeoutRef.current = setTimeout(async () => {
       console.log("Validating key:", keyTrimmed);
@@ -80,13 +90,27 @@ function App() {
         const data = await res.json().catch(()=>({ error: `Invalid JSON`})); if (!res.ok) throw new Error(data?.error || `Validation fail: ${res.status}`);
         if (data.isValid) {
           setKeyStatus({ isValid: true, username: data.username || 'User', loading: false, error: null });
+          // Restore potentially restricted saved prefs now key is valid
           const savedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null; if (savedModel && ALL_MODEL_VALUES.includes(savedModel)) { setSelectedModel(savedModel); }
           const savedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null; if (savedPersona && ALL_PERSONAS.includes(savedPersona)) { setSelectedPersona(savedPersona); }
-        } else { setKeyStatus({ isValid: false, username: null, loading: false, error: 'Invalid/inactive key.' }); if(ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted){ setSelectedModel('gemini-2.0-flash'); } if(AVAILABLE_PERSONAS.find(p=>p.value===selectedPersona)?.restricted){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } }
-      } catch (error) { console.error("Key validation fail:", error); const msg = error instanceof Error ? error.message : "Validation request fail."; setKeyStatus({ isValid: false, username: null, loading: false, error: msg }); if(ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted){ setSelectedModel('gemini-2.0-flash'); } if(AVAILABLE_PERSONAS.find(p=>p.value===selectedPersona)?.restricted){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } }
+        } else {
+          // Key is explicitly invalid
+          setKeyStatus({ isValid: false, username: null, loading: false, error: 'Invalid or inactive key.' });
+          // Reset restricted selections if current ones are restricted
+          if(RESTRICTED_MODELS_VALUES.includes(currentSelectedModel)){ setSelectedModel('gemini-2.0-flash'); }
+          if(RESTRICTED_PERSONAS_VALUES.includes(currentSelectedPersona)){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); }
+        }
+      } catch (error) {
+        console.error("Key validation fail:", error); const msg = error instanceof Error ? error.message : "Validation request fail.";
+        setKeyStatus({ isValid: false, username: null, loading: false, error: msg });
+         // Reset restricted selections on error too
+        if(RESTRICTED_MODELS_VALUES.includes(currentSelectedModel)){ setSelectedModel('gemini-2.0-flash'); }
+        if(RESTRICTED_PERSONAS_VALUES.includes(currentSelectedPersona)){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); }
+       }
     }, VALIDATION_DEBOUNCE_MS);
     return () => { if (debounceTimeoutRef.current) { clearTimeout(debounceTimeoutRef.current); } };
-  }, [enteredKey, selectedModel, selectedPersona]);
+  // Depend only on enteredKey; model/persona selection handled internally or by user
+  }, [enteredKey]);
 
   useEffect(() => { // Initial Load
     const initialKey = localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '';
@@ -95,12 +119,12 @@ function App() {
     let initialPersona: Persona = DEFAULT_UNRESTRICTED_PERSONA; if (savedPersona && ALL_PERSONAS.includes(savedPersona)) { initialPersona = savedPersona; } setSelectedPersona(initialPersona);
     const accepted = localStorage.getItem(BETA_ACCEPTED_KEY); if (accepted !== 'true') { setShowBetaNotice(true); }
     if (initialKey.trim()) {
-        const validateInitialKey = async (key: string) => {
-             setKeyStatus(prev => ({ ...prev, loading: true })); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'validateKey', accessKey: key }) }); const data = await res.json().catch(()=>({error:'Invalid JSON'})); if (res.ok && data.isValid) { setKeyStatus({ isValid: true, username: data.username || 'User', loading: false, error: null }); if (ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===initialModel)?.restricted) setSelectedModel(initialModel); if (AVAILABLE_PERSONAS.find(p=>p.value===initialPersona)?.restricted) setSelectedPersona(initialPersona); } else { setKeyStatus({ isValid: false, username: null, loading: false, error: data?.error || 'Invalid Key on load' }); if(ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===initialModel)?.restricted){ setSelectedModel('gemini-2.0-flash'); } if(AVAILABLE_PERSONAS.find(p=>p.value===initialPersona)?.restricted){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } }
-             catch (error) { const msg = error instanceof Error ? error.message : 'Validation failed'; setKeyStatus({ isValid: false, username: null, loading: false, error: msg }); if(ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===initialModel)?.restricted){ setSelectedModel('gemini-2.0-flash'); } if(AVAILABLE_PERSONAS.find(p=>p.value===initialPersona)?.restricted){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } };
-        validateInitialKey(initialKey);
+        const validateInitialKey = async (key: string, currentModel: GeminiModel, currentPersona: Persona) => { // Pass current selections
+             setKeyStatus(prev => ({ ...prev, loading: true })); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'validateKey', accessKey: key }) }); const data = await res.json().catch(()=>({error:'Invalid JSON'})); if (res.ok && data.isValid) { setKeyStatus({ isValid: true, username: data.username || 'User', loading: false, error: null }); /* Don't reset model/persona if key is valid, keep loaded ones */ } else { setKeyStatus({ isValid: false, username: null, loading: false, error: data?.error || 'Invalid Key on load' }); if(RESTRICTED_MODELS_VALUES.includes(currentModel)){ setSelectedModel('gemini-2.0-flash'); } if(RESTRICTED_PERSONAS_VALUES.includes(currentPersona)){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } }
+             catch (error) { const msg = error instanceof Error ? error.message : 'Validation failed'; setKeyStatus({ isValid: false, username: null, loading: false, error: msg }); if(RESTRICTED_MODELS_VALUES.includes(currentModel)){ setSelectedModel('gemini-2.0-flash'); } if(RESTRICTED_PERSONAS_VALUES.includes(currentPersona)){ setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } };
+        validateInitialKey(initialKey, initialModel, initialPersona); // Pass initial values
     }
-  }, []);
+  }, []); // Run only on mount
 
   // Persistence Effects
   useEffect(() => { const messagesToSave = messages.filter(msg => msg.sender !== 'loading'); if (messagesToSave.length > 1 || (messagesToSave.length === 1 && messagesToSave[0].sender !== 'bot')) { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave)); } else if (messagesToSave.length === 0) { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave)); } }, [messages]);
@@ -111,11 +135,11 @@ function App() {
 
   // --- Event Handlers ---
   const handleAcceptBeta = () => { localStorage.setItem(BETA_ACCEPTED_KEY, 'true'); setShowBetaNotice(false); };
-  const handleModelChange = (e: ChangeEvent<HTMLSelectElement>) => { const m = e.target.value as GeminiModel; if (ALL_MODEL_VALUES.includes(m)) setSelectedModel(m); else console.error("Invalid model selected:", m); }; // Corrected Constant
+  const handleModelChange = (e: ChangeEvent<HTMLSelectElement>) => { const m = e.target.value as GeminiModel; if (ALL_MODEL_VALUES.includes(m)) setSelectedModel(m); else console.error("Invalid model:", m);};
   const handleSttLangChange = (e: ChangeEvent<HTMLSelectElement>) => { setSttLang(e.target.value as SpeechLanguage); };
-  const handlePersonaChange = (e: ChangeEvent<HTMLSelectElement>) => { const p = e.target.value as Persona; if (ALL_PERSONAS.includes(p)) setSelectedPersona(p); else console.error("Invalid persona selected:", p); }; // Corrected Constant
+  const handlePersonaChange = (e: ChangeEvent<HTMLSelectElement>) => { const p = e.target.value as Persona; if (ALL_PERSONAS.includes(p)) setSelectedPersona(p); else console.error("Invalid persona:", p);};
   const toggleSettings = () => { setIsSettingsOpen(prev => !prev); if (isStaffPanelVisible) { setIsStaffPanelVisible(false); setIsStaffAuthenticated(false); setEnteredStaffKey(''); setAdminError(null);} };
-  const handleClearChat = () => { if (window.confirm("Clear chat?")) { const ts=Date.now(); const msg:Message={id:ts, text:"Welcome! ...", sender:'bot', timestamp:ts}; setMessages([msg]); localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([msg])); setIsSettingsOpen(false); } };
+  const handleClearChat = () => { if (window.confirm("Clear chat?")) { const ts=Date.now(); const msg:Message={id:ts, text:"Welcome!...", sender:'bot', timestamp:ts}; setMessages([msg]); localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([msg])); setIsSettingsOpen(false); } };
   const handleAccessKeyChange = (event: ChangeEvent<HTMLInputElement>) => { setEnteredKey(event.target.value); };
   const handleExportChat = () => { const msgs = messages.filter(m => m.sender !== 'loading'); if (msgs.length === 0 || (msgs.length === 1 && msgs[0].sender==='bot')) { alert("Empty chat."); return; } let content = `Chat Export\nAt: ${new Date().toLocaleString()}\nModel: ${selectedModel}\nPersona: ${selectedPersona}\n------------------------------------\n\n`; msgs.forEach(m => { const ts=new Date(m.timestamp).toLocaleString(); const sl = m.sender==='user' ? 'User' : 'Bot'; content += `[${ts}] ${sl}:\n${m.text}\n`; if (m.imageUrl) content += `(Image: ${m.imageUrl})\n`; content += `\n`; }); try { const blob = new Blob([content], {type:'text/plain;charset=utf-8'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; const tf = new Date().toISOString().replace(/[:.]/g, '-'); a.download = `chat-${tf}.txt`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID!=="G-JX58QMMKZY" && GA_MEASUREMENT_ID!=="G-JX58QMMKZY") { ReactGA.event({ category: "Chat", action: "Export", label: `Count: ${msgs.length}` }); } } catch (e) { console.error("Export fail:", e); alert("Export failed."); } };
   const clearAnalysisForm = () => { setField1(''); setField2(''); setField3(''); setField4(''); setField5(''); };
@@ -125,7 +149,7 @@ function App() {
   // --- Staff Panel Handlers ---
   const toggleStaffPanel = () => { setIsStaffPanelVisible(prev => !prev); if (!isStaffPanelVisible) { setIsStaffAuthenticated(false); setEnteredStaffKey(''); setAdminError(null); setAdminUserKeysList([]); setAdminRestrictedModelsList([]); } else { setIsStaffAuthenticated(false); setEnteredStaffKey(''); setAdminError(null); setAdminUserKeysList([]); setAdminRestrictedModelsList([]);} };
   const handleStaffKeyChange = (e: ChangeEvent<HTMLInputElement>) => { setEnteredStaffKey(e.target.value); };
-  const handleStaffLogin = async () => { if (!enteredStaffKey) { setAdminError("Staff Key empty."); return; } setIsAdminLoading(true); setAdminError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'staffLogin', staffKey: enteredStaffKey }) }); const data = await res.json().catch(()=>({error: 'Invalid JSON'})); if (!res.ok || !data.isValid) { throw new Error(data?.error || `Staff Login Fail: ${res.status}`); } setIsStaffAuthenticated(true); setAdminError(null); fetchAdminData(); } catch (e) { console.error("Staff login fail:", e); setIsStaffAuthenticated(false); setAdminError(e instanceof Error ? e.message : "Staff login failed."); } finally { setIsAdminLoading(false); } };
+  const handleStaffLogin = async () => { if (!enteredStaffKey) { setAdminError("Staff Key empty."); return; } setIsAdminLoading(true); setAdminError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'staffLogin', staffKey: enteredStaffKey }) }); const data = await res.json().catch(()=>({error: 'Invalid JSON'})); if (!res.ok || !data.isValid) { throw new Error(data?.error || `Staff Login Fail: ${res.status}`); } setIsStaffAuthenticated(true); setAdminError(null); /* Fetch data happens in useEffect */ } catch (e) { console.error("Staff login fail:", e); setIsStaffAuthenticated(false); setAdminError(e instanceof Error ? e.message : "Staff login failed."); } finally { setIsAdminLoading(false); } };
   const fetchAdminData = async () => { setIsAdminLoading(true); setAdminError(null); try { const [keysRes, restrictRes] = await Promise.all([ fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminListKeys' }) }), fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminGetRestrictions' }) }) ]); const keysData = await keysRes.json().catch(()=>({error:'Invalid JSON'})); if (!keysRes.ok || !keysData.success) throw new Error(keysData?.error || 'Failed keys'); setAdminUserKeysList(keysData.keys || []); const restrictData = await restrictRes.json().catch(()=>({error:'Invalid JSON'})); if (!restrictRes.ok || !restrictData.success) throw new Error(restrictData?.error || 'Failed restrictions'); setAdminRestrictedModelsList(restrictData.restrictedModels || []); } catch (e) { console.error("Fetch admin err:", e); setAdminError(e instanceof Error ? e.message : "Load failed."); } finally { setIsAdminLoading(false); } };
   const handleToggleUserKeyStatus = async (key: string, currentStatus: 'active' | 'inactive') => { const newStatus = currentStatus === 'active' ? 'inactive' : 'active'; if (!window.confirm(`Set key "${key.substring(0,8)}..." to ${newStatus}?`)) return; setIsAdminLoading(true); setAdminError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminUpdateKeyStatus', key: key, newStatus: newStatus }) }); const data = await res.json().catch(()=>({error: 'Invalid JSON'})); if (!res.ok || !data.success) throw new Error(data?.error || `Update fail: ${res.status}`); fetchAdminData(); /* Refresh list */ } catch (e) { console.error("Key update fail:", e); setAdminError(e instanceof Error ? e.message : "Update fail."); setIsAdminLoading(false); } };
   const handleToggleModelRestriction = async (modelValue: GeminiModel) => { const isCurrentlyRestricted = adminRestrictedModelsList.includes(modelValue); const optimisticNewList = isCurrentlyRestricted ? adminRestrictedModelsList.filter(m => m !== modelValue) : [...adminRestrictedModelsList, modelValue]; setAdminRestrictedModelsList(optimisticNewList); setIsAdminLoading(true); setAdminError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminSetRestrictedModels', models: optimisticNewList }) }); const data = await res.json().catch(()=>({error: 'Invalid JSON'})); if (!res.ok || !data.success) { setAdminRestrictedModelsList(adminRestrictedModelsList); throw new Error(data?.error || `Save fail: ${res.status}`); } console.log("Restricted models updated."); fetchAdminData(); /* Refresh list */ } catch (error) { console.error("Save restrictions fail:", error); setAdminError(error instanceof Error ? error.message : "Save fail."); setAdminRestrictedModelsList(adminRestrictedModelsList); } finally { setIsAdminLoading(false); } };
