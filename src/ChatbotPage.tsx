@@ -1,107 +1,38 @@
 // src/ChatbotPage.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-// Ensure Message, GeminiModel, SpeechLanguage, and Persona are exported from App.tsx
 import { Message, GeminiModel, SpeechLanguage, Persona } from './App';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-// Define the Worker URL - Make sure this is correct
 const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
 
-// Helper type for history formatting
-type HistoryItem = {
-  sender: 'user' | 'bot';
-  text: string;
-}
+type HistoryItem = { sender: 'user' | 'bot'; text: string; }
 
-// --- Helper Functions ---
+// Helper Functions
+function readFileAsBase64(file: File): Promise<string> { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result as string); reader.onerror = reject; reader.readAsDataURL(file); }); }
 
-// Reads file as Base64
-function readFileAsBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => { resolve(reader.result as string); };
-        reader.onerror = (error) => { reject(error); };
-        reader.readAsDataURL(file);
-    });
-}
-
-// Calls the Cloudflare Worker
-// Updated return type to include optional username and modelUsed
-async function getBotResponse(
-    userInput: string,
-    imageData: { type: string; dataUrl: string } | null,
-    history: HistoryItem[],
-    model: GeminiModel,
-    persona: Persona,
-    accessKey: string // User's unique key
-): Promise<{ text: string; imageUrl: string | null; modelUsed?: string; username?: string }> {
-    const promptToSend = userInput || (imageData ? "Describe this image." : "");
-    if (!promptToSend && !imageData) {
-        return { text: "Please type a message or upload an image.", imageUrl: null };
-    }
-
-    // ++ Add 'action' to the type definition ++
-    const requestBody: {
-        prompt: string;
-        model: GeminiModel;
-        persona: Persona;
-        imageMimeType?: string;
-        imageDataUrl?: string;
-        accessKey?: string;
-        history?: HistoryItem[];
-        action?: 'chat' | 'validateKey'; // <-- ADDED THIS LINE
-    } = {
-        prompt: promptToSend,
-        model: model,
-        persona: persona,
-        accessKey: accessKey, // Pass the unique key entered by user
-        history: history,
-        action: 'chat' // Specify action for chat requests
-    };
-
-    if (imageData) {
-        requestBody.imageMimeType = imageData.type;
-        requestBody.imageDataUrl = imageData.dataUrl;
-    }
-
+async function getBotResponse( userInput: string, imageData: { type: string; dataUrl: string } | null, history: HistoryItem[], model: GeminiModel, persona: Persona, accessKey: string ): Promise<{ text: string; imageUrl: string | null; modelUsed?: string; username?: string }> {
+    const promptToSend = userInput || (imageData ? "Describe image." : ""); if (!promptToSend && !imageData) { return { text: "Please type a message or upload an image.", imageUrl: null }; }
+    const requestBody: { prompt: string; model: GeminiModel; persona: Persona; imageMimeType?: string; imageDataUrl?: string; accessKey?: string; history?: HistoryItem[]; action?: 'chat' | 'validateKey'; } = { prompt: promptToSend, model: model, persona: persona, accessKey: accessKey, history: history, action: 'chat' }; // Specify action: 'chat'
+    if (imageData) { requestBody.imageMimeType = imageData.type; requestBody.imageDataUrl = imageData.dataUrl; }
     console.log(`Sending Chat Request (M: ${model}, P: ${persona}, H: ${history.length})`);
-
     try {
-        const response = await fetch(WORKER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', },
-            body: JSON.stringify(requestBody),
-        });
+        const response = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', }, body: JSON.stringify(requestBody), });
         const responseData = await response.json().catch(() => ({ error: `Invalid JSON response. Status: ${response.status}` }));
         if (!response.ok) { throw new Error(responseData?.error || `HTTP error! Status: ${response.status}`); }
         if (responseData.error) { throw new Error(responseData.error); }
         console.log('Received object from Worker:', responseData);
         return { text: responseData.reply || 'No reply.', imageUrl: responseData.imageUrl || null, modelUsed: responseData.modelUsed, username: responseData.username };
-    } catch (error) {
-        console.error('Fetch Err:', error);
-        const msg = error instanceof Error ? `Error: ${error.message}` : 'Fetch failed.';
-        return { text: msg, imageUrl: null };
-    }
+    } catch (error) { console.error('Fetch Err:', error); const msg = error instanceof Error ? `Error: ${error.message}` : 'Fetch failed.'; return { text: msg, imageUrl: null }; }
 }
 
-// Parses suggestions like [Suggestion: Text] from text
-function parseSuggestions(text: string): { mainText: string; suggestions: string[] } {
-    const suggestions: string[] = []; const regex = /\[Suggestion:\s*([\s\S]+?)\s*\]/g; let lastIndex = 0; const parts: string[] = []; let match;
-    while ((match = regex.exec(text)) !== null) { if (match.index > lastIndex) { parts.push(text.substring(lastIndex, match.index)); } if (match[1]) { suggestions.push(match[1].trim()); } lastIndex = regex.lastIndex; }
-    if (lastIndex < text.length) { parts.push(text.substring(lastIndex)); } const mainText = parts.join('').trim(); return { mainText, suggestions };
-}
+function parseSuggestions(text: string): { mainText: string; suggestions: string[] } { const suggestions: string[] = []; const regex = /\[Suggestion:\s*([\s\S]+?)\s*\]/g; let lastIndex = 0; const parts: string[] = []; let match; while ((match = regex.exec(text)) !== null) { if (match.index > lastIndex) { parts.push(text.substring(lastIndex, match.index)); } if (match[1]) { suggestions.push(match[1].trim()); } lastIndex = regex.lastIndex; } if (lastIndex < text.length) { parts.push(text.substring(lastIndex)); } const mainText = parts.join('').trim(); return { mainText, suggestions }; }
+function formatTime(timestamp: number): string { if (!timestamp || typeof timestamp !== 'number') return ''; try { const date = new Date(timestamp); return date.toLocaleTimeString(navigator.language||'en-US', { hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { console.error("Time fmt err:", e); return ''; } }
 
-// Formats timestamp e.g., "16:37"
-function formatTime(timestamp: number): string {
-    if (!timestamp || typeof timestamp !== 'number') return ''; try { const date = new Date(timestamp); return date.toLocaleTimeString(navigator.language||'en-US', { hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { console.error("Time fmt err:", e); return ''; }
-}
-
-// --- Speech Recognition ---
+// Speech Rec
 const SpeechRecognitionImpl = window.SpeechRecognition || (window as any).webkitSpeechRecognition; const recognitionAvailable = !!SpeechRecognitionImpl;
 
-// --- Component Definition ---
-// Props removed for validation feedback, as it's handled in App.tsx now
+// Component Props (Simplified)
 interface ChatbotPageProps {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
@@ -113,7 +44,7 @@ interface ChatbotPageProps {
 
 const SEND_COOLDOWN_MS = 3000;
 
-// Component (Props updated)
+// Component
 function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona, accessKey }: ChatbotPageProps) {
   // State
   const [input, setInput] = useState<string>(''); const [isLoading, setIsLoading] = useState<boolean>(false); const [selectedImage, setSelectedImage] = useState<File | null>(null); const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null); const [isOnCooldown, setIsOnCooldown] = useState<boolean>(false); const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -124,9 +55,9 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
   useEffect(() => { return () => { if (imagePreviewUrl) { URL.revokeObjectURL(imagePreviewUrl); } }; }, [imagePreviewUrl]);
   useEffect(() => { return () => { if (cooldownTimerRef.current) { clearTimeout(cooldownTimerRef.current); } }; }, []);
-  useEffect(() => { if (!recognitionAvailable) return; if (!recognitionRef.current) { try { recognitionRef.current = new SpeechRecognitionImpl(); if (!recognitionRef.current) return; recognitionRef.current.continuous = false; recognitionRef.current.interimResults = false; recognitionRef.current.onresult = (e: SpeechRecognitionEvent) => { const t = e.results[e.results.length-1]?.[0]?.transcript; if (t) setInput(t); setIsRecording(false); }; recognitionRef.current.onerror = (e: SpeechRecognitionErrorEvent) => { console.error('Speech Err:', e.error, e.message); let msg=`Speech error: ${e.error}`; if (e.error === 'no-speech') msg="No speech."; else if (e.error === 'audio-capture') msg="Mic error."; else if (e.error === 'not-allowed') msg="Mic permission denied."; else msg+=` - ${e.message||'Unknown'}`; alert(msg); setIsRecording(false); }; recognitionRef.current.onstart = () => { setIsRecording(true); }; recognitionRef.current.onend = () => { setIsRecording(false); }; console.log("Speech Rec Initialized"); } catch (err) { console.error("Fail init speech:", err); recognitionRef.current = null; } } return () => { if (recognitionRef.current?.onstart) { try { recognitionRef.current.abort(); } catch(e){ /*ignore*/ } } setIsRecording(false); }; }, []);
+  useEffect(() => { if (!recognitionAvailable) return; if (!recognitionRef.current) { try { recognitionRef.current = new SpeechRecognitionImpl(); if (!recognitionRef.current) return; recognitionRef.current.continuous = false; recognitionRef.current.interimResults = false; recognitionRef.current.onresult = (e: SpeechRecognitionEvent) => { const t = e.results[e.results.length-1]?.[0]?.transcript; if (t) setInput(t); setIsRecording(false); }; recognitionRef.current.onerror = (e: SpeechRecognitionErrorEvent) => { console.error('Speech Err:', e.error, e.message); let msg=`Speech error: ${e.error}`; if (e.error === 'no-speech') msg="No speech."; else if (e.error === 'audio-capture') msg="Mic error."; else if (e.error === 'not-allowed') msg="Mic permission denied."; else msg+=` - ${e.message||'Unknown'}`; alert(msg); setIsRecording(false); }; recognitionRef.current.onstart = () => { setIsRecording(true); }; recognitionRef.current.onend = () => { setIsRecording(false); }; } catch (err) { console.error("Fail init speech:", err); recognitionRef.current = null; } } return () => { if (recognitionRef.current?.onstart) { try { recognitionRef.current.abort(); } catch(e){ /*ignore*/ } } setIsRecording(false); }; }, []);
 
-  // Core Send Logic (No longer needs to set username/error state)
+  // Core Send Logic
   const sendMessage = useCallback(async (messageText: string, imageFile: File | null) => {
     const textTrimmed = messageText.trim(); if ((!textTrimmed && !imageFile) || isLoading || isOnCooldown) return;
     const currentTime = Date.now(); const imageToSend = imageFile; let imageDataForApi: { type: string; dataUrl: string } | null = null;
@@ -139,23 +70,12 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
 
     let botResponse: { text: string; imageUrl: string | null; modelUsed?: string; username?: string } = { text: 'Error: Response failed.', imageUrl: null };
 
-    try {
-        botResponse = await getBotResponse(textTrimmed, imageDataForApi, historyToSend, selectedModel, selectedPersona, accessKey);
-        // Validation feedback now happens via the debounced call in App.tsx
-        // We just process the response text here. If it's an error (like invalid key), it will just display as the bot message.
-    } catch (error) {
-      console.error("Network/fetch error in sendMessage:", error);
-      const errorMsg = error instanceof Error ? `Error: ${error.message}` : "Network error.";
-      botResponse.text = errorMsg;
-    } finally {
-      setIsLoading(false);
-      const botTime = Date.now() + 2;
-      const newBotMessage: Message = { id: botTime, text: botResponse.text, sender: 'bot', timestamp: botTime, imageUrl: botResponse.imageUrl ?? undefined };
-      setMessages((prev => [ ...prev.filter(m => m.id !== loadingTime), newBotMessage ]));
-    }
-  }, [messages, isLoading, isOnCooldown, input, selectedImage, setMessages, selectedModel, selectedPersona, accessKey]); // Removed setters from dependencies
+    try { botResponse = await getBotResponse(textTrimmed, imageDataForApi, historyToSend, selectedModel, selectedPersona, accessKey); }
+    catch (error) { console.error("Network/fetch error in sendMessage:", error); const errorMsg = error instanceof Error ? `Error: ${error.message}` : "Network error."; botResponse.text = errorMsg; }
+    finally { setIsLoading(false); const botTime = Date.now() + 2; const newBotMessage: Message = { id: botTime, text: botResponse.text, sender: 'bot', timestamp: botTime, imageUrl: botResponse.imageUrl ?? undefined }; setMessages((prev => [ ...prev.filter(m => m.id !== loadingTime), newBotMessage ])); }
+  }, [messages, isLoading, isOnCooldown, input, selectedImage, setMessages, selectedModel, selectedPersona, accessKey]); // Dependencies
 
-  // --- Event Handlers ---
+  // Event Handlers
   const handleSend = () => { sendMessage(input, selectedImage); };
   const handleSuggestionClick = useCallback((suggestionText: string) => { sendMessage(suggestionText, null); }, [sendMessage]);
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => { setInput(event.target.value); };
