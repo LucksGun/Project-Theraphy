@@ -1,13 +1,13 @@
-// src/App.tsx - FINAL VERSION (Modal Login -> Admin Page) + Feedback Feature + TS Fixes
+// src/App.tsx - FINAL VERSION (Modal Login -> Admin Page) + Feedback Feature + All TS Fixes
 import React, { useState, useEffect, ChangeEvent, useRef } from 'react';
 import ReactGA from 'react-ga4';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import './App.css'; // Ensure feedback modal styles are added here
 import ChatbotPage from './ChatbotPage';
-import AdminPage from './AdminPage'; // Import the Admin page component
+import AdminPage from './AdminPage';
 
 // --- GA Initialization ---
-const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
+const GA_MEASUREMENT_ID = "G-JX58QMMKZY"; // Replace if needed
 if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "YOUR_GA_ID_HERE") { try { ReactGA.initialize(GA_MEASUREMENT_ID); console.log("GA Init:", GA_MEASUREMENT_ID); ReactGA.send({ hitType: "pageview", page: window.location.pathname + window.location.search, title: "Initial Load" }); } catch (e) { console.error("GA Init Err:", e); } } else { console.warn("GA ID missing/invalid. GA not initialized."); }
 
 // --- Types & Interfaces (Export for AdminPage & ChatbotPage) ---
@@ -18,6 +18,10 @@ export type Persona = 'normal' | 'therapist' | 'university_master';
 interface KeyValidationStatus { isValid: boolean | null; username: string | null; loading: boolean; error?: string | null; }
 export interface UserKeyInfo { key: string; username: string | null; status: 'active' | 'inactive'; created_at: string; }
 export interface FeedbackItem { id: number; email: string | null; rating: number; comment: string; submitted_at: string; is_important: number; }
+
+// --- Added Type Definition ---
+export type PersonaInstructionMap = { [key in Persona]?: string };
+// -----------------------------
 
 // --- localStorage Keys ---
 const CHAT_STORAGE_KEY = 'chatMessages'; const BETA_ACCEPTED_KEY = 'betaAccepted'; const MODEL_STORAGE_KEY = 'selectedApiModel'; const STT_LANG_STORAGE_KEY = 'selectedSttLang'; const ACCESS_KEY_STORAGE_KEY = 'userAccessKey'; const PERSONA_STORAGE_KEY = 'selectedPersona';
@@ -32,14 +36,30 @@ export const ALL_PERSONAS: Persona[] = AVAILABLE_PERSONAS.map(p => p.value);
 export const DEFAULT_UNRESTRICTED_PERSONA: Persona = 'university_master';
 export const RESTRICTED_MODELS_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.filter(m => m.restricted).map(m => m.value);
 export const RESTRICTED_PERSONAS_VALUES: Persona[] = AVAILABLE_PERSONAS.filter(p => p.restricted).map(p => p.value);
+// Default Instructions (Export these for AdminPage fallback/reset logic)
+export const DEFAULT_BASE_SYSTEM_INSTRUCTION = `
+You are a helpful AI assistant for Project Theraphy.
+Please format your response using markdown where appropriate. Use bullet points (-) or numbered lists (1.) for lists or steps. Bold text using **text**.
+When asking a question with clear choices or suggesting concise next steps FOR GENERAL TOPICS, provide the options enclosed in square brackets like this: [Suggestion: Choice Text]. Make sure if there are multiple suggestions, each is in its own bracket.
+Example: [Suggestion: Tell me more about oranges] [Suggestion: What other fruits are common?]
+HOWEVER, if the user is asking for advice on potentially sensitive personal topics (like "my kid is naughty", "I feel stressed", "I'm worried about X"), provide suggestions or follow-up questions as normal text within your response, NOT using the [Suggestion: ...] format.
+When user types in Thai, respond in Thai, even if the message contains only a few Thai words, unless explicitly asked to answer in English.
+If asked about your current AI model, state the model name you are configured to use.
+If the user expresses feeling bad or hopeless, offer an inspirational quote. REMEMBER TO OFFER AN INSPIRATIONAL QUOTE IN THIS SITUATION.
+If you receive input clearly identified as starting with "Field 1:", "Field 2:", etc., this is from a special form submission about the user. Analyze this input specifically for college/university advice. Based *only* on the provided field inputs, recommend suitable faculties, specific universities (mentioning potential locations if relevant), and general advice on how to prepare for or get into those paths. Structure this advice clearly (e.g., using headings or bullet points).
+`;
+export const DEFAULT_PERSONA_INSTRUCTIONS: PersonaInstructionMap = { // Use defined type
+    normal: `\nYou are currently in 'Normal Bot' persona mode. Act as a general-purpose assistant. Respond helpfully to a wide range of queries. If the topic is suitable (not sensitive personal advice), suggest follow-up questions using the [Suggestion: ...] format based on common interests or logical next steps.`,
+    therapist: `\nYou are currently roleplaying as a supportive and empathetic therapist assistant in 'Therapist' persona mode. Your primary goal is to offer a safe, non-judgmental space for users to discuss feelings, stress, and future planning concerns. Use gentle, understanding, and validating language. Acknowledge the user's feelings (e.g., "It sounds like that's really challenging," "It's understandable to feel that way."). DO NOT give direct medical advice, diagnoses, or claim to be a real therapist. You can suggest seeking professional help if appropriate. Guide users towards healthy coping mechanisms, self-reflection, or reframing thoughts in a constructive way. When suggesting next steps related to emotional well-being or coping strategies, present them as gentle questions or suggestions in PLAIN TEXT, not using the [Suggestion: ...] format. Example: "Perhaps exploring mindfulness techniques could be helpful for managing stress. Is that something you'd be open to discussing?" or "Would you like to explore what might be triggering these feelings?" Prioritize offering inspirational quotes when the user expresses distress or hopelessness.`,
+    university_master: `\nYou are currently roleplaying as an expert academic advisor in 'University Master' persona mode. Focus your responses on topics related to college/university planning, choosing majors/faculties, understanding university life, developing effective study habits, and exploring career paths related to academic degrees. When the user asks general questions about college or careers, suggest specific areas to explore using the [Suggestion: ...] format. Example: [Suggestion: What subjects are you most interested in studying?] [Suggestion: What are your long-term career goals?] [Suggestion: Tell me about your preferred learning style or environment] If you receive the structured "Field 1-5" input, provide detailed college/faculty/university recommendations as described in the base instructions. Maintain a knowledgeable, encouraging, and advisory tone. Avoid overly emotional or therapeutic language.`
+};
+export const ALL_PERSONA_KEYS = Object.keys(DEFAULT_PERSONA_INSTRUCTIONS);
 
 // --- API ---
 export const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
-export interface ApiRequestBody { prompt?: string; model?: GeminiModel; persona?: Persona; imageMimeType?: string; imageDataUrl?: string; accessKey?: string; action: string; staffKey?: string; key?: string; newStatus?: 'active' | 'inactive'; models?: GeminiModel[]; personas?: Persona[]; username?: string | null; newUsername?: string | null; email?: string | null; rating?: number; comment?: string; feedbackId?: number; isImportant?: boolean | number; }
+export interface ApiRequestBody { prompt?: string; model?: GeminiModel; persona?: Persona; imageMimeType?: string; imageDataUrl?: string; accessKey?: string; action: string; staffKey?: string; key?: string; newStatus?: 'active' | 'inactive'; models?: GeminiModel[]; personas?: Persona[]; username?: string | null; newUsername?: string | null; email?: string | null; rating?: number; comment?: string; feedbackId?: number; isImportant?: boolean | number; baseInstruction?: string; personaInstructions?: PersonaInstructionMap; } // Corrected definition
 async function getBotResponseForAnalysis(userInput: string, model: GeminiModel, persona: Persona, accessKey: string): Promise<string> { const promptToSend = userInput; if (!promptToSend) return "Error: No text provided."; const requestBody: ApiRequestBody = { action: 'chat', prompt: promptToSend, model: model, persona: persona, accessKey: accessKey }; console.log(`Sending Analysis Request`); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); if (!res.ok) { const errData = await res.json().catch(() => ({ error: `HTTP Error ${res.status}` })); throw new Error(errData?.error || `HTTP Error ${res.status}`); } const data = await res.json(); if (data.error) throw new Error(data.error); return data.reply || 'No reply.'; } catch (e) { console.error('Analysis API Error:', e); if (e instanceof Error) { if (e.message.includes("Access Key required") || e.message.includes("Invalid")) return "Error: Invalid/Inactive Access Key."; return `Error: ${e.message}`; } return 'Error: Analysis failed.'; } }
 const VALIDATION_DEBOUNCE_MS = 600;
-
-// --- Component for Protected Route ---
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => { const keyFromSession = sessionStorage.getItem('staffKey'); const location = useLocation(); if (!keyFromSession) { console.log("ProtectedRoute: No key, redirecting from", location.pathname); return <Navigate to="/" replace />; } return <>{children}</>; };
 
 
@@ -49,7 +69,7 @@ function App() {
     const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
     const [enteredKey, setEnteredKey] = useState<string>(() => localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '');
     const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash');
-    const [sttLang, setSttLang] = useState<SpeechLanguage>(() => { const stored = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null; if (stored && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(stored)) { return stored; } return 'en-US'; }); // Fixed initializer
+    const [sttLang, setSttLang] = useState<SpeechLanguage>(() => { const stored = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null; if (stored && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(stored)) { return stored; } return 'en-US'; });
     const [selectedPersona, setSelectedPersona] = useState<Persona>(DEFAULT_UNRESTRICTED_PERSONA);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const [isAnalysisFormVisible, setIsAnalysisFormVisible] = useState<boolean>(false);
@@ -57,12 +77,10 @@ function App() {
     const [field1, setField1] = useState(''); const [field2, setField2] = useState(''); const [field3, setField3] = useState(''); const [field4, setField4] = useState(''); const [field5, setField5] = useState('');
     const [keyStatus, setKeyStatus] = useState<KeyValidationStatus>({ isValid: null, username: null, loading: false, error: null });
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    // Staff Login Modal State
     const [isStaffLoginModalVisible, setIsStaffLoginModalVisible] = useState<boolean>(false);
     const [enteredStaffKey, setEnteredStaffKey] = useState<string>('');
     const [isStaffLoginLoading, setIsStaffLoginLoading] = useState<boolean>(false);
     const [staffLoginError, setStaffLoginError] = useState<string | null>(null);
-    // Feedback Modal State
     const [isFeedbackModalVisible, setIsFeedbackModalVisible] = useState<boolean>(false);
     const [feedbackEmail, setFeedbackEmail] = useState<string>('');
     const [feedbackRating, setFeedbackRating] = useState<number>(0);
@@ -84,7 +102,6 @@ function App() {
     const clearAnalysisForm=()=>{setField1('');setField2('');setField3('');setField4('');setField5('');}; const toggleAnalysisForm=()=>{setIsAnalysisFormVisible(p=>!p); if(isAnalysisFormVisible){clearAnalysisForm();setIsAnalyzing(false);} setIsSettingsOpen(false); setIsStaffLoginModalVisible(false); setIsFeedbackModalVisible(false);}; const handleAnalysisSubmit=async(e:React.FormEvent)=>{e.preventDefault();const v1=field1.trim();const v2=field2.trim();const v3=field3.trim();const v4=field4.trim();const v5=field5.trim();if(!v1||!v2||!v3||!v4||!v5||isAnalyzing)return alert("Fill all fields.");setIsAnalyzing(true);if(GA_MEASUREMENT_ID&&GA_MEASUREMENT_ID!=="G-JX58QMMKZY"&&GA_MEASUREMENT_ID!=="YOUR_GA_ID_HERE"){try{ReactGA.event({category:"Analysis",action:"Submit",label:`F1 Len: ${v1.length}`});}catch(e){console.error("GA event fail:",e);}}let input=`Field 1: ${v1}\nField 2: ${v2}\nField 3: ${v3}\nField 4: ${v4}\nField 5: ${v5}\n`;const ts=Date.now();const loadMsg:Message={id:ts,text:`Analyzing...`,sender:'loading',timestamp:ts};setMessages(p=>[...p,loadMsg]);const result=await getBotResponseForAnalysis(input.trim(),selectedModel,selectedPersona,enteredKey);setMessages(p=>p.filter(m=>m.id!==ts));if(result.startsWith("Error: Access Key required")){setKeyStatus({isValid:false,username:null,loading:false,error:"Key required."});const et=Date.now()+1;const em:Message={id:et,text:result,sender:'bot',timestamp:et};setMessages(p=>[...p,em]);}else if(result.startsWith("Error:")){setKeyStatus(pr=>({...pr,error:result}));const et=Date.now()+1;const em:Message={id:et,text:result,sender:'bot',timestamp:et};setMessages(p=>[...p,em]);}else{setKeyStatus(pr=>({...pr,error:null}));const te=Date.now()+1;const rm:Message={id:te,text:result,sender:'bot',timestamp:te};setMessages(p=>[...p,rm]);clearAnalysisForm();setIsAnalysisFormVisible(false);}setIsAnalyzing(false);};
     const toggleStaffLoginModal = () => { setIsStaffLoginModalVisible(prev => !prev); if (isStaffLoginModalVisible) { setEnteredStaffKey(''); setStaffLoginError(null); } setIsSettingsOpen(false); setIsAnalysisFormVisible(false); setIsFeedbackModalVisible(false); };
     const handleStaffKeyChange = (e: ChangeEvent<HTMLInputElement>) => { setEnteredStaffKey(e.target.value); setStaffLoginError(null);};
-    // This function is defined and USED by the form's onSubmit
     const handleStaffLogin = async () => { if (!enteredStaffKey.trim()) { setStaffLoginError("Key required."); return; } setIsStaffLoginLoading(true); setStaffLoginError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'staffLogin', staffKey: enteredStaffKey }) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.isValid) { throw new Error(data?.error || `Login Failed`); } sessionStorage.setItem('staffKey', enteredStaffKey); setIsStaffLoginModalVisible(false); setEnteredStaffKey(''); navigate('/admin'); } catch (e) { setStaffLoginError(e instanceof Error ? e.message : "Login failed."); sessionStorage.removeItem('staffKey'); } finally { setIsStaffLoginLoading(false); } };
     const toggleFeedbackModal = () => { const closing = isFeedbackModalVisible; setIsFeedbackModalVisible(prev => !prev); if (closing) { setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); setFeedbackError(null); setFeedbackSuccess(null); setIsSubmittingFeedback(false); } if (!closing) { setIsSettingsOpen(false); setIsAnalysisFormVisible(false); setIsStaffLoginModalVisible(false); } };
     const handleFeedbackSubmit = async (e: React.FormEvent) => { e.preventDefault(); if (feedbackRating === 0) { setFeedbackError("Rating required."); return; } if (!feedbackComment.trim()) { setFeedbackError("Comment required."); return; } if (feedbackComment.length > 2000) { setFeedbackError("Comment too long."); return; } setIsSubmittingFeedback(true); setFeedbackError(null); setFeedbackSuccess(null); const payload: ApiRequestBody = { action: 'submitFeedback', email: feedbackEmail.trim() || null, rating: feedbackRating, comment: feedbackComment.trim() }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) { throw new Error(data?.error || `Submit failed: ${res.statusText}`); } setFeedbackSuccess("Thank you! Feedback submitted."); setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); setTimeout(() => { toggleFeedbackModal(); }, 2500); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "YOUR_GA_ID_HERE") { ReactGA.event({ category: "Feedback", action: "Submit", label: `Rating: ${feedbackRating}` }); } } catch (err) { setFeedbackError(err instanceof Error ? err.message : "Failed submit."); } finally { setIsSubmittingFeedback(false); } };
@@ -100,8 +117,8 @@ function App() {
 
             <Routes>
                 <Route path="/" element={ <> <header className="App-header"> <div style={{ display: 'flex', alignItems: 'center' }}> <button onClick={toggleSettings} className="settings-button" title="Settings">⚙️</button> <button onClick={toggleAnalysisForm} className="settings-button analysis-button" title="University Advice Form">📝</button> <button onClick={toggleFeedbackModal} className="settings-button" title="Submit Feedback">💬</button> </div> <h1>Project Theraphy</h1> <div className="header-spacer-right"></div> </header> <ChatbotPage messages={messages} setMessages={setMessages} selectedModel={selectedModel} sttLang={sttLang} selectedPersona={selectedPersona} accessKey={enteredKey} /> </> } />
-                <Route path="/admin" element={ <ProtectedRoute> <AdminPage /> </ProtectedRoute> } />
-                <Route path="*" element={<Navigate to="/" replace />} />
+                 <Route path="/admin" element={ <ProtectedRoute> <AdminPage /> </ProtectedRoute> } />
+                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </div>
     );

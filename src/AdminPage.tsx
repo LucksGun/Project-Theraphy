@@ -1,232 +1,141 @@
-// src/ChatbotPage.tsx - FINAL CLEANED VERSION
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-// Ensure types are correctly imported (adjust path if you moved them)
-import { Message, GeminiModel, SpeechLanguage, Persona, WORKER_URL } from './App';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+// src/AdminPage.tsx - Fixed unused handleDeleteFeedback handler
+import { useState, useEffect, ChangeEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './admin.css';
+import {
+    GeminiModel, Persona, UserKeyInfo, AVAILABLE_PERSONAS,
+    ALL_AVAILABLE_MODELS_FRONTEND, WORKER_URL, ApiRequestBody, FeedbackItem,
+    DEFAULT_BASE_SYSTEM_INSTRUCTION, DEFAULT_PERSONA_INSTRUCTIONS,
+    ALL_PERSONA_KEYS
+} from './App';
 
-// --- Constants ---
-const SEND_COOLDOWN_MS = 1500;
-const MAX_HISTORY = 20;
-const MAX_IMAGE_SIZE_MB = 3.8;
+type PersonaInstructionMap = { [key in Persona]?: string };
 
-// History type expected by the worker
-type HistoryItem = {
-    role: 'user' | 'model';
-    parts: { text: string }[];
-}
-
-// --- Helper Functions ---
-function readFileAsBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = (error) => reject(error);
-        reader.readAsDataURL(file);
-    });
-}
-
-// Function to call the backend worker for chat
-async function getBotResponse(
-    userInput: string,
-    imageData: { type: string; dataUrl: string } | null,
-    history: HistoryItem[],
-    model: GeminiModel,
-    persona: Persona,
-    accessKey: string
-): Promise<{ text: string; imageUrl: string | null; modelUsed?: string; username?: string }> {
-
-    const promptToSend = userInput || (imageData ? "Describe this image." : "");
-    if (!promptToSend && !imageData) {
-        return { text: "Error: Cannot send empty message.", imageUrl: null };
-    }
-
-    const requestBody = { // Explicitly defining type not needed if using ApiRequestBody from App.tsx
-        action: 'chat' as const, // Use 'as const' for literal type
-        prompt: promptToSend,
-        model: model,
-        persona: persona,
-        accessKey: accessKey || undefined,
-        history: history,
-        imageMimeType: imageData?.type,
-        imageDataUrl: imageData?.dataUrl
-    };
-
-    console.log(`Sending Chat Req (Model: ${model}, Persona: ${persona}, History: ${history.length}, Img: ${!!imageData})`);
-
-    try {
-        const response = await fetch(WORKER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody),
-        });
-        const responseData = await response.json().catch(() => ({ error: `Server error: Invalid response format (Status: ${response.status})` }));
-        if (!response.ok) throw new Error(responseData?.error || `API Error: ${response.status} ${response.statusText}`);
-        if (responseData.error) throw new Error(responseData.error); // Handle application errors
-
-        console.log('Worker Response:', responseData);
-        return {
-            text: responseData.reply || '', // Default to empty string
-            imageUrl: responseData.imageUrl || null,
-            modelUsed: responseData.modelUsed,
-            username: responseData.username,
-        };
-    } catch (error) {
-        console.error('getBotResponse Error:', error);
-        const errorMessage = error instanceof Error ? (error.message.startsWith('Error: ') ? error.message : `Error: ${error.message}`)
-                           : 'Error: Unknown fetch error.';
-        return { text: errorMessage, imageUrl: null };
-    }
-}
-
-// Function to parse suggestions
-function parseSuggestions(text: string): { mainText: string; suggestions: string[] } {
-    if (!text) return { mainText: '', suggestions: [] };
-    const suggestions: string[] = [];
-    const suggestionRegex = /\[Suggestion:\s*([\s\S]*?)\s*\]/g; // Less greedy
-    let lastIndex = 0; const textParts: string[] = []; let match;
-    while ((match = suggestionRegex.exec(text)) !== null) {
-        if (match.index > lastIndex) textParts.push(text.substring(lastIndex, match.index));
-        if (match[1]) suggestions.push(match[1].trim());
-        lastIndex = suggestionRegex.lastIndex;
-    }
-    if (lastIndex < text.length) textParts.push(text.substring(lastIndex));
-    const mainText = textParts.join('').trim();
-    return { mainText, suggestions };
-}
-
-// Function to format timestamp
-function formatTime(timestamp: number): string {
-    if (!timestamp || typeof timestamp !== 'number') return '';
-    try { return new Date(timestamp).toLocaleTimeString(navigator.language || 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false }); }
-    catch (e) { console.error("Timestamp format error:", e); return ''; }
-}
-
-// --- Speech Recognition Setup ---
-const SpeechRecognitionImpl = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-const recognitionAvailable = !!SpeechRecognitionImpl;
-if (!recognitionAvailable) console.warn("Speech Recognition not supported.");
-
-// --- Component Props Interface ---
-interface ChatbotPageProps {
-    messages: Message[];
-    setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
-    selectedModel: GeminiModel;
-    sttLang: SpeechLanguage;
-    selectedPersona: Persona;
-    accessKey: string;
-}
-
-// --- ChatbotPage Component ---
-function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona, accessKey }: ChatbotPageProps) {
+function AdminPage() {
+    const navigate = useNavigate();
+    const [authenticatedStaffKey, setAuthenticatedStaffKey] = useState<string | null>(null);
     // --- State ---
-    const [input, setInput] = useState<string>('');
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [selectedImage, setSelectedImage] = useState<File | null>(null);
-    const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-    const [isOnCooldown, setIsOnCooldown] = useState<boolean>(false);
-    const [isRecording, setIsRecording] = useState<boolean>(false);
-
-    // --- Refs ---
-    const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const recognitionRef = useRef<SpeechRecognition | null>(null);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [adminUserKeysList, setAdminUserKeysList] = useState<UserKeyInfo[]>([]);
+    const [adminRestrictedModelsList, setAdminRestrictedModelsList] = useState<GeminiModel[]>([]);
+    const [adminRestrictedPersonasList, setAdminRestrictedPersonasList] = useState<Persona[]>([]);
+    const [adminFeedbackList, setAdminFeedbackList] = useState<FeedbackItem[]>([]);
+    const [newKeyUsername, setNewKeyUsername] = useState<string>('');
+    const [editingKey, setEditingKey] = useState<string | null>(null);
+    const [editUsernameValue, setEditUsernameValue] = useState<string>('');
+    const [isAdminLoading, setIsAdminLoading] = useState<boolean>(true);
+    const [adminError, setAdminError] = useState<string | null>(null);
+    const [adminSuccess, setAdminSuccess] = useState<string | null>(null);
+    const [basePrompt, setBasePrompt] = useState<string>('');
+    const [personaPrompts, setPersonaPrompts] = useState<PersonaInstructionMap>({});
+    const [initialBasePrompt, setInitialBasePrompt] = useState<string>('');
+    const [initialPersonaPrompts, setInitialPersonaPrompts] = useState<PersonaInstructionMap>({});
 
     // --- Effects ---
-    const scrollToBottom = useCallback(() => { setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, 100); }, []);
-    useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
-    useEffect(() => { return () => { if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); }; }, [imagePreviewUrl]);
-    useEffect(() => { return () => { if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current); }; }, []);
-    useEffect(() => { // Speech Recognition Init/Cleanup
-        if (!recognitionAvailable) return;
-        if (!recognitionRef.current) {
-            try {
-                const recognition = new SpeechRecognitionImpl();
-                recognition.continuous = false; recognition.interimResults = false;
-                recognition.onresult = (event: SpeechRecognitionEvent) => { const transcript = event.results[event.results.length - 1]?.[0]?.transcript; if (transcript) setInput(prev => (prev ? prev + ' ' : '') + transcript); setIsRecording(false); };
-                recognition.onerror = (event: SpeechRecognitionErrorEvent) => { console.error('Speech Rec Error:', event.error, event.message); let msg = `Speech error: ${event.error}`; if (event.error === 'no-speech') msg = "No speech detected."; else if (event.error === 'audio-capture') msg = "Mic error."; else if (event.error === 'not-allowed') msg = "Mic permission denied."; else msg += ` - ${event.message || 'Unknown'}`; alert(msg); setIsRecording(false); };
-                recognition.onstart = () => setIsRecording(true); recognition.onend = () => setIsRecording(false);
-                recognitionRef.current = recognition;
-            } catch (err) { console.error("Speech rec init error:", err); recognitionRef.current = null; }
-        }
-        return () => { if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch(e) {/* ignore */} recognitionRef.current.onresult = null; recognitionRef.current.onerror = null; recognitionRef.current.onstart = null; recognitionRef.current.onend = null; } setIsRecording(false); };
-    }, []);
+    useEffect(() => {
+        const keyFromSession = sessionStorage.getItem('staffKey');
+        if (!keyFromSession) { navigate('/'); } else { setAuthenticatedStaffKey(keyFromSession); fetchAdminData(keyFromSession); }
+    }, [navigate]);
 
-    // --- Core Send Logic ---
-    const sendMessage = useCallback(async (messageText: string, imageFile: File | null) => {
-        const textTrimmed = messageText.trim();
-        if ((!textTrimmed && !imageFile) || isLoading || isOnCooldown) return;
-
-        const timestamp = Date.now(); const imageToSend = imageFile; let imageDataForApi: { type: string; dataUrl: string } | null = null;
-        const historyToSend: HistoryItem[] = messages.filter(m => (m.sender === 'user' || m.sender === 'bot') && m.text && !m.text.startsWith('Error:')).slice(-MAX_HISTORY).map(m => ({ role: m.sender === 'user' ? 'user' : 'model', parts: [{ text: m.text }] }));
-        const userMsgText = textTrimmed || (imageToSend ? `(Image: ${imageToSend.name})` : ''); if (!userMsgText) return;
-        const userMsg: Message = { id: timestamp, text: userMsgText, sender: 'user', timestamp: timestamp };
-        setMessages(prev => [...prev, userMsg]);
-        if (messageText === input) setInput(''); if (imageToSend && imageToSend === selectedImage) { setSelectedImage(null); setImagePreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; }
-        setIsLoading(true); setIsOnCooldown(true); if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current); cooldownTimerRef.current = setTimeout(() => setIsOnCooldown(false), SEND_COOLDOWN_MS);
-        const loadingTimestamp = Date.now() + 1; const loadingMsg: Message = { id: loadingTimestamp, text: 'Bot is thinking...', sender: 'loading', timestamp: loadingTimestamp }; setMessages(prev => [...prev, loadingMsg]);
-
-        if (imageToSend) { try { if (!imageToSend.type.startsWith('image/')) throw new Error("Invalid file type."); if (imageToSend.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) throw new Error(`Image size exceeds ${MAX_IMAGE_SIZE_MB}MB.`); imageDataForApi = { type: imageToSend.type, dataUrl: await readFileAsBase64(imageToSend) }; } catch (e) { console.error("Image processing error:", e); const errorMsgText = `Error: ${e instanceof Error ? e.message : 'Could not process image.'}`; const errorMsg: Message = { id: Date.now() + 2, text: errorMsgText, sender: 'bot', timestamp: Date.now() + 2 }; setMessages(prev => [...prev.filter(m => m.id !== loadingTimestamp), errorMsg]); setIsLoading(false); return; } }
-
-        // Initialize botResponse with a default state
-        let botResponse: { text: string; imageUrl: string | null; modelUsed?: string; username?: string; } = { text: 'Error: Failed to initialize response.', imageUrl: null };
-
+    const fetchAdminData = async (staffKey: string | null) => {
+        if (!staffKey) return; console.log("AdminPage: Fetching data..."); setIsAdminLoading(true); setAdminError(null); setAdminSuccess(null);
         try {
-            botResponse = await getBotResponse(textTrimmed, imageDataForApi, historyToSend, selectedModel, selectedPersona, accessKey);
-        } catch (error) { // Catch critical errors during the fetch/await itself
-            console.error("Critical sendMessage error:", error);
-            botResponse.text = error instanceof Error ? `Error: ${error.message}` : "Error: Critical network error.";
-            botResponse.imageUrl = null;
-        } finally {
-            setIsLoading(false);
-            const botTimestamp = Date.now() + 2;
-            if (botResponse.text || botResponse.imageUrl) { // Check if there's content (could be reply or formatted error)
-                const newBotMessage: Message = { id: botTimestamp, text: botResponse.text, sender: 'bot', timestamp: botTimestamp, imageUrl: botResponse.imageUrl ?? undefined, modelUsed: botResponse.modelUsed, };
-                setMessages(prev => [...prev.filter(m => m.id !== loadingTimestamp), newBotMessage]);
-            } else { // Handle truly empty responses from backend
-                console.warn("Received empty response (no text/image/error).");
-                setMessages(prev => prev.filter(m => m.id !== loadingTimestamp)); // Just remove loading
-            }
-        }
-    }, [messages, isLoading, isOnCooldown, input, selectedImage, setMessages, selectedModel, selectedPersona, accessKey, scrollToBottom]); // Keep dependencies
+            const listKeysBody: ApiRequestBody = { action: 'adminListKeys', staffKey: staffKey };
+            const getRestrictionsBody: ApiRequestBody = { action: 'adminGetRestrictions', staffKey: staffKey };
+            const listFeedbackBody: ApiRequestBody = { action: 'adminListFeedback', staffKey: staffKey };
+            const getPromptsBody: ApiRequestBody = { action: 'adminGetPrompts', staffKey: staffKey };
+            const [keysRes, restrictRes, feedbackRes, promptsRes] = await Promise.all([
+                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(listKeysBody) }),
+                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getRestrictionsBody) }),
+                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(listFeedbackBody) }),
+                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getPromptsBody) })
+            ]);
+            const keysData = await keysRes.json().catch(() => ({ error: 'Invalid JSON keys' })); if (!keysRes.ok || !keysData.success) throw new Error(keysData?.error || 'Failed fetch keys.'); setAdminUserKeysList(keysData.keys || []);
+            const restrictData = await restrictRes.json().catch(() => ({ error: 'Invalid JSON restrictions' })); if (!restrictRes.ok || !restrictData.success) throw new Error(restrictData?.error || 'Failed fetch restrictions.'); setAdminRestrictedModelsList(restrictData.restrictedModels || []); setAdminRestrictedPersonasList(restrictData.restrictedPersonas || []);
+            const feedbackData = await feedbackRes.json().catch(() => ({ error: 'Invalid JSON feedback' })); if (!feedbackRes.ok || !feedbackData.success) throw new Error(feedbackData?.error || 'Failed fetch feedback.'); setAdminFeedbackList(feedbackData.feedback || []);
+            const promptsData = await promptsRes.json().catch(() => ({ error: 'Invalid JSON prompts' })); if (!promptsRes.ok || !promptsData.success) throw new Error(promptsData?.error || 'Failed fetch prompts.');
+            const fetchedBase = promptsData.baseInstruction || DEFAULT_BASE_SYSTEM_INSTRUCTION; const fetchedPersonas = promptsData.personaInstructions || DEFAULT_PERSONA_INSTRUCTIONS; setBasePrompt(fetchedBase); setInitialBasePrompt(fetchedBase); setPersonaPrompts(fetchedPersonas); setInitialPersonaPrompts(fetchedPersonas);
+            setAdminError(null);
+        } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed load admin data."); setAdminUserKeysList([]); setAdminRestrictedModelsList([]); setAdminRestrictedPersonasList([]); setAdminFeedbackList([]); setBasePrompt(DEFAULT_BASE_SYSTEM_INSTRUCTION); setPersonaPrompts(DEFAULT_PERSONA_INSTRUCTIONS); setInitialBasePrompt(DEFAULT_BASE_SYSTEM_INSTRUCTION); setInitialPersonaPrompts(DEFAULT_PERSONA_INSTRUCTIONS); } finally { setIsAdminLoading(false); }
+    };
+    useEffect(() => { let timer: NodeJS.Timeout | null = null; if (adminSuccess) { timer = setTimeout(() => setAdminSuccess(null), 3500); } return () => { if (timer) clearTimeout(timer); }; }, [adminSuccess]);
 
-    // --- Event Handlers ---
-    const handleSend = () => sendMessage(input, selectedImage);
-    const handleSuggestionClick = useCallback((suggestionText: string) => sendMessage(suggestionText, null), [sendMessage]);
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value);
-    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) { if (!file.type.startsWith('image/')) { alert("Invalid file type."); if (fileInputRef.current) fileInputRef.current.value = ""; return; } if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) { alert(`Image too large. Max: ${MAX_IMAGE_SIZE_MB}MB.`); if (fileInputRef.current) fileInputRef.current.value = ""; return; } setSelectedImage(file); if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); setImagePreviewUrl(URL.createObjectURL(file)); } };
-    const handleImageUploadClick = () => fileInputRef.current?.click();
-    const removeSelectedImage = () => { setSelectedImage(null); setImagePreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; };
-    const handleMicClick = () => { if (!recognitionRef.current || !recognitionAvailable) return alert("Speech rec not available."); if (isLoading || isOnCooldown) return; if (isRecording) { try { recognitionRef.current.stop(); } catch (e) { console.warn("Error stopping mic:", e); setIsRecording(false); } } else { try { recognitionRef.current.lang = sttLang; recognitionRef.current.start(); } catch (e) { if (e instanceof DOMException && e.name === 'InvalidStateError') alert("Wait before starting mic again."); else { console.error("Error starting mic:", e); alert("Could not start mic."); } setIsRecording(false); } } };
+    // --- Handlers ---
+    const handleToggleUserKeyStatus = async (key: string, status: 'active' | 'inactive') => { if (!authenticatedStaffKey) return; const nS=status==='active'?'inactive':'active'; const kS=key.substring(0,8); if(!window.confirm(`Set key "${kS}..." to ${nS}?`))return; setIsAdminLoading(true);setAdminError(null);setAdminSuccess(null); const requestBody: ApiRequestBody = {action:'adminUpdateKeyStatus',staffKey:authenticatedStaffKey,key:key,newStatus:nS}; try{const r=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(requestBody)}); const d=await r.json().catch(()=>({error:'Invalid JSON'}));if(!r.ok||!d.success)throw new Error(d?.error||`Update failed: ${r.status}`);setAdminSuccess(d.message||"Status updated.");}catch(e){setAdminError(e instanceof Error?e.message:"Failed update.");}finally{ fetchAdminData(authenticatedStaffKey); } };
+    const handleToggleModelRestriction = async (val: GeminiModel) => { if (!authenticatedStaffKey) return; const isR=adminRestrictedModelsList.includes(val); const act=isR?"make public":"make restricted"; if(!window.confirm(`Make model "${val}" ${act}?`))return; const nL=isR?adminRestrictedModelsList.filter(m=>m!==val):[...adminRestrictedModelsList,val]; setIsAdminLoading(true);setAdminError(null);setAdminSuccess(null); const requestBody: ApiRequestBody = {action:'adminSetRestrictedModels',staffKey:authenticatedStaffKey,models:nL}; try{const r=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(requestBody)}); const d=await r.json().catch(()=>({error:'Invalid JSON'}));if(!r.ok||!d.success)throw new Error(d?.error||`Save failed: ${r.status}`);setAdminSuccess(d.message||"Models updated.");}catch(e){setAdminError(e instanceof Error?e.message:"Failed save.");}finally{ fetchAdminData(authenticatedStaffKey); } };
+    const handleTogglePersonaRestriction = async (val: Persona) => { if (!authenticatedStaffKey) return; const isR=adminRestrictedPersonasList.includes(val); const pI=AVAILABLE_PERSONAS.find(p=>p.value===val); const pL=pI?pI.label:val; const act=isR?"make public":"make restricted"; if(!window.confirm(`Make persona "${pL}" ${act}?`))return; const nL=isR?adminRestrictedPersonasList.filter(p=>p!==val):[...adminRestrictedPersonasList,val]; setIsAdminLoading(true);setAdminError(null);setAdminSuccess(null); const requestBody: ApiRequestBody = {action:'adminSetRestrictedPersonas',staffKey:authenticatedStaffKey,personas:nL}; try{const r=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(requestBody)}); const d=await r.json().catch(()=>({error:'Invalid JSON'}));if(!r.ok||!d.success)throw new Error(d?.error||`Save failed: ${r.status}`);setAdminSuccess(d.message||"Personas updated.");}catch(e){setAdminError(e instanceof Error?e.message:"Failed save.");}finally{ fetchAdminData(authenticatedStaffKey); } };
+    const handleAddNewKey = async () => { if (!authenticatedStaffKey) return; setIsAdminLoading(true);setAdminError(null);setAdminSuccess(null); const uTS=newKeyUsername.trim()||null; const requestBody: ApiRequestBody = {action:'adminAddKey',staffKey:authenticatedStaffKey,username:uTS}; try{const r=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(requestBody)}); const d=await r.json().catch(()=>({error:'Invalid JSON'}));if(!r.ok||!d.success)throw new Error(d?.error||`Add failed: ${r.status}`);setAdminSuccess(d.message||"Key added!");setNewKeyUsername('');}catch(e){setAdminError(e instanceof Error?e.message:"Failed add key.");}finally{ fetchAdminData(authenticatedStaffKey); } };
+    const handleDeleteKey = async (keyToDelete: string) => { if (!authenticatedStaffKey) return; const kS=keyToDelete.substring(0,8); if(!window.confirm(`DELETE key "${kS}..."? Cannot undo.`))return; setIsAdminLoading(true);setAdminError(null);setAdminSuccess(null); const requestBody: ApiRequestBody = {action:'adminDeleteKey',staffKey:authenticatedStaffKey,key:keyToDelete}; try{const r=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(requestBody)}); const d=await r.json().catch(()=>({error:'Invalid JSON'}));if(!r.ok||!d.success)throw new Error(d?.error||`Delete failed: ${r.status}`);setAdminSuccess(d.message||"Key deleted!");}catch(e){setAdminError(e instanceof Error?e.message:"Failed delete key.");}finally{ fetchAdminData(authenticatedStaffKey); } };
+    const handleCopyKey = async (keyToCopy: string) => { try{await navigator.clipboard.writeText(keyToCopy);setAdminSuccess(`Key copied!`);}catch(e){console.error("Copy failed:",e);setAdminError("Failed to copy key.");}};
+    const handleStartEdit = (key: string, currentUsername: string | null) => { setEditingKey(key);setEditUsernameValue(currentUsername||'');};
+    const handleCancelEdit = () => { setEditingKey(null);setEditUsernameValue('');};
+    const handleSaveUsername = async () => { if(editingKey===null || !authenticatedStaffKey)return; const keyToEdit=editingKey;const usernameToSend=editUsernameValue.trim()||null;setIsAdminLoading(true);setAdminError(null);setAdminSuccess(null); const requestBody: ApiRequestBody = {action:'adminEditUsername',staffKey:authenticatedStaffKey,key:keyToEdit,newUsername:usernameToSend}; try{const r=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(requestBody)});const d=await r.json().catch(()=>({error:'Invalid JSON'}));if(!r.ok) throw new Error(d?.error||`Update failed: ${r.status}`); setAdminSuccess(d.message||"Username updated!");setEditingKey(null);setEditUsernameValue('');}catch(e){setAdminError(e instanceof Error?e.message:"Failed update username.");}finally{ fetchAdminData(authenticatedStaffKey); } };
+    const handleNewKeyUsernameChange = (e:ChangeEvent<HTMLInputElement>)=>{setNewKeyUsername(e.target.value);};
+    const handleEditUsernameChange = (e:ChangeEvent<HTMLInputElement>)=>{setEditUsernameValue(e.target.value);};
+    const handleLogout = () => { sessionStorage.removeItem('staffKey'); navigate('/'); };
+    const handleMarkImportant = async (feedbackId: number, currentIsImportant: number) => { if (!authenticatedStaffKey) return; const makeImportant = !currentIsImportant; setIsAdminLoading(true); setAdminError(null); setAdminSuccess(null); const requestBody: ApiRequestBody = { action: 'adminMarkFeedbackImportant', staffKey: authenticatedStaffKey, feedbackId: feedbackId, isImportant: makeImportant ? 1 : 0 }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) throw new Error(data?.error || `Update importance failed: ${res.status}`); setAdminSuccess(data.message || "Feedback importance updated."); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed update importance."); } finally { fetchAdminData(authenticatedStaffKey); } };
+    // This handler should now be used
+    const handleDeleteFeedback = async (feedbackId: number) => { if (!authenticatedStaffKey) return; if (!window.confirm(`DELETE feedback entry #${feedbackId}?`)) return; setIsAdminLoading(true); setAdminError(null); setAdminSuccess(null); const requestBody: ApiRequestBody = { action: 'adminDeleteFeedback', staffKey: authenticatedStaffKey, feedbackId: feedbackId }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) throw new Error(data?.error || `Delete failed: ${res.status}`); setAdminSuccess(data.message || "Feedback deleted."); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed delete feedback."); } finally { fetchAdminData(authenticatedStaffKey); } };
+    const handleBasePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => { setBasePrompt(e.target.value); setAdminError(null); setAdminSuccess(null); };
+    const handlePersonaPromptChange = (personaKey: string, value: string) => { setPersonaPrompts(prev => ({ ...prev, [personaKey]: value })); setAdminError(null); setAdminSuccess(null); };
+    const handleRevertPromptChanges = () => { if (window.confirm("Revert unsaved prompt changes?")) { setBasePrompt(initialBasePrompt); setPersonaPrompts(initialPersonaPrompts); setAdminError(null); setAdminSuccess("Changes reverted."); } };
+    const handleSaveChanges = async () => { if (!authenticatedStaffKey) return; const baseChanged = basePrompt !== initialBasePrompt; const personasChanged = JSON.stringify(personaPrompts) !== JSON.stringify(initialPersonaPrompts); if (!baseChanged && !personasChanged) { setAdminError("No changes to save."); return; } if (!window.confirm("Save prompt changes?")) return; setIsAdminLoading(true); setAdminError(null); setAdminSuccess(null); const requestBody: ApiRequestBody = { action: 'adminSetPrompts', staffKey: authenticatedStaffKey, baseInstruction: basePrompt, personaInstructions: personaPrompts }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) { throw new Error(data?.error || `Save failed: ${res.status}`); } setAdminSuccess(data.message || "Prompts saved!"); setInitialBasePrompt(basePrompt); setInitialPersonaPrompts(personaPrompts); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed save prompts."); } finally { setIsAdminLoading(false); } };
+    const hasPromptChanges = basePrompt !== initialBasePrompt || JSON.stringify(personaPrompts) !== JSON.stringify(initialPersonaPrompts);
 
-    // --- JSX Rendering ---
+
+    // --- Render Logic ---
+    if (isAdminLoading && !initialBasePrompt && !adminUserKeysList.length && !adminFeedbackList.length) { return <div style={{ padding: '40px', textAlign: 'center', fontSize: '1.2em', color: '#666' }}>Loading Admin Data...</div>; }
+    if (!authenticatedStaffKey && !isAdminLoading) { return <div style={{ padding: '40px', textAlign: 'center', color: 'red' }}>Error: Not authenticated. Please log in again.</div>; }
+
+    const renderStars = (rating: number) => { const stars = []; for (let i = 1; i <= 5; i++) { stars.push(<span key={i} className={i <= rating ? 'star-filled' : 'star-empty'}>★</span>); } return <div className="rating-stars-display">{stars}</div>; };
+
     return (
-        <div className="chatbot-container"> {/* Ensure this class matches App.css for layout */}
-            <div className="chatbot-messages">
-                {messages.map((message: Message) => {
-                    let mainText = message.text; let suggestions: string[] = [];
-                    let isErrorMessage = message.sender === 'bot' && message.text.startsWith('Error:');
-                    if (message.sender === 'bot' && mainText && !isErrorMessage) { const parsed = parseSuggestions(mainText); mainText = parsed.mainText; suggestions = parsed.suggestions; }
-                    return ( <div key={message.id} className={`message-wrapper message-wrapper-${message.sender}`}> <div className={`message ${message.sender}`}> {message.sender === 'bot' ? ( <> {isErrorMessage ? ( <p className="error-message">{message.text}</p> ) : mainText ? ( <ReactMarkdown remarkPlugins={[remarkGfm]} children={mainText} /> ) : null } {message.imageUrl && ( <img src={message.imageUrl} alt="Bot response" className="bot-image" style={{ maxWidth: '100%', maxHeight: '350px', display: 'block', marginTop: mainText ? '8px' : '0px', borderRadius: '8px', cursor: 'pointer' }} onClick={() => window.open(message.imageUrl, '_blank')} onError={(e) => { console.warn(`Failed image load: ${message.imageUrl}`); const imgElement = e.target as HTMLImageElement; imgElement.style.display = 'none'; const errorText = document.createElement('span'); errorText.textContent = '[Image failed]'; errorText.style.fontSize = '0.8em'; errorText.style.color = 'grey'; imgElement.parentNode?.insertBefore(errorText, imgElement.nextSibling); }}/> )} {!mainText && !message.imageUrl && !isErrorMessage && ( <i>[Empty Response]</i> )} </> ) : message.sender === 'loading' ? ( <i>{message.text}</i> ) : ( <p style={{ whiteSpace: 'pre-wrap' }}>{message.text}</p> )} </div> {message.sender !== 'loading' && message.timestamp && ( <span className="message-timestamp">{formatTime(message.timestamp)}</span> )} {message.sender === 'bot' && !isErrorMessage && suggestions.length > 0 && ( <div className="suggestions-container"> {suggestions.map((s, i) => ( <button key={`${message.id}-s-${i}`} className="suggestion-button" onClick={() => handleSuggestionClick(s)} disabled={isLoading || isOnCooldown}>{s}</button> ))} </div> )} </div> );
-                })}
-                <div ref={messagesEndRef} style={{ height: '1px' }} />
-            </div>
+        <div className="admin-page-container">
+            <div className="admin-page-header"> <h1>Staff Admin Panel</h1> <button onClick={handleLogout} className="admin-logout-button">Logout</button> </div>
+            <div className="staff-admin-section">
+                <div style={{ minHeight: '40px' }}> {adminSuccess && <p className="admin-feedback success">{adminSuccess}</p>} {adminError && <p className="admin-feedback error">{adminError}</p>} </div>
 
-            {/* Input Area */}
-            <div className="chatbot-input-area">
-                 {imagePreviewUrl && ( <div className="image-preview-area"> <img src={imagePreviewUrl} alt="Preview" className="image-preview-thumbnail" /> <button onClick={removeSelectedImage} title="Remove image" className="remove-image-button">×</button> </div> )}
-                 <div style={{ display: 'flex', alignItems: 'center', flexGrow: 1, gap: '6px' }}>
-                     <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleImageChange}/>
-                     <button onClick={handleImageUploadClick} className="input-button image-upload-button" title="Upload Image" disabled={isLoading || isOnCooldown}>📎</button>
-                     <input type="text" className="chatbot-input" value={input} onChange={handleInputChange} onKeyPress={handleKeyPress} placeholder={isLoading ? "Waiting..." : (imagePreviewUrl ? "Add text or send..." : "Type message...")} disabled={isLoading || isOnCooldown} aria-label="Chat input" style={{ flexGrow: 1 }}/>
-                      {recognitionAvailable && ( <button onClick={handleMicClick} className={`input-button mic-button ${isRecording ? 'recording' : ''}`} title={isRecording ? "Stop" : "Speak"} disabled={isLoading || isOnCooldown}> {isRecording ? '🛑' : '🎤'} </button> )}
-                     <button onClick={handleSend} className="send-button" title="Send" disabled={(!input.trim() && !selectedImage) || isLoading || isOnCooldown}>➤</button>
-                 </div>
-            </div>
-        </div> // End chatbot-container
+                <h4>Manage User Access Keys</h4>
+                <div className="admin-data-section">
+                    {(isAdminLoading && !adminUserKeysList.length && !adminError) && <p className="admin-loading-text">Loading keys...</p>}
+                    {(!adminUserKeysList.length && !isAdminLoading && !adminError) && <p>No keys found.</p>}
+                    {(adminUserKeysList.length > 0 || (!isAdminLoading && !adminError)) && (
+                        <div className="user-keys-list">
+                            <table><thead><tr><th>Key</th><th>Username</th><th>Status</th><th>Created</th><th className="actions-column">Actions</th></tr></thead><tbody>{adminUserKeysList.map(k=>(<tr key={k.key} className={editingKey===k.key?'editing-row':''}><td><div className="key-cell-content"><code>{k.key}</code><button onClick={()=>handleCopyKey(k.key)} className="copy-button" title="Copy Key">📋</button></div></td><td>{editingKey===k.key?(<input type="text" value={editUsernameValue} onChange={handleEditUsernameChange} className="settings-input inline-edit-input" autoFocus onKeyDown={(e)=>{if(e.key==='Enter')handleSaveUsername();else if(e.key==='Escape')handleCancelEdit();}}/>):(k.username||<span className="no-username"><em>(none)</em></span>)}</td><td><span className={`status-${k.status}`}>{k.status}</span></td><td>{new Date(k.created_at).toLocaleDateString()}</td><td><div className="action-buttons-cell">{editingKey===k.key?(<><button onClick={handleSaveUsername} className="save-button" disabled={isAdminLoading}>✔️ Save</button><button onClick={handleCancelEdit} className="cancel-button" disabled={isAdminLoading}>❌ Cancel</button></>):(<> <button onClick={()=>handleToggleUserKeyStatus(k.key,k.status)} className={`key-status-toggle-button ${k.status==='active'?'deactivate':'activate'}`} disabled={isAdminLoading||!!editingKey}>{k.status==='active'?'Deactivate':'Activate'}</button><button onClick={()=>handleStartEdit(k.key, k.username)} className="edit-button" disabled={isAdminLoading||!!editingKey}>✏️</button><button onClick={()=>handleDeleteKey(k.key)} className="delete-button" disabled={isAdminLoading||!!editingKey} title={`Delete key`}>🗑️</button></>)}</div></td></tr>))}</tbody></table>
+                        </div>
+                    )}
+                    <div className="add-key-section"><h5>Add New Key</h5><div className="add-key-form"><div className="settings-option" style={{flexGrow: 1}}><label htmlFor="new-key-username">Username (Optional):</label><input type="text" id="new-key-username" className="settings-input" value={newKeyUsername} onChange={handleNewKeyUsernameChange} placeholder="Assign username (optional)" disabled={isAdminLoading||!!editingKey}/></div><button onClick={handleAddNewKey} className="add-key-button" disabled={isAdminLoading||!!editingKey}>{isAdminLoading?'Adding...':'+ Add Key'}</button></div></div>
+                </div>
+
+                <hr className="staff-separator" />
+                <h4>Manage User Feedback</h4>
+                <div className="admin-data-section">
+                    {(isAdminLoading && !adminFeedbackList.length && !adminError) && <p className="admin-loading-text">Loading feedback...</p>}
+                    {(!adminFeedbackList.length && !isAdminLoading && !adminError) && <p>No feedback submitted yet.</p>}
+                    {(adminFeedbackList.length > 0 || (!isAdminLoading && !adminError)) && (
+                        <div className="feedback-list">
+                             <table><thead><tr><th style={{width:"140px"}}>Submitted</th><th>Email</th><th style={{width:"90px"}}>Rating</th><th style={{width:"40%"}}>Comment</th><th className="actions-column" style={{width:"200px"}}>Actions</th></tr></thead><tbody>{adminFeedbackList.map(fb=>(<tr key={fb.id} className={`feedback-item ${fb.is_important?'important-feedback':''}`}><td>{new Date(fb.submitted_at).toLocaleString()}</td><td>{fb.email||<span className="no-username"><em>(none)</em></span>}</td><td>{renderStars(fb.rating)}</td><td className="feedback-comment-cell">{fb.comment}</td><td><div className="action-buttons-cell"><button onClick={()=>handleMarkImportant(fb.id,fb.is_important)} className={`feedback-action-button ${fb.is_important?'unmark-important':'mark-important'}`} disabled={isAdminLoading||!!editingKey}>{fb.is_important?'★ Unmark':'☆ Mark Imp'}</button><button onClick={()=>handleDeleteFeedback(fb.id)} className="delete-button feedback-delete-button" disabled={isAdminLoading||!!editingKey}>🗑️ Delete</button></div></td></tr>))}</tbody></table>
+                         </div>
+                    )}
+                </div>
+
+                <hr className="staff-separator" />
+                <h4>Manage AI Prompts</h4>
+                 <div className="admin-prompt-warning">⚠️ **Caution:** Editing prompts directly affects AI behavior. Incorrect formatting can break functionality.</div>
+                <div className="admin-data-section prompt-editing-section">
+                     {isAdminLoading && !initialBasePrompt && <p className="admin-loading-text">Loading prompts...</p>}
+                     {(!isAdminLoading && !adminError) && (<><div className="prompt-edit-area"><label htmlFor="base-prompt-edit">Base System Instruction:</label><textarea id="base-prompt-edit" className="prompt-textarea" value={basePrompt} onChange={handleBasePromptChange} rows={10} disabled={isAdminLoading||!!editingKey}/></div><h5>Persona Instructions:</h5>{ALL_PERSONA_KEYS.map(key=>(<div className="prompt-edit-area" key={key}><label htmlFor={`persona-prompt-${key}`}>{key.charAt(0).toUpperCase()+key.slice(1)}:</label><textarea id={`persona-prompt-${key}`} className="prompt-textarea persona-textarea" value={personaPrompts[key as Persona]||''} onChange={(e)=>handlePersonaPromptChange(key,e.target.value)} rows={6} disabled={isAdminLoading||!!editingKey}/></div>))}{/* Prompt Actions */} <div className="prompt-actions"><button onClick={handleSaveChanges} className="save-button" disabled={!hasPromptChanges||isAdminLoading||!!editingKey} title={!hasPromptChanges?"No changes":"Save changes"}>{isAdminLoading?'Saving...':'💾 Save Prompt Changes'}</button><button onClick={handleRevertPromptChanges} className="cancel-button" disabled={!hasPromptChanges||isAdminLoading||!!editingKey} title="Discard changes">↩️ Revert Changes</button></div></>)}
+                </div>
+
+                <hr className="staff-separator" />
+                <h4>Manage Restricted Models</h4>
+                <div className="admin-data-section">{ (isAdminLoading && !adminRestrictedModelsList.length && !adminError) && <p className="admin-loading-text">Loading models...</p>} {(!isAdminLoading && !adminError) && ( <div className="restricted-items-list"> <p className="restriction-description">Toggle models requiring access key.</p> {ALL_AVAILABLE_MODELS_FRONTEND.map(mInfo => { const isRestricted = adminRestrictedModelsList.includes(mInfo.value); return ( <div key={mInfo.value} className="restriction-item"> <span>{mInfo.label} (<code>{mInfo.value}</code>)</span> <button onClick={()=>handleToggleModelRestriction(mInfo.value)} className={`restriction-toggle-button ${isRestricted?'deactivate':'activate'}`} disabled={isAdminLoading || !!editingKey}>{isRestricted ? 'Restricted ✔':'Public'}</button> </div> ); })} </div> )}</div>
+                <hr className="staff-separator" />
+                <h4>Manage Restricted Personas</h4>
+                <div className="admin-data-section">{ (isAdminLoading && !adminRestrictedPersonasList.length && !adminError) && <p className="admin-loading-text">Loading personas...</p>} {(!isAdminLoading && !adminError) && ( <div className="restricted-items-list"> <p className="restriction-description">Toggle personas requiring access key.</p> {AVAILABLE_PERSONAS.map(pInfo => { const isRestricted = adminRestrictedPersonasList.includes(pInfo.value); return ( <div key={pInfo.value} className="restriction-item"> <span>{pInfo.emoji} {pInfo.label} (<code>{pInfo.value}</code>)</span> <button onClick={()=>handleTogglePersonaRestriction(pInfo.value)} className={`restriction-toggle-button ${isRestricted ? 'deactivate' : 'activate'}`} disabled={isAdminLoading || !!editingKey}>{isRestricted ? 'Restricted ✔' : 'Public'}</button> </div> ); })} </div> )}</div>
+
+             </div>
+        </div>
     );
 }
 
-export default ChatbotPage;
+export default AdminPage;
