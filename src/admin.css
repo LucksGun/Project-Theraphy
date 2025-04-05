@@ -1,253 +1,192 @@
-/* src/admin.css - Styles for AdminPage.tsx */
+/* src/admin.css - Full width Admin Page */
 
 /* Overall Admin Page Container */
 .admin-page-container {
-    padding: 25px 35px; /* Generous padding */
-    max-width: 1100px; /* Max width */
-    margin: 20px auto; /* Top/bottom margin & centering */
-    background-color: var(--container-bg, #ffffff); /* Use variable with fallback */
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
-    border: 1px solid var(--border-color, #dee2e6);
-    /* --- Scrolling Fix --- */
-    max-height: calc(100vh - 40px); /* Calculate max height based on viewport minus top/bottom margin */
-    overflow-y: auto; /* Add vertical scrollbar ONLY when needed */
-    /* --- End Scrolling Fix --- */
-    box-sizing: border-box; /* Include padding/border in height calculation */
-  }
-  
-  /* Admin Page Header (Title + Logout) */
-  .admin-page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border-color, #dee2e6);
-    flex-wrap: wrap;
-    gap: 15px;
-  }
-  
-  .admin-page-header h1 {
-    margin: 0;
-    font-size: 1.8em;
-    color: var(--text-primary, #212529);
-    font-weight: 600;
-  }
-  
-  /* Reuse close button style for logout, adjust as needed */
-  .admin-logout-button {
-    width: auto;
-    margin-top: 0;
-    padding: 8px 16px;
-    font-size: 0.9em;
-    background-color: var(--button-secondary-bg, #e9ecef);
-    border: 1px solid var(--border-color, #dee2e6);
-    color: var(--text-primary, #212529);
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-  }
-  .admin-logout-button:hover {
-    background-color: var(--button-secondary-hover-bg, #dee2e6);
-  }
-  
-  /* Admin Section Styling */
-  .staff-admin-section h4 {
-    font-size: 1.3em;
-    margin-top: 35px;
-    margin-bottom: 18px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color, #dee2e6);
-    color: var(--text-primary, #212529);
-    font-weight: 600;
-  }
-  .staff-admin-section h4:first-of-type {
-    margin-top: 0; /* No top margin for the very first heading */
-  }
-  
-  .admin-data-section {
-    margin-bottom: 30px;
-  }
-  
-  .admin-data-section > p { /* Loading/error/no data text */
-    font-style: italic;
-    color: var(--text-secondary, #6c757d);
-    padding: 15px 5px;
-    text-align: center;
-  }
-  
-  /* Feedback Messages (Success/Error) */
-  .admin-feedback {
-    text-align: center;
-    margin-bottom: 15px;
-    padding: 10px 15px;
-    border-radius: 4px;
-    font-weight: 500;
-    border: 1px solid transparent;
-    font-size: 0.9em;
-    min-height: 40px; /* Reserve space */
-    display: flex; /* Center vertically */
-    align-items: center;
-    justify-content: center;
-  }
-  /* Add specific styles if needed when *no* message is present but space is reserved */
-  .admin-feedback:empty {
-      min-height: 0;
-      padding: 0;
-      margin-bottom: 0;
-      border: none;
-  }
-  
-  .admin-feedback.success {
-    color: var(--key-valid-color, #198754);
-    background-color: #d1e7dd;
-    border-color: #badbcc;
-  }
-  .admin-feedback.error {
-    color: var(--key-invalid-color, #dc3545);
-    background-color: #f8d7da;
-    border-color: #f5c6cb;
-  }
-  
-  /* User Keys Table Enhancements */
-  .user-keys-list {
-    border: 1px solid var(--border-color, #dee2e6);
-    border-radius: 6px;
-    overflow-x: auto; /* Horizontal scroll for table if needed */
-    background-color: #fff;
-  }
-  .user-keys-list table {
-    width: 100%;
-    border-collapse: collapse;
-    /* table-layout: fixed; */ /* Use fixed only if columns misbehave badly */
-  }
-  .user-keys-list th,
-  .user-keys-list td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color, #dee2e6);
-    font-size: 0.9em;
-    vertical-align: middle;
-    word-break: break-word; /* Allow long text to wrap */
-  }
-  .user-keys-list th {
-    background-color: #f8f9fa;
-    font-weight: 600;
-    white-space: nowrap;
-    color: var(--text-secondary);
-    position: sticky; /* Make header sticky if list scrolls */
-    top: 0; /* Required for sticky */
-    z-index: 1; /* Keep header above scrolling content */
-  }
-  .user-keys-list tr:last-child td {
-    border-bottom: none;
-  }
-  .user-keys-list tr:hover td:not(.editing-row td) { /* Subtle hover */
-    background-color: #fdfdfd;
-  }
-  .user-keys-list .actions-column {
-    width: 220px; /* Ensure enough space for buttons */
-    white-space: nowrap; /* Prevent buttons wrapping */
-  }
-  .user-keys-list .no-username {
-    color: var(--text-secondary, #888);
-    font-style: italic;
-  }
-  .key-cell-content {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 150px; /* Give key column some base width */
-  }
-  .key-cell-content code {
-    font-family: monospace;
-    background-color: #e9ecef;
-    padding: 3px 6px;
-    border-radius: 3px;
-    font-size: 0.95em;
-    flex-shrink: 1;
-    overflow: hidden; /* Hide overflow if still too long */
-    text-overflow: ellipsis; /* Add ... if too long */
-    max-width: 300px; /* Limit max width before ellipsis */
-    display: inline-block; /* Needed for text-overflow */
-  }
-  .copy-button {
-    background: none; border: none; cursor: pointer; font-size: 1.1em;
-    padding: 0 3px; color: var(--text-secondary); line-height: 1; flex-shrink: 0;
-  }
-  .copy-button:hover { color: var(--text-primary); }
-  
-  /* Status text styling */
-  .status-active { color: var(--key-valid-color, #198754); font-weight: 500; }
-  .status-inactive { color: var(--key-invalid-color, #dc3545); font-weight: 500; }
-  
-  /* Action Buttons in Table */
-  .action-buttons-cell { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
-  .action-buttons-cell button { padding: 6px 10px; font-size: 0.85em; flex-grow: 0; flex-shrink: 0; white-space: nowrap; border-radius: 4px; cursor: pointer; border: 1px solid; transition: all 0.2s ease; }
-  .action-buttons-cell button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .action-buttons-cell .key-status-toggle-button.deactivate { background-color: var(--settings-clear-bg); color: var(--settings-clear-text); border-color: var(--settings-clear-border); }
-  .action-buttons-cell .key-status-toggle-button.deactivate:hover:not(:disabled) { background-color: var(--settings-clear-hover-bg); }
-  .action-buttons-cell .key-status-toggle-button.activate { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
-  .action-buttons-cell .key-status-toggle-button.activate:hover:not(:disabled) { background-color: #b6dfc8; }
-  .action-buttons-cell .edit-button { background-color: var(--button-secondary-bg); border-color: var(--input-border-color); color: var(--text-secondary); padding: 5px 8px; }
-  .action-buttons-cell .edit-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); border-color: #adb5bd; }
-  .action-buttons-cell .delete-button { background-color: #fff0f1; border-color: var(--settings-clear-border); color: var(--settings-clear-text); padding: 5px 8px; }
-  .action-buttons-cell .delete-button:hover:not(:disabled) { background-color: var(--settings-clear-hover-bg); }
-  .action-buttons-cell .save-button { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; flex-grow: 1; }
-  .action-buttons-cell .save-button:hover:not(:disabled) { background-color: #b6dfc8; }
-  .action-buttons-cell .cancel-button { background-color: #e9ecef; border-color: #dee2e6; color: #495057; flex-grow: 1; }
-  .action-buttons-cell .cancel-button:hover:not(:disabled) { background-color: #dee2e6; }
-  
-  /* Inline Editing Input */
-  .inline-edit-input { padding: 4px 8px !important; font-size: 0.9em !important; height: 30px !important; /* Fixed height for alignment */ min-height: 0 !important; box-shadow: 0 0 0 1px var(--input-focus-border-color) !important; border-color: var(--input-focus-border-color) !important; }
-  .editing-row td { background-color: #fff9e4; /* Slightly different yellow */ }
-  
-  
-  /* Add Key Section Styling */
-  .add-key-section { margin-top: 25px; padding: 20px 25px; border: 1px solid var(--border-color, #dee2e6); border-radius: 6px; background-color: #f8f9fa; }
-  .add-key-section h5 { margin-top: 0; margin-bottom: 15px; font-size: 1.15em; font-weight: 600; }
-  .add-key-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-  .add-key-form .settings-option { margin-bottom: 0; flex-grow: 1; } /* Allow label/input to grow */
-  .add-key-form .settings-option label { display: block; margin-bottom: 5px; font-size: 0.85em; font-weight: 500; color: var(--settings-label-text); }
-  .add-key-button { padding: 8px 18px; border: none; background-color: var(--beta-button-bg, #0d6efd); color: var(--beta-button-text, #fff); border-radius: 5px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background-color 0.2s ease; height: 35px; align-self: flex-end; flex-shrink: 0; }
-  .add-key-button:hover:not(:disabled) { background-color: var(--beta-button-hover-bg, #0b5ed7); }
-  .add-key-button:disabled { opacity: 0.6; cursor: default; background-color: var(--button-disabled-bg, #cfe2ff) !important; color: var(--button-disabled-text, #6c757d) !important; }
-  
-  
-  /* Restriction Lists Styling */
-  .restricted-items-list { margin-top: 10px; border: 1px solid var(--border-color, #dee2e6); border-radius: 6px; max-height: 350px; overflow-y: auto; background-color: #ffffff; }
-  .restriction-description { font-size: 0.9em; color: var(--text-secondary, #6c757d); margin-bottom: 0px; padding: 10px 15px; border-bottom: 1px solid var(--border-color, #dee2e6); background-color: #f8f9fa; }
-  .restriction-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid var(--border-color, #dee2e6); font-size: 0.9em; min-height: 44px; /* Ensure consistent row height */ }
-  .restriction-item:last-child { border-bottom: none; }
-  .restriction-item span { flex-grow: 1; margin-right: 15px; word-break: break-word; display: flex; align-items: center; gap: 8px; }
-  .restriction-item code { background-color: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.9em; }
-  .restriction-toggle-button { padding: 6px 12px; font-size: 0.85em; /* Reuse action button style */ flex-shrink: 0;}
-  /* Reuse activate/deactivate styles from action buttons */
-  .restriction-toggle-button.deactivate { background-color: var(--settings-clear-bg); color: var(--settings-clear-text); border-color: var(--settings-clear-border); }
-  .restriction-toggle-button.deactivate:hover:not(:disabled) { background-color: var(--settings-clear-hover-bg); }
-  .restriction-toggle-button.activate { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
-  .restriction-toggle-button.activate:hover:not(:disabled) { background-color: #b6dfc8; }
-  
-  
-  /* Loading Text */
-  .admin-loading-text { padding: 20px; text-align: center; color: var(--text-secondary, #6c757d); font-style: italic; }
-  
-  /* Separator */
-  .staff-separator { border: none; border-top: 1px solid var(--border-color, #dee2e6); margin: 35px 0; }
-  
-  /* Responsive */
-  @media (max-width: 768px) {
-      .admin-page-container { padding: 15px 20px; margin: 15px; }
-      .admin-page-header h1 { font-size: 1.5em; }
-      .user-keys-list th, .user-keys-list td { padding: 10px 8px; font-size: 0.85em; }
-      .action-buttons-cell { flex-wrap: wrap; justify-content: flex-start; }
-      .add-key-form { flex-direction: column; align-items: stretch; }
-      .add-key-button { margin-top: 10px; }
-  }
-  @media (max-width: 500px) {
-      .admin-page-container { padding: 10px 15px; margin: 10px; }
-      .admin-page-header h1 { font-size: 1.3em; }
-      .user-keys-list th, .user-keys-list td { font-size: 0.8em; padding: 8px 6px;}
-      .key-cell-content code { max-width: 150px; /* Shorter ellipsis on mobile */ }
-  }
+  /* max-width: 1100px; */ /* Removed for full width */
+  margin: 0; /* Use padding for spacing */
+  padding: 25px 35px; /* Padding inside the container */
+  background-color: var(--container-bg, #ffffff);
+  /* border-radius: 8px; */ /* Optional: Remove for full width */
+  /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07); */ /* Optional: Remove */
+  /* border: 1px solid var(--border-color, #dee2e6); */ /* Optional: Remove */
+
+  min-height: calc(100vh - 1px); /* Try to fill viewport height */
+  overflow-y: auto; /* Add vertical scrollbar ONLY when needed */
+  box-sizing: border-box;
+}
+
+/* Admin Page Header (Title + Logout) */
+.admin-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px; /* Spacing below header */
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color, #dee2e6);
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.admin-page-header h1 {
+  margin: 0;
+  font-size: 1.8em;
+  color: var(--text-primary, #212529);
+  font-weight: 600;
+}
+
+.admin-logout-button {
+  width: auto;
+  margin-top: 0;
+  padding: 8px 16px;
+  font-size: 0.9em;
+  background-color: var(--button-secondary-bg, #e9ecef);
+  border: 1px solid var(--border-color, #dee2e6);
+  color: var(--text-primary, #212529);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.admin-logout-button:hover {
+  background-color: var(--button-secondary-hover-bg, #dee2e6);
+}
+
+/* Admin Section Styling */
+.staff-admin-section h4 {
+  font-size: 1.3em;
+  margin-top: 35px;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color, #dee2e6);
+  color: var(--text-primary, #212529);
+  font-weight: 600;
+}
+.staff-admin-section h4:first-of-type {
+  margin-top: 0;
+}
+
+.admin-data-section {
+  margin-bottom: 30px;
+}
+
+.admin-data-section > p { /* Loading/error/no data text */
+  font-style: italic;
+  color: var(--text-secondary, #6c757d);
+  padding: 15px 5px;
+  text-align: center;
+}
+
+/* Feedback Messages (Success/Error) */
+.admin-feedback {
+  text-align: center;
+  margin-bottom: 15px;
+  padding: 10px 15px;
+  border-radius: 4px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  font-size: 0.9em;
+  min-height: 40px; /* Reserve space */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.admin-feedback:empty { min-height: 0; padding: 0; margin-bottom: 0; border: none; }
+.admin-feedback.success { color: var(--key-valid-color, #198754); background-color: #d1e7dd; border-color: #badbcc; }
+.admin-feedback.error { color: var(--key-invalid-color, #dc3545); background-color: #f8d7da; border-color: #f5c6cb; }
+
+
+/* User Keys Table Enhancements */
+.user-keys-list {
+  border: 1px solid var(--border-color, #dee2e6);
+  border-radius: 6px;
+  overflow-x: auto; /* Horizontal scroll for table if needed */
+  background-color: #fff;
+}
+.user-keys-list table { width: 100%; border-collapse: collapse; }
+.user-keys-list th,
+.user-keys-list td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color, #dee2e6); font-size: 0.9em; vertical-align: middle; word-break: break-word; }
+.user-keys-list th { background-color: #f8f9fa; font-weight: 600; white-space: nowrap; color: var(--text-secondary); position: sticky; top: 0; z-index: 1; }
+.user-keys-list tr:last-child td { border-bottom: none; }
+.user-keys-list tr:hover td:not(.editing-row td) { background-color: #fcfcfc; }
+.user-keys-list .actions-column { width: 220px; white-space: nowrap; }
+.user-keys-list .no-username { color: var(--text-secondary, #888); font-style: italic; }
+.key-cell-content { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+.key-cell-content code { font-family: monospace; background-color: #e9ecef; padding: 3px 6px; border-radius: 3px; font-size: 0.95em; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; max-width: 300px; display: inline-block; }
+.copy-button { background: none; border: none; cursor: pointer; font-size: 1.1em; padding: 0 3px; color: var(--text-secondary); line-height: 1; flex-shrink: 0; }
+.copy-button:hover { color: var(--text-primary); }
+.status-active { color: var(--key-valid-color, #198754); font-weight: 500; }
+.status-inactive { color: var(--key-invalid-color, #dc3545); font-weight: 500; }
+
+/* Action Buttons in Table */
+.action-buttons-cell { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
+.action-buttons-cell button { padding: 6px 10px; font-size: 0.85em; flex-grow: 0; flex-shrink: 0; white-space: nowrap; border-radius: 4px; cursor: pointer; border: 1px solid; transition: all 0.2s ease; }
+.action-buttons-cell button:disabled { opacity: 0.5; cursor: not-allowed; }
+.action-buttons-cell .key-status-toggle-button.deactivate { background-color: var(--settings-clear-bg); color: var(--settings-clear-text); border-color: var(--settings-clear-border); }
+.action-buttons-cell .key-status-toggle-button.deactivate:hover:not(:disabled) { background-color: var(--settings-clear-hover-bg); }
+.action-buttons-cell .key-status-toggle-button.activate { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
+.action-buttons-cell .key-status-toggle-button.activate:hover:not(:disabled) { background-color: #b6dfc8; }
+.action-buttons-cell .edit-button { background-color: var(--button-secondary-bg); border-color: var(--input-border-color); color: var(--text-secondary); padding: 5px 8px; }
+.action-buttons-cell .edit-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); border-color: #adb5bd; }
+.action-buttons-cell .delete-button { background-color: #fff0f1; border-color: var(--settings-clear-border); color: var(--settings-clear-text); padding: 5px 8px; }
+.action-buttons-cell .delete-button:hover:not(:disabled) { background-color: var(--settings-clear-hover-bg); }
+.action-buttons-cell .save-button { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; flex-grow: 1; }
+.action-buttons-cell .save-button:hover:not(:disabled) { background-color: #b6dfc8; }
+.action-buttons-cell .cancel-button { background-color: #e9ecef; border-color: #dee2e6; color: #495057; flex-grow: 1; }
+.action-buttons-cell .cancel-button:hover:not(:disabled) { background-color: #dee2e6; }
+
+/* Inline Editing Input */
+.inline-edit-input { padding: 4px 8px !important; font-size: 0.9em !important; height: 30px !important; min-height: 0 !important; box-shadow: 0 0 0 1px var(--input-focus-border-color) !important; border-color: var(--input-focus-border-color) !important; }
+.editing-row td { background-color: #fff9e4; }
+
+/* Add Key Section Styling */
+.add-key-section { margin-top: 25px; padding: 20px 25px; border: 1px solid var(--border-color, #dee2e6); border-radius: 6px; background-color: #f8f9fa; }
+.add-key-section h5 { margin-top: 0; margin-bottom: 15px; font-size: 1.15em; font-weight: 600; }
+.add-key-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.add-key-form .settings-option { margin-bottom: 0; flex-grow: 1; }
+.add-key-form .settings-option label { display: block; margin-bottom: 5px; font-size: 0.85em; font-weight: 500; color: var(--settings-label-text); }
+.add-key-button { padding: 8px 18px; border: none; background-color: var(--beta-button-bg, #0d6efd); color: var(--beta-button-text, #fff); border-radius: 5px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background-color 0.2s ease; height: 35px; align-self: flex-end; flex-shrink: 0; }
+.add-key-button:hover:not(:disabled) { background-color: var(--beta-button-hover-bg, #0b5ed7); }
+.add-key-button:disabled { opacity: 0.6; cursor: default; background-color: var(--button-disabled-bg, #cfe2ff) !important; color: var(--button-disabled-text, #6c757d) !important; }
+
+/* Restriction Lists Styling */
+.restricted-items-list { margin-top: 10px; border: 1px solid var(--border-color, #dee2e6); border-radius: 6px; max-height: 350px; overflow-y: auto; background-color: #ffffff; }
+.restriction-description { font-size: 0.9em; color: var(--text-secondary, #6c757d); margin-bottom: 0px; padding: 10px 15px; border-bottom: 1px solid var(--border-color, #dee2e6); background-color: #f8f9fa; }
+.restriction-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid var(--border-color, #dee2e6); font-size: 0.9em; min-height: 44px; }
+.restriction-item:last-child { border-bottom: none; }
+.restriction-item span { flex-grow: 1; margin-right: 15px; word-break: break-word; display: flex; align-items: center; gap: 8px; }
+.restriction-item code { background-color: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.9em; }
+.restriction-toggle-button { padding: 6px 12px; font-size: 0.85em; flex-shrink: 0;} /* Adjust padding as needed */
+.restriction-toggle-button.deactivate { background-color: var(--settings-clear-bg); color: var(--settings-clear-text); border-color: var(--settings-clear-border); }
+.restriction-toggle-button.deactivate:hover:not(:disabled) { background-color: var(--settings-clear-hover-bg); }
+.restriction-toggle-button.activate { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
+.restriction-toggle-button.activate:hover:not(:disabled) { background-color: #b6dfc8; }
+
+
+/* Loading Text */
+.admin-loading-text { padding: 20px; text-align: center; color: var(--text-secondary, #6c757d); font-style: italic; }
+
+/* Separator */
+.staff-separator { border: none; border-top: 1px solid var(--border-color, #dee2e6); margin: 35px 0; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .admin-page-container {
+        padding: 15px 20px;
+        margin: 0; /* Remove margin for full width */
+        min-height: 100vh; /* Ensure full height */
+        border-radius: 0; /* Remove radius */
+        border-left: none;
+        border-right: none;
+    }
+    .admin-page-header h1 { font-size: 1.5em; }
+    .user-keys-list th, .user-keys-list td { padding: 10px 8px; font-size: 0.85em; }
+    .action-buttons-cell { flex-wrap: wrap; }
+    .add-key-form { flex-direction: column; align-items: stretch; }
+    .add-key-button { margin-top: 10px; }
+}
+@media (max-width: 500px) {
+    .admin-page-container { padding: 10px 15px; }
+    .admin-page-header h1 { font-size: 1.3em; }
+    .user-keys-list th, .user-keys-list td { font-size: 0.8em; padding: 8px 6px;}
+    .key-cell-content code { max-width: 120px; /* Shorter ellipsis */ }
+    .restriction-item span { margin-right: 8px; gap: 5px;}
+}
