@@ -144,6 +144,73 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 .save-restrictions-button { /* Reuses beta-accept-button */ padding: 8px 16px; border: none; background-color: var(--beta-button-bg); color: var(--beta-button-text); border-radius: 5px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background-color 0.2s ease; width: auto; margin-top: 5px; }
 .save-restrictions-button:hover { background-color: var(--beta-button-hover-bg); }
 .save-restrictions-button:disabled { opacity: 0.6; cursor: wait; background-color: var(--button-disabled-bg) !important; color: var(--button-disabled-text) !important; }
+/* Add these styles to src/App.css */
+
+.restricted-models-list {
+  margin-top: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  max-height: 250px; /* Allow scrolling if many models */
+  overflow-y: auto;
+}
+
+.restriction-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9em;
+}
+.restriction-item:last-child {
+  border-bottom: none;
+}
+.restriction-item span {
+  flex-grow: 1;
+  margin-right: 10px;
+  word-break: break-all; /* Wrap long model names */
+}
+
+.restriction-toggle-button {
+  padding: 4px 8px;
+  font-size: 0.8em;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid;
+  flex-shrink: 0; /* Prevent button shrinking */
+}
+.restriction-toggle-button.deactivate {
+  background-color: #d1e7dd; /* Light green */
+  color: #0f5132;
+  border-color: #badbcc;
+}
+.restriction-toggle-button.deactivate:hover {
+   background-color: #b6dfc8;
+}
+.restriction-toggle-button.activate {
+  background-color: var(--settings-clear-bg);
+  color: var(--settings-clear-text);
+  border-color: var(--settings-clear-border);
+}
+.restriction-toggle-button.activate:hover {
+   background-color: var(--settings-clear-hover-bg);
+}
+.restriction-toggle-button:disabled {
+   opacity: 0.6;
+   cursor: not-allowed;
+}
+
+/* Responsive adjustments for restriction list */
+@media (max-width: 500px) {
+  .restriction-item {
+      font-size: 0.8em;
+      padding: 6px 8px;
+  }
+   .restriction-toggle-button {
+      font-size: 0.75em;
+      padding: 3px 6px;
+  }
+}
 
 /* --- Analysis Form --- */
 .analysis-form-overlay { position: fixed; top:0;left:0;right:0;bottom:0; background-color:var(--beta-overlay-bg); display:flex; align-items:center; justify-content:center; z-index:1050; padding:15px; box-sizing:border-box; }
