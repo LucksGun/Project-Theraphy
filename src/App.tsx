@@ -58,7 +58,7 @@ const RESTRICTED_MODELS_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS.filter(m=>m
 interface PersonaInfo { value: Persona; label: string; emoji: string; restricted: boolean; }
 const AVAILABLE_PERSONAS: PersonaInfo[] = [ {value:'university_master',label:'University Master',emoji:'🎓',restricted:true}, {value:'normal',label:'Normal Bot',emoji:'🤖',restricted:false}, {value:'therapist',label:'Therapist',emoji:'🧠',restricted:true} ];
 const RESTRICTED_PERSONAS_VALUES: Persona[] = AVAILABLE_PERSONAS.filter(p=>p.restricted).map(p=>p.value);
-const DEFAULT_UNRESTRICTED_PERSONA: Persona = 'university_master';
+const DEFAULT_UNRESTRICTED_PERSONA: Persona = 'normal';
 
 // --- API ---
 const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
