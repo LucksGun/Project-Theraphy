@@ -161,6 +161,136 @@
 .restriction-toggle-button.activate:hover:not(:disabled) { background-color: #b6dfc8; }
 
 
+
+/* src/admin.css - Add styles for Feedback Management Section */
+
+/* ... (Keep all existing styles for .admin-page-container, headers, user keys, restrictions, etc.) ... */
+
+/* --- Feedback List/Table --- */
+.feedback-list {
+  border: 1px solid var(--border-color, #dee2e6);
+  border-radius: 6px;
+  overflow-x: auto; /* Scroll horizontally if needed on small screens */
+  background-color: #ffffff;
+  margin-top: 10px; /* Space above the feedback table */
+}
+
+.feedback-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.feedback-list th,
+.feedback-list td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color, #dee2e6);
+  font-size: 0.85em; /* Slightly smaller font for feedback table */
+  vertical-align: top; /* Align content to the top, good for comments */
+}
+
+.feedback-list th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.feedback-list tr:last-child td {
+  border-bottom: none;
+}
+
+.feedback-list tr:hover td { /* Hover effect */
+  background-color: #fcfcfc;
+}
+
+/* Highlight important feedback rows */
+.feedback-item.important-feedback td {
+    background-color: #fff9e4; /* Light yellow highlight */
+    font-weight: 500; /* Make text slightly bolder */
+}
+.feedback-item.important-feedback code { /* Adjust code block if needed */
+    background-color: #fdf3d1;
+}
+
+
+/* Rating Stars Display */
+.rating-stars-display {
+    color: #ffc107; /* Gold color for stars */
+    font-size: 1.1em;
+    white-space: nowrap;
+}
+.rating-stars-display .star-empty {
+    color: #e0e0e0; /* Light gray for empty stars */
+}
+
+/* Comment Cell */
+.feedback-comment-cell {
+    white-space: pre-wrap; /* Allow comment text to wrap */
+    max-height: 150px; /* Limit height */
+    overflow-y: auto; /* Allow scrolling for long comments */
+    font-size: 0.95em; /* Slightly larger comment text */
+    line-height: 1.5;
+}
+
+/* Feedback Action Buttons */
+.feedback-action-button {
+    padding: 5px 10px !important; /* Override any generic button padding */
+    font-size: 0.8em !important; /* Smaller action buttons */
+    margin-right: 5px; /* Space between buttons */
+}
+.feedback-action-button:last-child {
+    margin-right: 0;
+}
+
+/* Specific styles for Mark Important button */
+.mark-important {
+    background-color: #fffbe6; /* Light yellow background */
+    border-color: #ffe58f;
+    color: #856404;
+}
+.mark-important:hover:not(:disabled) { background-color: #fff3cd; }
+
+.unmark-important {
+    background-color: #fff3cd; /* Darker yellow background */
+    border-color: #ffeeba;
+    color: #856404;
+    font-weight: bold; /* Indicate it's already marked */
+}
+.unmark-important:hover:not(:disabled) { background-color: #ffeeba; }
+
+/* Reuse delete button style */
+.feedback-delete-button {
+   /* Uses .delete-button styles defined earlier */
+   padding: 5px 8px !important; /* Adjust padding */
+}
+
+/* Responsive adjustments for feedback table */
+@media (max-width: 768px) {
+    .feedback-list th,
+    .feedback-list td {
+        padding: 8px 10px;
+        font-size: 0.8em;
+    }
+    .rating-stars-display {
+        font-size: 1em;
+    }
+    .feedback-comment-cell {
+         font-size: 0.9em;
+    }
+    .action-buttons-cell {
+        flex-wrap: nowrap; /* Try to keep feedback buttons on one line */
+    }
+     .feedback-action-button {
+         white-space: nowrap;
+     }
+}
+
+
+
 /* Loading Text */
 .admin-loading-text { padding: 20px; text-align: center; color: var(--text-secondary, #6c757d); font-style: italic; }
 
