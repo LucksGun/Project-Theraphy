@@ -341,7 +341,7 @@ function ChatbotPage({
 
     // --- JSX Rendering ---
     return (
-        <div className="chatbot-page">
+        <div className="chatbot-container">
             <div className="chatbot-messages">
                 {messages.map((message: Message) => {
                     let mainText = message.text;
