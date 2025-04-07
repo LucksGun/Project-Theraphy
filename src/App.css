@@ -155,8 +155,35 @@
 
 
 /* Basic Reset & Font */
-html, body, #root { height: 100%; margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: var(--page-bg); overflow: hidden; color: var(--text-primary); transition: background-color 0.3s ease, color 0.3s ease; }
-button, input, select, textarea { font-family: inherit; color: inherit; background-color: transparent; box-sizing: border-box; }
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--page-bg);
+  overflow: hidden; /* Keep this to prevent body scroll */
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+  background-color: transparent;
+  box-sizing: border-box;
+}
+
+/* >>> ADDED/MODIFIED FOR LAYOUT FIX <<< */
+/* Ensure the main App container uses flexbox to manage layout */
+.App {
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Or height: 100% if #root already has 100% height */
+  overflow: hidden; /* Prevent the App container itself from scrolling */
+}
+/* >>> END LAYOUT FIX SECTION <<< */
+
+
 /* Add transitions to other elements */
 .App, .App-header, .chatbot-container, .chatbot-input-area, .settings-menu, .staff-panel-modal, .beta-notice-modal, .feedback-modal, .analysis-form-modal, input, select, textarea, button, .message {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
@@ -172,7 +199,21 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 * { scrollbar-width: thin; scrollbar-color: var(--text-secondary) transparent; }
 
 /* --- Header Styles --- */
-.App-header { padding: 10px 15px; background-color: var(--header-bg); border-bottom: 1px solid var(--border-color); text-align: center; flex-shrink: 0; box-shadow: 0 1px 3px var(--shadow-color); display: flex; justify-content: space-between; align-items: center; position: relative; box-sizing: border-box; z-index: 10; min-height: 50px; }
+.App-header {
+  padding: 10px 15px;
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  flex-shrink: 0; /* Keep: Prevent header from shrinking */
+  box-shadow: 0 1px 3px var(--shadow-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  box-sizing: border-box;
+  z-index: 10;
+  min-height: 50px;
+}
 .App-header h1 { margin: 0; font-size: 1.15em; font-weight: 600; color: var(--text-primary); white-space: nowrap; flex-grow: 1; text-align: center; }
 .settings-button { background: none; border: none; padding: 5px; font-size: 22px; cursor: pointer; color: var(--text-secondary); opacity: 0.9; transition: opacity 0.2s ease; line-height: 1; flex-shrink: 0; }
 .settings-button:hover { opacity: 1; color: var(--text-primary); }
@@ -282,8 +323,23 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 
 
 /* --- ChatbotPage Styles --- */
-.chatbot-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; background-color: var(--messages-bg); }
-.chatbot-messages { flex-grow: 1; overflow-y: auto; padding: 20px 10px 25px 10px; display: flex; flex-direction: column; gap: 15px; font-size: 1rem; }
+.chatbot-container {
+  flex-grow: 1; /* Keep: Allows this container to fill space */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Keep: Prevents this container from scrolling */
+  background-color: var(--messages-bg);
+}
+
+.chatbot-messages {
+  flex-grow: 1; /* Keep: Allows message list to fill chatbot-container */
+  overflow-y: auto; /* Keep: Enables scrolling ONLY for this element */
+  padding: 20px 10px 25px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  font-size: 1rem;
+}
 
 /* Message Wrapper and Alignment */
 .message-wrapper { display: flex; flex-direction: column; max-width: 100%; }
@@ -327,7 +383,14 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 
 
 /* --- Input Area Adjustments --- */
-.chatbot-input-area { display: flex; flex-direction: column; padding: 8px; border-top: 1px solid var(--border-color); background-color: var(--input-bg); flex-shrink: 0; }
+.chatbot-input-area {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--input-bg);
+  flex-shrink: 0; /* Keep: Prevent input area from shrinking */
+}
 .chatbot-input-area > div:last-child { display: flex; align-items: center; gap: 5px; width: 100%; }
 .chatbot-input-area input[type="text"].chatbot-input { flex-grow: 1; padding: 10px 15px; border: 1px solid var(--input-border-color); border-radius: 18px; font-size: 0.95rem; outline: none; background-color: var(--container-bg); color: var(--text-primary); box-shadow: none; min-height: 40px; box-sizing: border-box; }
 .chatbot-input-area input[type="text"].chatbot-input::placeholder { color: var(--text-secondary); opacity: 0.9; }
