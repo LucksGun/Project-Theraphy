@@ -1,4 +1,4 @@
-/* src/App.css - FINAL Version */
+/* src/App.css - FINAL Version with TTS Button Styles */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
@@ -112,6 +112,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 .close-settings-button { display: block; width: 100%; padding: 9px 15px; margin-top: 5px; background-color: var(--settings-close-bg); color: var(--settings-close-text); border: 1px solid var(--settings-menu-border); border-radius: 4px; cursor: pointer; text-align: center; font-weight: 500; font-size: 0.9em; transition: background-color 0.2s ease; flex-shrink: 0; }
 .close-settings-button:hover { background-color: var(--settings-close-hover-bg); }
 
+/* Staff Login Modal */
 .staff-panel-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 1100; padding: 15px; box-sizing: border-box; }
 .staff-panel-modal { background-color: var(--settings-menu-bg); padding: 25px 30px; border-radius: 8px; border: 1px solid var(--settings-menu-border); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); width: 90%; max-width: 400px; /* Adjusted for login */ max-height: 90vh; overflow-y: auto; position: relative; }
 .staff-panel-modal h3 { text-align: center; font-size: 1.3em; font-weight: 600; color: var(--text-primary); margin-top: 0; margin-bottom: 20px; }
@@ -125,6 +126,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 .staff-error { color: var(--key-invalid-color); font-size: 0.9em; margin-top: 10px; text-align: center; }
 .staff-security-warning { font-size: 0.8em; color: #856404; background-color: #fff3cd; border: 1px solid #ffeeba; padding: 8px 12px; border-radius: 4px; margin-top: 15px; text-align: center; }
 
+/* Analysis Form Modal */
 .analysis-form-overlay { position: fixed; top:0;left:0;right:0;bottom:0; background-color:var(--beta-overlay-bg); display:flex; align-items:center; justify-content:center; z-index:1050; padding:15px; box-sizing:border-box; }
 .analysis-form-modal { background-color:var(--settings-menu-bg); padding:25px 30px; border-radius:8px; border:1px solid var(--settings-menu-border); box-shadow:0 5px 15px var(--settings-menu-shadow); max-width:600px; width:100%; box-sizing:border-box; max-height:90vh; overflow-y:auto; }
 .analysis-form-modal h3 { text-align:center; font-size:1.1em; font-weight:600; color:var(--text-primary); margin-top:0; margin-bottom:15px; flex-shrink:0; }
@@ -134,6 +136,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 .analysis-form-actions .close-settings-button, .analysis-form-actions .beta-accept-button { width:auto; margin-top:0; }
 .beta-accept-button:disabled { background-color:var(--button-disabled-bg) !important; color:var(--button-disabled-text) !important; cursor:default; opacity:0.7; }
 
+/* Beta Notice */
 .beta-notice-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--beta-overlay-bg); display: flex; align-items: center; justify-content: center; z-index: 1050; padding: 15px; box-sizing: border-box; }
 .beta-notice-modal { background-color: var(--beta-modal-bg); padding: 25px 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); max-width: 500px; width: 100%; text-align: center; box-sizing: border-box; }
 .beta-notice-modal h2 { margin-top: 0; color: var(--beta-heading-color); font-size: 1.3em; margin-bottom: 10px; }
@@ -142,6 +145,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 .beta-accept-button { padding: 10px 20px; border: none; background-color: var(--beta-button-bg); color: var(--beta-button-text); border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: background-color 0.2s ease; }
 .beta-accept-button:hover { background-color: var(--beta-button-hover-bg); }
 
+/* Feedback Modal */
 .feedback-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--beta-overlay-bg, rgba(0, 0, 0, 0.6)); display: flex; align-items: center; justify-content: center; z-index: 1050; padding: 15px; box-sizing: border-box; }
 .feedback-modal { background-color: var(--settings-menu-bg, #ffffff); padding: 25px 35px; border-radius: 8px; border: 1px solid var(--settings-menu-border, #dee2e6); box-shadow: 0 5px 15px var(--settings-menu-shadow, rgba(0, 0, 0, 0.1)); max-width: 550px; width: 100%; box-sizing: border-box; max-height: 90vh; overflow-y: auto; position: relative; }
 .feedback-modal h3 { text-align: center; font-size: 1.3em; font-weight: 600; color: var(--text-primary, #212529); margin-top: 0; margin-bottom: 25px; }
@@ -157,7 +161,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 .star-button.selected { color: #ffc107; }
 .star-button:hover { opacity: 0.8; }
 .star-button:disabled { cursor: default; opacity: 0.6; }
-.feedback-field label span { color: var(--key-invalid-color, #dc3545); margin-left: 3px; }
+.feedback-field label span { color: var(--key-invalid-color, #dc3545); margin-left: 3px; } /* Required indicator */
 .feedback-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
 .cancel-feedback-button, .submit-feedback-button { padding: 10px 20px; border-radius: 5px; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease; font-size: 0.95em; }
 .cancel-feedback-button { background-color: var(--button-secondary-bg, #e9ecef); color: var(--text-primary, #212529); border: 1px solid var(--border-color, #dee2e6); }
@@ -173,39 +177,60 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 /* --- ChatbotPage Styles --- */
 .chatbot-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; background-color: var(--messages-bg); }
 .chatbot-messages { flex-grow: 1; overflow-y: auto; padding: 20px 10px 25px 10px; display: flex; flex-direction: column; gap: 15px; font-size: 1rem; }
+
+/* Message Wrapper and Alignment */
 .message-wrapper { display: flex; flex-direction: column; max-width: 100%; }
 .message-wrapper-user { align-items: flex-end; }
 .message-wrapper-bot, .message-wrapper-loading { align-items: flex-start; }
+
+/* Message Bubble Styling */
 .message { padding: 10px 15px; border-radius: 16px; max-width: 85%; word-wrap: break-word; line-height: 1.5; box-shadow: 0 1px 2px var(--shadow-color); position: relative; }
 .message p { margin: 0 0 0.5em 0; } .message p:last-child { margin-bottom: 0; }
 .message ul, .message ol { margin: 0.5em 0; padding-left: 20px; } .message li { margin-bottom: 0.2em; }
 .message.user { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; border-bottom-right-radius: 6px; }
 .message.bot, .message.loading { background-color: var(--bot-bubble-bg); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 6px; }
 .message.loading i { font-style: normal; color: var(--text-secondary); }
-.message-timestamp { font-size: 0.7em; color: var(--text-secondary); margin-top: 3px; margin-right: 4px; margin-left: 4px; align-self: flex-end; display: block; text-align: right; }
-.message-wrapper-bot .message-timestamp, .message-wrapper-loading .message-timestamp { align-self: flex-start; text-align: left; }
 .message.bot .error-message { color: var(--key-invalid-color, #dc3545); font-weight: 500; margin: 0; white-space: pre-wrap; }
+.message.bot .bot-image { /* Style for images within bot messages */ max-width: 100%; max-height: 350px; display: block; margin-top: 8px; border-radius: 8px; cursor: pointer; }
+
+/* Message Meta (Timestamp & TTS Button) */
+.message-meta {
+    font-size: 0.7em;
+    color: var(--text-secondary);
+    margin-top: 3px;
+    margin-right: 4px; /* Align right for user */
+    margin-left: 4px; /* Align left for bot */
+    display: flex; /* Use flex to align items */
+    align-items: center; /* Vertically center timestamp and button */
+    gap: 5px; /* Space between timestamp and button */
+    min-height: 1.2em; /* Ensure space even if no button */
+}
+.message-wrapper-bot .message-meta { align-self: flex-start; margin-right: 0; margin-left: 15px; /* Indent slightly like the bubble */ }
+.message-wrapper-user .message-meta { align-self: flex-end; margin-left: 0; margin-right: 15px; flex-direction: row-reverse; }
+.message-timestamp { white-space: nowrap; }
+
+/* TTS Button Styles */
+.tts-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2em; /* Make icon slightly larger relative to meta text */
+    padding: 0; /* Remove padding */
+    margin: 0; /* Remove margin */
+    color: var(--text-secondary);
+    opacity: 0.6;
+    transition: opacity 0.2s ease, color 0.2s ease;
+    line-height: 1; /* Ensure icon aligns well */
+}
+.tts-button:hover:not(:disabled) { opacity: 1; color: var(--text-primary); }
+.tts-button:disabled { cursor: not-allowed; opacity: 0.3; }
+.tts-button.speaking { color: var(--user-bubble-bg); opacity: 1; }
+
 
 /* --- Input Area Adjustments --- */
-.chatbot-input-area {
-    display: flex;
-    flex-direction: column; /* Stack preview above input row */
-    padding: 8px;
-    border-top: 1px solid var(--border-color);
-    background-color: var(--input-bg);
-    flex-shrink: 0;
-}
-.chatbot-input-area > div:last-child { /* Target the inner div holding buttons/input */
-    display: flex;
-    align-items: center;
-    gap: 5px; /* Adjust gap */
-    width: 100%;
-}
-.chatbot-input-area input[type="text"].chatbot-input {
-    flex-grow: 1; padding: 10px 15px; border: 1px solid var(--input-border-color); border-radius: 18px;
-    font-size: 0.95rem; outline: none; background-color: #ffffff; color: var(--text-primary);
-    box-shadow: none; min-height: 40px; box-sizing: border-box;
-}
+.chatbot-input-area { display: flex; flex-direction: column; padding: 8px; border-top: 1px solid var(--border-color); background-color: var(--input-bg); flex-shrink: 0; }
+.chatbot-input-area > div:last-child { display: flex; align-items: center; gap: 5px; width: 100%; }
+.chatbot-input-area input[type="text"].chatbot-input { flex-grow: 1; padding: 10px 15px; border: 1px solid var(--input-border-color); border-radius: 18px; font-size: 0.95rem; outline: none; background-color: #ffffff; color: var(--text-primary); box-shadow: none; min-height: 40px; box-sizing: border-box; }
 .chatbot-input-area input[type="text"].chatbot-input::placeholder { color: var(--text-secondary); opacity: 0.9; }
 .chatbot-input-area input[type="text"].chatbot-input:focus { border-color: var(--input-focus-border-color); box-shadow: 0 0 0 2px var(--input-focus-shadow); }
 
@@ -225,7 +250,8 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 .remove-image-button { background: var(--remove-button-bg); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; line-height: 16px; text-align: center; cursor: pointer; font-size: 11px; font-weight: bold; flex-shrink: 0; margin-left: auto; }
 .remove-image-button:hover { background: var(--remove-button-hover-bg); }
 
-.suggestions-container { display: flex; flex-wrap: wrap; gap: 6px; margin-left: 0; margin-top: 8px; max-width: 100%; justify-content: flex-start; }
+/* Suggestions */
+.suggestions-container { display: flex; flex-wrap: wrap; gap: 6px; margin-left: 15px; /* Align with bot bubble meta */ margin-top: 5px; /* Space below meta */ max-width: 100%; justify-content: flex-start; }
 .suggestion-button { padding: 5px 12px; border: 1px solid var(--suggestion-border); background-color: var(--suggestion-bg); color: var(--suggestion-text); border-radius: 16px; cursor: pointer; font-size: 0.85em; transition: background-color 0.2s ease; white-space: nowrap; }
 .suggestion-button:hover:not(:disabled) { background-color: var(--suggestion-hover-bg); border-color: #adb5bd; }
 .suggestion-button:disabled { color: #adb5bd; border-color: var(--input-border-color); cursor: default; background-color: var(--suggestion-bg); opacity: 0.7; }
@@ -245,7 +271,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
   .chatbot-input-area .input-button, .chatbot-input-area .send-button { width: 38px; height: 38px; font-size: 1.1em; border-radius: 12px; }
   .image-preview-area { padding: 4px 8px; margin-bottom: 8px;}
   .image-preview-thumbnail { max-height: 35px; max-width: 50px; }
-  .suggestions-container { gap: 5px; }
+  .suggestions-container { gap: 5px; margin-left: 10px; }
   .suggestion-button { padding: 4px 10px; font-size: 0.8em; }
   .settings-menu { min-width: 0; width: calc(100% - 20px); padding: 15px; top: 50px; left: 10px; right: 10px; max-height: calc(100vh - 60px); }
   .settings-grid { grid-template-columns: 1fr; gap: 0; }
@@ -253,19 +279,27 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
   .settings-column:not(:last-child) { margin-bottom: 15px; }
   .analysis-form-modal { padding: 20px; max-height: 85vh; }
   .staff-panel-modal { width: 95%; max-width: 95%; padding: 20px; }
-  .user-keys-list th, .user-keys-list td { padding: 6px 8px; font-size: 0.8em; }
+  /* Responsive Admin Styles (Keep from original if needed) */
+  /* .user-keys-list th, .user-keys-list td { padding: 6px 8px; font-size: 0.8em; } */
+
+  /* Responsive TTS/Meta */
+   .message-meta { font-size: 0.65em; }
+   .tts-button { font-size: 1.1em; }
+   .message-wrapper-bot .message-meta, .message-wrapper-user .message-meta {
+      margin-left: 10px; margin-right: 10px;
+   }
 }
 
 @media (max-width: 500px) {
   .chatbot-messages { padding: 15px 8px 20px 8px; gap: 12px; }
   .message { max-width: 90%; padding: 8px 12px; }
-  .message-timestamp { font-size: 0.65em; }
+  .message-timestamp { font-size: 0.65em; } /* Adjusted timestamp size slightly */
   .chatbot-input-area { padding: 6px; }
-   .chatbot-input-area > div:last-child { gap: 4px; }
+  .chatbot-input-area > div:last-child { gap: 4px; }
   .chatbot-input-area input[type="text"].chatbot-input { padding: 8px 12px; font-size: 0.9rem; min-height: 36px; border-radius: 12px;}
   .chatbot-input-area .input-button, .chatbot-input-area .send-button { width: 36px; height: 36px; font-size: 1.0em; border-radius: 10px; }
   .image-preview-thumbnail { max-height: 30px; max-width: 45px; }
-  .suggestions-container { gap: 4px; }
+  .suggestions-container { gap: 4px; margin-left: 8px; }
   .suggestion-button { padding: 4px 8px; font-size: 0.75em; }
   .settings-menu { padding: 12px; top: 45px; left: 5px; right: 5px; width: calc(100% - 10px); max-height: calc(100vh - 55px); }
   .settings-column { gap: 12px; }
@@ -284,8 +318,16 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
   .beta-accept-button { font-size: 0.9rem; padding: 8px 16px; }
   .staff-panel-modal { padding: 15px; }
   .staff-panel-modal h3 { font-size: 1.15em; margin-bottom: 15px; }
-  .user-keys-list th, .user-keys-list td { font-size: 0.75em; padding: 5px; }
-  .key-status-toggle-button { font-size: 0.75em; padding: 3px 6px; }
-  .save-restrictions-button { font-size: 0.85em; padding: 6px 12px; }
-  #restricted-models-edit { font-size: 0.8em; }
+  /* Responsive Admin Styles (Keep from original if needed) */
+  /* .user-keys-list th, .user-keys-list td { font-size: 0.75em; padding: 5px; } */
+  /* .key-status-toggle-button { font-size: 0.75em; padding: 3px 6px; } */
+  /* .save-restrictions-button { font-size: 0.85em; padding: 6px 12px; } */
+  /* #restricted-models-edit { font-size: 0.8em; } */
+
+  /* Responsive TTS/Meta */
+   .message-meta { font-size: 0.6em; gap: 3px; }
+   .tts-button { font-size: 1em; } /* Smaller icon */
+    .message-wrapper-bot .message-meta, .message-wrapper-user .message-meta {
+      margin-left: 8px; margin-right: 8px;
+   }
 }
