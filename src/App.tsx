@@ -1,4 +1,4 @@
-// src/App.tsx - Added Theme Toggle & Persistence
+// src/App.tsx - Verified Full Version with Theme Toggle
 import React, { useState, useEffect, ChangeEvent, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
@@ -7,7 +7,7 @@ import ChatbotPage from './ChatbotPage';
 import AdminPage from './AdminPage';
 
 // --- GA Initialization ---
-const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
+const GA_MEASUREMENT_ID = "G-JX58QMMKZY"; // Replace with your actual ID if different
 if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "YOUR_GA_ID_HERE") { try { ReactGA.initialize(GA_MEASUREMENT_ID); console.log("GA Init:", GA_MEASUREMENT_ID); ReactGA.send({ hitType: "pageview", page: window.location.pathname + window.location.search, title: "Initial Load" }); } catch (e) { console.error("GA Init Err:", e); } } else { console.warn("GA ID missing/invalid. GA not initialized."); }
 
 // --- Types & Interfaces (Exported) ---
@@ -44,9 +44,8 @@ export const DEFAULT_BASE_SYSTEM_INSTRUCTION = `You are a helpful AI assistant. 
 export const DEFAULT_PERSONA_INSTRUCTIONS = { normal: `Act as a general assistant. Use [Suggestion: ...] for follow-ups on general topics.`, therapist: `Roleplay as an empathetic therapist assistant. Use gentle, validating language. Do NOT give medical advice. Ask gentle questions or suggest coping mechanisms in PLAIN TEXT, not [Suggestion:...]. Prioritize inspirational quotes for distress.`, university_master: `Roleplay as an expert academic advisor. Focus on university/career topics. Use [Suggestion: ...] for general academic questions. Provide detailed recommendations for "Field 1-5" input.` };
 export const ALL_PERSONA_KEYS = Object.keys(DEFAULT_PERSONA_INSTRUCTIONS);
 
-
 // --- API ---
-export const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/'; // Ensure this is correct
+export const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/'; // Ensure this is your correct Worker URL
 export interface ApiRequestBody { action: string; prompt?: string; model?: GeminiModel; persona?: Persona; imageMimeType?: string; imageDataUrl?: string; accessKey?: string; history?: any[]; staffKey?: string; key?: string; newStatus?: 'active' | 'inactive'; models?: GeminiModel[]; personas?: Persona[]; username?: string | null; newUsername?: string | null; email?: string | null; rating?: number; comment?: string; feedbackId?: number; isImportant?: boolean | number; baseInstruction?: string; personaInstructions?: PersonaInstructionMap; fileId?: string; }
 
 // --- Constants ---
@@ -57,7 +56,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => { const 
 
 // --- Helper function to get initial theme ---
 const getInitialTheme = (): AppTheme => {
-    if (typeof window !== 'undefined') { // Ensure localStorage is available
+    if (typeof window !== 'undefined') {
         const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as AppTheme | null;
         if (storedTheme && (storedTheme === 'light' || storedTheme === 'dark')) {
             return storedTheme;
@@ -124,6 +123,7 @@ function App() {
     const toggleTheme = useCallback(() => { setCurrentTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light')); }, []);
 
     // --- JSX ---
+    // The data-theme attribute is applied in the useEffect hook based on currentTheme state
     return (
         <div className="App">
             {showBetaNotice && ( <div className="beta-notice-overlay"><div className="beta-notice-modal"><h2>⚠️ Beta Notice</h2><p>Welcome! This is a beta test version. Features may change or contain bugs.</p><p>Your feedback is valuable!</p><button onClick={handleAcceptBeta} className="beta-accept-button">✔️ Accept & Continue</button></div></div> )}
@@ -134,22 +134,22 @@ function App() {
                     <div className="settings-grid">
                         {/* Column 1: Key, Persona, Model */}
                         <div className="settings-column">
-                             <div className="settings-option"> <label htmlFor="access-key-input">Access Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/> <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid?<span>✅ Valid Key ({keyStatus.username || 'User'})</span>:keyStatus.error?<span>❌ {keyStatus.error}</span>:<span>Enter key for restricted features.</span>}</div> </div>
-                             <div className="settings-option"> <label htmlFor="persona-select">Persona:</label> <select id="persona-select" value={selectedPersona} onChange={handlePersonaChange} className="settings-select" disabled={AVAILABLE_PERSONAS.find(p=>p.value===selectedPersona)?.restricted&&keyStatus.isValid!==true}>{AVAILABLE_PERSONAS.map((p)=>{const isDisabled=p.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={p.value} value={p.value} disabled={isDisabled} style={style}>{p.emoji} {p.label}{p.restricted?' (Key Req.) ':''}</option>);})}</select> </div>
-                             <div className="settings-option"> <label htmlFor="model-select">AI Model:</label> <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select" disabled={ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted&&keyStatus.isValid!==true}>{ALL_AVAILABLE_MODELS_FRONTEND.map((m)=>{const isDisabled=m.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={m.value} value={m.value} disabled={isDisabled} style={style}>{m.label}{m.restricted?' (Key Req.)':''}</option>);})}</select> {keyStatus.isValid!==true&&(RESTRICTED_PERSONAS_VALUES.length>0||RESTRICTED_MODELS_VALUES.length>0)&&(<p className="settings-helper-text">Enter valid key to unlock restricted options.</p>)} </div>
-                         </div>
+                            <div className="settings-option"> <label htmlFor="access-key-input">Access Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/> <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid?<span>✅ Valid Key ({keyStatus.username || 'User'})</span>:keyStatus.error?<span>❌ {keyStatus.error}</span>:<span>Enter key for restricted features.</span>}</div> </div>
+                            <div className="settings-option"> <label htmlFor="persona-select">Persona:</label> <select id="persona-select" value={selectedPersona} onChange={handlePersonaChange} className="settings-select" disabled={AVAILABLE_PERSONAS.find(p=>p.value===selectedPersona)?.restricted&&keyStatus.isValid!==true}>{AVAILABLE_PERSONAS.map((p)=>{const isDisabled=p.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={p.value} value={p.value} disabled={isDisabled} style={style}>{p.emoji} {p.label}{p.restricted?' (Key Req.) ':''}</option>);})}</select> </div>
+                            <div className="settings-option"> <label htmlFor="model-select">AI Model:</label> <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select" disabled={ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted&&keyStatus.isValid!==true}>{ALL_AVAILABLE_MODELS_FRONTEND.map((m)=>{const isDisabled=m.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={m.value} value={m.value} disabled={isDisabled} style={style}>{m.label}{m.restricted?' (Key Req.)':''}</option>);})}</select> {keyStatus.isValid!==true&&(RESTRICTED_PERSONAS_VALUES.length>0||RESTRICTED_MODELS_VALUES.length>0)&&(<p className="settings-helper-text">Enter valid key to unlock restricted options.</p>)} </div>
+                        </div>
                         {/* Column 2: Language, Theme, Actions */}
                         <div className="settings-column">
-                             <div className="settings-option"> <label htmlFor="stt-lang-select">Speech Input Lang:</label> <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"><option value="en-US">English (US)</option><option value="th-TH">ไทย (Thai)</option><option value="es-ES">Español (Spain)</option><option value="fr-FR">Français (France)</option></select> </div>
-                             <div className="settings-option">
-                                 <label htmlFor="theme-toggle">Appearance:</label>
-                                 <button onClick={toggleTheme} id="theme-toggle" className="settings-action-button theme-toggle-button">
-                                     {currentTheme === 'light' ? '🌙 Switch to Dark Mode' : '☀️ Switch to Light Mode'}
-                                 </button>
-                             </div>
-                             <div className="settings-option"> <label>Chat Actions:</label> <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}><button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button><button onClick={handleClearChat} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat History</button></div> </div>
-                             <div className="settings-option"> <label>Admin Area:</label> <button onClick={toggleStaffLoginModal} className="settings-action-button staff-area-button">🔑 Staff Login</button> </div>
-                         </div>
+                            <div className="settings-option"> <label htmlFor="stt-lang-select">Speech Input Lang:</label> <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"><option value="en-US">English (US)</option><option value="th-TH">ไทย (Thai)</option><option value="es-ES">Español (Spain)</option><option value="fr-FR">Français (France)</option></select> </div>
+                            <div className="settings-option">
+                                <label htmlFor="theme-toggle">Appearance:</label>
+                                <button onClick={toggleTheme} id="theme-toggle" className="settings-action-button theme-toggle-button">
+                                    {currentTheme === 'light' ? '🌙 Switch to Dark Mode' : '☀️ Switch to Light Mode'}
+                                </button>
+                            </div>
+                            <div className="settings-option"> <label>Chat Actions:</label> <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}><button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button><button onClick={handleClearChat} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat History</button></div> </div>
+                            <div className="settings-option"> <label>Admin Area:</label> <button onClick={toggleStaffLoginModal} className="settings-action-button staff-area-button">🔑 Staff Login</button> </div>
+                        </div>
                     </div>
                     <hr className="settings-separator" />
                     <button onClick={toggleSettings} className="close-settings-button">Close Settings</button>
@@ -160,7 +160,8 @@ function App() {
 
             {isFeedbackModalVisible && ( <div className="feedback-modal-overlay"> <div className="feedback-modal"> <h3 id="feedback-title">Submit Feedback</h3> <button onClick={toggleFeedbackModal} className="close-feedback-button" title="Close Feedback">×</button> {feedbackSuccess && <p className="feedback-message success">{feedbackSuccess}</p>} {feedbackError && <p className="feedback-message error">{feedbackError}</p>} {!feedbackSuccess && ( <form onSubmit={handleFeedbackSubmit} className="feedback-form"> <div className="feedback-field"> <label htmlFor="feedback-email">Email (Optional):</label> <input type="email" id="feedback-email" className="settings-input" value={feedbackEmail} onChange={(e) => setFeedbackEmail(e.target.value)} placeholder="your.email@example.com" maxLength={250} disabled={isSubmittingFeedback} /> </div> <div className="feedback-field"> <label>Rating:<span style={{color:'red'}}>*</span></label> <div className="star-rating"> {[1, 2, 3, 4, 5].map(star => ( <button key={star} type="button" aria-pressed={star === feedbackRating} className={`star-button ${star <= feedbackRating ? 'selected' : ''}`} onClick={() => setFeedbackRating(star)} disabled={isSubmittingFeedback} aria-label={`Rate ${star}/5`}>★</button> ))} </div> </div> <div className="feedback-field"> <label htmlFor="feedback-comment">Comment:<span style={{color:'red'}}>*</span></label> <textarea id="feedback-comment" className="settings-input" rows={5} value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)} placeholder="Tell us about your experience, suggestions, or any bugs..." maxLength={2000} required disabled={isSubmittingFeedback} /> </div> <div className="feedback-actions"> <button type="button" onClick={toggleFeedbackModal} className="cancel-feedback-button" disabled={isSubmittingFeedback}>Cancel</button> <button type="submit" className="submit-feedback-button" disabled={isSubmittingFeedback || feedbackRating === 0 || !feedbackComment.trim()}> {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'} </button> </div> </form> )} </div> </div> )}
 
-            {/* Main Routing */}
+            {/* Main Routing and Layout */}
+            {/* This structure ensures Header and ChatbotPage are rendered for the main route */}
             <Routes>
                 <Route path="/" element={
                     <>
@@ -172,6 +173,7 @@ function App() {
                             <h1>Project Theraphy</h1>
                             <div className="header-spacer-right"></div>
                         </header>
+                        {/* ChatbotPage includes the message list AND the input area */}
                         <ChatbotPage
                             messages={messages}
                             setMessages={setMessages}
@@ -189,7 +191,7 @@ function App() {
                 } />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-        </div>
+        </div> // End div.App
     );
 }
 
