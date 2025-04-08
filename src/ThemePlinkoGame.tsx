@@ -1,7 +1,7 @@
-// src/ThemePlinkoGame.tsx
+// src/ThemePlinkoGame.tsx - Complete with CSS Pins
 
-import React, { useState, useEffect, useCallback } from 'react';
-import './ThemePlinkoGame.css'; // We'll create this CSS file next
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import './ThemePlinkoGame.css'; // Import the CSS for styling
 import { AppTheme } from './App'; // Import type from App
 
 interface ThemePlinkoGameProps {
@@ -12,7 +12,7 @@ interface ThemePlinkoGameProps {
     onThemeChange: (newTheme: AppTheme) => void;
 }
 
-// Define possible animation outcomes
+// Define possible animation outcomes based on animation names in CSS
 type AnimationOutcome = 'light' | 'dark';
 const ANIMATION_NAMES: { [key: string]: AnimationOutcome } = {
     'plinko-drop-light-1': 'light',
@@ -23,21 +23,36 @@ const ANIMATION_NAMES: { [key: string]: AnimationOutcome } = {
 };
 const ANIMATION_KEYS = Object.keys(ANIMATION_NAMES);
 
+// Define Pin Layout (Example - Adjust top/left percentages for your desired look)
+const pinLayout = [
+    // Row 1
+    { top: '20%', left: '50%' },
+    // Row 2
+    { top: '35%', left: '35%' }, { top: '35%', left: '65%' },
+    // Row 3
+    { top: '50%', left: '20%' }, { top: '50%', left: '50%' }, { top: '50%', left: '80%' },
+    // Row 4
+    { top: '65%', left: '35%' }, { top: '65%', left: '65%' },
+     // Row 5 (Optional - near bottom outlets)
+    { top: '80%', left: '50%' },
+];
+
+// The Component
 const ThemePlinkoGame: React.FC<ThemePlinkoGameProps> = ({
     isOpen, onClose, currentTheme, onThemeChange
 }) => {
     const [isAnimating, setIsAnimating] = useState(false);
     const [result, setResult] = useState<AnimationOutcome | null>(null);
     const [message, setMessage] = useState<string | null>(null);
-    // State to hold the randomly chosen animation name for this run
     const [currentAnimationName, setCurrentAnimationName] = useState<string>('');
+    const boardRef = useRef<HTMLDivElement>(null);
 
+    // Function to start/restart the game
     const startGame = useCallback(() => {
         console.log("Starting Plinko Game");
-        // Reset state
         setResult(null);
         setMessage("Dropping ball...");
-        setIsAnimating(false); // Ensure animation restarts cleanly
+        setIsAnimating(false); // Reset animation state first
 
         // Choose a random animation path/outcome
         const randomIndex = Math.floor(Math.random() * ANIMATION_KEYS.length);
@@ -45,13 +60,15 @@ const ThemePlinkoGame: React.FC<ThemePlinkoGameProps> = ({
         console.log("Chosen Animation:", randomAnimation);
         setCurrentAnimationName(randomAnimation);
 
-        // Slight delay before setting isAnimating to true to allow state update
-        // and ensure CSS animation restarts if the same one is picked twice
+        // Use a short timeout to allow React to apply the new animation name
+        // before setting isAnimating to true, ensuring restart works
         setTimeout(() => {
-             setIsAnimating(true);
+             if (isOpen) { // Check if still open before starting
+                 setIsAnimating(true);
+             }
         }, 50);
 
-    }, []); // No dependencies needed for random choice
+    }, [isOpen]); // Added isOpen dependency
 
     // Start game when modal opens
     useEffect(() => {
@@ -97,22 +114,36 @@ const ThemePlinkoGame: React.FC<ThemePlinkoGameProps> = ({
             <div className="plinko-game-modal" onClick={(e) => e.stopPropagation()}>
                 <h4>Theme Plinko!</h4>
 
-                <div className="plinko-board">
-                    {/* Background image/structure */}
+                <div className="plinko-board" ref={boardRef}>
+                    {/* Render Pins */}
+                    {pinLayout.map((pin, index) => (
+                        <div
+                            key={`pin-${index}`}
+                            className="plinko-pin"
+                            style={{ top: pin.top, left: pin.left }}
+                        ></div>
+                    ))}
+
+                    {/* Ball */}
                     <div className={`plinko-ball ${isAnimating ? 'dropping' : ''}`}
+                         // Apply animation name dynamically
                          style={{ animationName: isAnimating ? currentAnimationName : 'none' }}
-                         onAnimationEnd={handleAnimationEnd} // Listen for animation end
-                    ></div> {/* The Ball */}
+                         // Event listener for when animation finishes
+                         onAnimationEnd={handleAnimationEnd}
+                    ></div>
+
+                    {/* Labels */}
                     <div className="plinko-label-light">LIGHT</div>
                     <div className="plinko-label-dark">DARK</div>
                 </div>
 
                 <p className="plinko-message" aria-live="polite">
-                    {message || ' '}
+                    {/* Display message based on state */}
+                    {result ? message : isAnimating ? "Dropping ball..." : message || ' '}
                 </p>
 
-                {/* Optionally add a cancel button if animation is long */}
-                 {!isAnimating && result === null && (
+                {/* Show Drop Again button only after animation ends AND before closing timeout */}
+                 {!isAnimating && result !== null && (
                     <button onClick={startGame} className="plinko-button">Drop Again</button>
                  )}
                  <button onClick={onClose} className="plinko-button cancel">Close</button>
