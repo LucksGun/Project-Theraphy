@@ -1,6 +1,6 @@
 // src/App.tsx - FINAL COMPLETE Version v3 (All Features & ALL Fixes)
 
-import React, { useState, useEffect, ChangeEvent, useRef, useCallback } from 'react';
+import React, { useState, useEffect, ChangeEvent, useRef} from 'react';
 import ReactGA from 'react-ga4';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
@@ -128,7 +128,6 @@ function App() {
     const handleStaffLogin = async () => { if (!enteredStaffKey.trim()) { setStaffLoginError("Staff key is required."); return; } setIsStaffLoginLoading(true); setStaffLoginError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'staffLogin', staffKey: enteredStaffKey }) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON response from server.' })); if (!res.ok || !data.isValid) { throw new Error(data?.error || `Login Failed (Status: ${res.status})`); } sessionStorage.setItem('staffKey', enteredStaffKey); setIsStaffLoginModalVisible(false); setEnteredStaffKey(''); navigate('/admin'); } catch (e) { setStaffLoginError(e instanceof Error ? e.message : "Login failed due to an unknown error."); sessionStorage.removeItem('staffKey'); } finally { setIsStaffLoginLoading(false); } };
     const toggleFeedbackModal = () => { const closing = isFeedbackModalVisible; setIsFeedbackModalVisible(prev => !prev); if (closing) { setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); setFeedbackError(null); setFeedbackSuccess(null); setIsSubmittingFeedback(false); } if (!closing) { setIsSettingsOpen(false); setIsStaffLoginModalVisible(false); setIsClearConfirmGameVisible(false); setIsPlinkoVisible(false); setIsModelBuilderVisible(false); } };
     const handleFeedbackSubmit = async (e: React.FormEvent) => { e.preventDefault(); if (feedbackRating === 0) { setFeedbackError("Please select a star rating."); return; } if (!feedbackComment.trim()) { setFeedbackError("Please provide a comment."); return; } if (feedbackComment.length > 2000) { setFeedbackError("Comment is too long (max 2000 characters)."); return; } setIsSubmittingFeedback(true); setFeedbackError(null); setFeedbackSuccess(null); const payload: ApiRequestBody = { action: 'submitFeedback', email: feedbackEmail.trim() || null, rating: feedbackRating, comment: feedbackComment.trim() }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON response' })); if (!res.ok || !data.success) { throw new Error(data?.error || `Submit failed: ${res.statusText}`); } setFeedbackSuccess("Thank you! Your feedback has been submitted."); setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { ReactGA.event({ category: "Feedback", action: "Submit", label: `Rating: ${feedbackRating}` }); } } catch (err) { setFeedbackError(err instanceof Error ? err.message : "Failed to submit feedback."); } finally { setIsSubmittingFeedback(false); } };
-    const toggleTheme = useCallback(() => { setCurrentTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light')); }, []);
     const handlePersonaSelectedFromGame = (persona: Persona) => { setSelectedPersona(persona); setIsCupGameVisible(false); };
     const handlePlinkoThemeChange = (newTheme: AppTheme) => { console.log(`Plinko decided theme: ${newTheme}. Current: ${currentTheme}`); if (newTheme !== currentTheme) { setCurrentTheme(newTheme); } setIsPlinkoVisible(false); };
     const handleModelSelectedFromBuilder = (model: GeminiModel) => { setSelectedModel(model); setIsModelBuilderVisible(false); };
@@ -162,12 +161,38 @@ function App() {
                     <div className="settings-option"> <label htmlFor="access-key-input">Access Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/> <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid?<span>✅ Valid Key ({keyStatus.username || 'User'})</span>:keyStatus.error?<span>❌ {keyStatus.error}</span>:<span>Enter key for restricted features.</span>}</div> </div>
                     <div className="settings-option"><label>Persona:</label><p className="current-persona-display">{AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.emoji} {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label || selectedPersona}</p><button onClick={() => setIsCupGameVisible(true)} className="settings-action-button persona-change-button" disabled={keyStatus.isValid !== true || !canPlayCupGame} title={ keyStatus.isValid !== true ? "Requires a valid Access Key..." : !canPlayCupGame ? "Not enough personas..." : "Change Persona (Opens Game)"}>Change Persona</button>{keyStatus.isValid !== true && ( <p className="settings-helper-text">Enter a valid Access Key to change personas.</p>)}{keyStatus.isValid === true && !canPlayCupGame && ( <p className="settings-helper-text">Game requires at least 3 personas defined.</p>)}</div>
                     {/* AI Model Section (Now uses Builder Game) */}
-                    <div className="settings-option"><label>AI Model:</label><p className="current-persona-display">{ALL_AVAILABLE_MODELS_FRONTEND.find(m => m.value === selectedModel)?.label || selectedModel}</p><button onClick={() => setIsModelBuilderVisible(true)} className="settings-action-button model-builder-button" title="Select model components">🔧 Build AI Model...</button></div>
+                    <div className="settings-option">
+    <label>AI Model:</label>
+    {/* Display Current Model */}
+    <p className="current-persona-display"> {/* Reusing style, maybe rename class later */}
+        {ALL_AVAILABLE_MODELS_FRONTEND.find(m => m.value === selectedModel)?.label || selectedModel}
+    </p>
+    {/* Button to trigger Model Builder Game */}
+    <button
+        onClick={() => setIsModelBuilderVisible(true)}
+        className="settings-action-button model-builder-trigger-button" // Specific class for green styling
+        title="Select model components"
+    >
+        🔧 Build AI Model...
+    </button>
+</div>
                 </div>
                 {/* Column 2 */}
                 <div className="settings-column">
                     <div className="settings-option"> <label htmlFor="stt-lang-select">Speech Input Lang:</label> <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"><option value="en-US">English (US)</option><option value="th-TH">ไทย (Thai)</option><option value="es-ES">Español (Spain)</option><option value="fr-FR">Français (France)</option></select> </div>
-                    <div className="settings-option"><label>Appearance:</label><div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}><button onClick={toggleTheme} id="theme-toggle" className="settings-action-button theme-toggle-button">{currentTheme === 'light' ? '🌙 Force Dark Mode' : '☀️ Force Light Mode'}</button><button onClick={() => setIsPlinkoVisible(true)} className="settings-action-button theme-plinko-button">{currentTheme === 'light' ? '🌙' : '☀️'} Try Random Theme Change</button></div></div>
+                    <div className="settings-option">
+    <label>Appearance:</label>
+    {/* Single button that shows target theme emoji and launches game */}
+    <button
+        onClick={() => setIsPlinkoVisible(true)}
+        className="settings-action-button theme-plinko-button" // Use specific class or reuse secondary
+        title="Try to randomly change theme"
+    >
+        {/* Show emoji for the OPPOSITE theme */}
+        {currentTheme === 'light' ? '🌙' : '☀️'} Change Theme
+    </button>
+    {/* Helper text removed */}
+</div>
                     <div className="settings-option"> <label>Chat Actions:</label> <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}><button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button><button onClick={() => setIsClearConfirmGameVisible(true)} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat History</button></div> </div>
                     <div className="settings-option"> <label>Admin Area:</label> <button onClick={toggleStaffLoginModal} className="settings-action-button staff-area-button">🔑 Staff Login</button> </div>
                 </div>
