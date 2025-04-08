@@ -1,4 +1,4 @@
-// src/PersonaCupGame.tsx - FINAL Version (v3 - Fix timing issue in shuffle check)
+// src/PersonaCupGame.tsx - FINAL v4 - Corrected useCallback Dependency for setupGame
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 // Import types from App.tsx (ensure App.tsx exports them)
@@ -59,9 +59,9 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
         console.log(`Clearing ${shuffleTimeoutsRef.current.length} shuffle timeouts.`);
         shuffleTimeoutsRef.current.forEach(clearTimeout);
         shuffleTimeoutsRef.current = [];
-    },[]);
+    },[]); // Stable reference
 
-    // Game Setup Logic (memoized)
+    // Game Setup Logic (memoized with CORRECT dependencies)
     const setupGame = useCallback(() => {
         if (!isMountedRef.current) { console.log("setupGame called but component not mounted/visible."); return; }
         clearShuffleTimeouts();
@@ -84,31 +84,30 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
         // Store initial setup in ref AND state
         initialCupsRef.current = [ { id: 1, personaInfo: gamePersonas[0], order: 0, isChosen: false, isRevealed: false }, { id: 2, personaInfo: gamePersonas[1], order: 1, isChosen: false, isRevealed: false }, { id: 3, personaInfo: gamePersonas[2], order: 2, isChosen: false, isRevealed: false }, ];
         setCups(initialCupsRef.current);
-        setPhase('showing');
+        setPhase('showing'); // Set phase AFTER setting cups
 
         // Start Shuffling Timer
         console.log("Setting timer to start shuffle...");
         const initialShuffleTimer = setTimeout(() => {
              if (!isMountedRef.current) return; // Check mount status ONLY
+             // Read current phase using a ref or functional update if needed, but direct read *should* be ok here
+             // as this timeout runs after the 'showing' phase is likely committed.
+             // Let's assume direct phase read is okay for the start condition.
+             // if (phase !== 'showing') return; // This check might be too strict due to timing
+
             setPhase('shuffling');
             setMessage("Shuffling...");
             console.log("Shuffle timer fired, starting moves...");
 
             let currentMove = 0;
             const performShuffleMove = () => {
-                 // *** REMOVED PHASE CHECK HERE ***
-                 if (!isMountedRef.current) {
-                    console.log("Shuffle move skipped: component unmounted or closed.");
-                    clearShuffleTimeouts();
-                    return;
-                 }
+                 if (!isMountedRef.current) { console.log("Shuffle move skipped: component unmounted or closed."); clearShuffleTimeouts(); return; }
+                // The check for `phase !== 'shuffling'` was removed in previous step, keep it removed.
 
                 if (currentMove >= NUM_SHUFFLE_MOVES) { console.log("Finished 5 shuffle moves."); setPhase('selecting'); setMessage("Pick a cup!"); return; }
 
                 const orders = shuffleArray([0, 1, 2]); console.log(`Shuffle Move ${currentMove + 1}: New order -> ${orders.join(',')}`);
-                // Use functional update + read from ref for initial state
                 setCups(prevCups => prevCups.map((cup) => {
-                    // Use initialCupsRef.current to get stable initial persona info
                     const originalCup = initialCupsRef.current.find(c => c.id === cup.id);
                     const originalIndex = initialCupsRef.current.findIndex(c => c.id === cup.id);
                     return { ...cup, order: orders[originalIndex], personaInfo: originalCup?.personaInfo ?? null };
@@ -123,7 +122,7 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
 
         }, SHOW_DELAY_MS);
         shuffleTimeoutsRef.current.push(initialShuffleTimer);
-    // Removed phase from dependencies
+    // *** REMOVED 'phase' from dependency array ***
     }, [availablePersonasForGame, onClose, clearShuffleTimeouts]);
 
 
@@ -147,7 +146,9 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
             isMountedRef.current = false;
             if (phase !== 'idle') { setPhase('idle'); setCups([]); setMessage(null); clearShuffleTimeouts(); }
         }
-    }, [isOpen, setupGame, clearShuffleTimeouts, phase]); // Keep phase for restart trigger
+     // Depend only on isOpen and the stable setupGame/clear callbacks
+     // Phase IS needed here to re-trigger setup after restartOnError sets phase to idle
+    }, [isOpen, setupGame, clearShuffleTimeouts, phase]);
 
 
     // Cup Click Handler
@@ -166,7 +167,7 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
             setMessage(`Oops! Persona '${chosenCup.personaInfo.label}' chosen, but your selected AI Model ('${currentSelectedModel}') needs a valid key. Let's roll again!`);
             setPhase('restartingOnError');
             const restartTimer = setTimeout(() => {
-                // Set phase to idle, useEffect watching phase will trigger setupGame again
+                // Set phase to idle, the useEffect watching phase will trigger setupGame again
                 if (isMountedRef.current) setPhase('idle');
             }, RESTART_DELAY_MS);
             shuffleTimeoutsRef.current.push(restartTimer);
