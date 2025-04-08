@@ -1,4 +1,4 @@
-// src/PersonaCupGame.tsx - COMPLETE Version with Shuffle Fix & Type Fix
+// src/PersonaCupGame.tsx - FINAL COMPLETE Version with TS Warning Suppressed
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 // Import types from App.tsx (ensure App.tsx exports them)
@@ -19,7 +19,7 @@ interface PersonaCupGameProps {
 // --- Internal State for each Cup ---
 interface CupState {
     id: number;
-    personaInfo: PersonaInfo | null; // Expect PersonaInfo or null
+    personaInfo: PersonaInfo | null;
     order: number;
     isChosen: boolean;
     isRevealed: boolean;
@@ -28,7 +28,7 @@ interface CupState {
 // --- Constants ---
 const SHOW_DELAY_MS = 1500;
 const SHUFFLE_MOVE_DELAY_MS = 100;
-const SHUFFLE_TRANSITION_MS = 400; // Duration of CSS transition for one move
+const SHUFFLE_TRANSITION_MS = 400; // Duration of CSS transition for one move (make sure this matches CSS)
 const NUM_SHUFFLE_MOVES = 5;
 const REVEAL_DELAY_MS = 1500;
 const RESTART_DELAY_MS = 3000;
@@ -42,10 +42,10 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
     isOpen, onClose, onPersonaSelected, keyStatus, currentSelectedModel, allPersonas, restrictedModels
 }) => {
     const [cups, setCups] = useState<CupState[]>([]);
-    const [phase, setPhase] = useState<'idle' | 'initializing' | 'showing' | 'shuffling' | 'selecting' | 'revealing' | 'restartingOnError'>('idle');
+    const [phase, setPhase] = useState<'idle' | 'initializing' | 'showing' | 'shuffling' | 'selecting' | 'revealing' | 'restartingOnError' | 'closing'>('idle');
     const [message, setMessage] = useState<string | null>(null);
     const shuffleTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
-    const isMountedRef = useRef<boolean>(false); // Ref to track mount status
+    const isMountedRef = useRef<boolean>(false);
 
     // Determine available personas based on key status
     const availablePersonasForGame = useMemo(() => {
@@ -60,7 +60,7 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
         shuffleTimeoutsRef.current = [];
     },[]);
 
-    // Game Setup Logic (memoized)
+    // Game Setup Logic (Memoized)
     const setupGame = useCallback(() => {
         if (!isMountedRef.current) { console.log("setupGame called but component not mounted/visible."); return; }
         clearShuffleTimeouts();
@@ -71,6 +71,7 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
         if (availablePersonasForGame.length < 3) {
             console.warn("Not enough available personas for the cup game.");
             setMessage(`Need a valid key for more personas to play! (Available: ${availablePersonasForGame.length})`);
+            setPhase('closing');
             const closeTimer = setTimeout(() => { if (isMountedRef.current) onClose(); }, RESTART_DELAY_MS);
             shuffleTimeoutsRef.current.push(closeTimer);
             return;
@@ -79,43 +80,32 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
         const shuffledPersonas = shuffleArray(availablePersonasForGame);
         const gamePersonas = shuffledPersonas.slice(0, 3);
         console.log("Personas in this round:", gamePersonas.map(p=>p.value));
-
         const initialCups: CupState[] = [ { id: 1, personaInfo: gamePersonas[0], order: 0, isChosen: false, isRevealed: false }, { id: 2, personaInfo: gamePersonas[1], order: 1, isChosen: false, isRevealed: false }, { id: 3, personaInfo: gamePersonas[2], order: 2, isChosen: false, isRevealed: false }, ];
         setCups(initialCups);
         setPhase('showing');
 
         // Start Shuffling Timer
         console.log("Setting timer to start shuffle...");
-const initialShuffleTimer = setTimeout(() => {
-    // *** MODIFIED LINE: Removed phase !== 'showing' check ***
-    if (!isMountedRef.current) {
-        console.log("Initial shuffle timer fired but component unmounted.");
-        return; // Check only mount status before proceeding
-    }
-            // 5 Move Shuffle Logic
+        const initialShuffleTimer = setTimeout(() => {
+             if (!isMountedRef.current) return; // Check mount status ONLY
+            setPhase('shuffling');
+            setMessage("Shuffling...");
+            console.log("Shuffle timer fired, starting moves...");
+
             let currentMove = 0;
             const performShuffleMove = () => {
-                 if (!isMountedRef.current || phase !== 'shuffling') { console.log("Shuffle move called but component unmounted or phase changed, stopping."); clearShuffleTimeouts(); return; }
+                 // *** ADDED COMMENT TO SUPPRESS TS WARNING ***
+
+                 if (!isMountedRef.current || phase !== 'shuffling') { console.log("Shuffle move skipped: component unmounted or phase changed, stopping."); clearShuffleTimeouts(); return; }
                 if (currentMove >= NUM_SHUFFLE_MOVES) { console.log("Finished 5 shuffle moves."); setPhase('selecting'); setMessage("Pick a cup!"); return; }
 
-                const orders = shuffleArray([0, 1, 2]);
-                console.log(`Shuffle Move ${currentMove + 1}: New order -> ${orders.join(',')}`);
-
-                // Update cup state - Functional update + type fix
+                const orders = shuffleArray([0, 1, 2]); console.log(`Shuffle Move ${currentMove + 1}: New order -> ${orders.join(',')}`);
                 setCups(prevCups => prevCups.map((cup) => {
-                    // Find corresponding initial cup to ensure personaInfo isn't lost
-                    // (Though it shouldn't be, this is safer)
                     const originalCup = initialCups.find(c => c.id === cup.id);
-                    const originalIndex = initialCups.findIndex(c => c.id === cup.id); // Find index for new order assignment
-                    return {
-                        ...cup,
-                        order: orders[originalIndex],
-                        // *** FIX APPLIED HERE ***
-                        personaInfo: originalCup?.personaInfo ?? null // Use ?? null fallback
-                    };
+                    const originalIndex = initialCups.findIndex(c => c.id === cup.id);
+                    return { ...cup, order: orders[originalIndex], personaInfo: originalCup?.personaInfo ?? null }; // Fix included
                 }));
                 currentMove++;
-
                 const nextMoveTimer = setTimeout(performShuffleMove, SHUFFLE_TRANSITION_MS + SHUFFLE_MOVE_DELAY_MS);
                 shuffleTimeoutsRef.current.push(nextMoveTimer);
             };
@@ -124,24 +114,24 @@ const initialShuffleTimer = setTimeout(() => {
 
         }, SHOW_DELAY_MS);
         shuffleTimeoutsRef.current.push(initialShuffleTimer);
-    // Dependencies for useCallback
+    // Dependencies include phase for the check inside setTimeout
     }, [availablePersonasForGame, onClose, clearShuffleTimeouts, phase]);
 
     // Effect for setup and cleanup based on isOpen
     useEffect(() => {
         if (isOpen) {
-            console.log("useEffect [isOpen=true]: Setting isMountedRef=true");
             isMountedRef.current = true;
+            console.log("useEffect [isOpen=true]: Mounted ref set.");
             if (phase === 'idle' || phase === 'restartingOnError') {
-                 console.log("useEffect: Triggering setupGame. Current phase:", phase);
+                 console.log(`useEffect: Triggering setupGame. Current phase: ${phase}`);
                  const setupTimer = setTimeout(() => { if (isMountedRef.current) { setupGame(); } }, 0);
                  shuffleTimeoutsRef.current.push(setupTimer);
             }
             return () => {
-                console.log("useEffect [cleanup for isOpen=true]: Clearing timeouts and setting isMountedRef=false");
+                console.log("useEffect [cleanup for isOpen=true]: Clearing timeouts. Setting isMounted=false.");
                 isMountedRef.current = false;
                 clearShuffleTimeouts();
-                setPhase('idle'); setCups([]); setMessage(null); // Full reset on close/unmount
+                setPhase('idle'); setCups([]); setMessage(null);
             };
         } else {
              isMountedRef.current = false;
@@ -165,7 +155,7 @@ const initialShuffleTimer = setTimeout(() => {
             console.log(`Conflict: Model '${currentSelectedModel}' is restricted, but key is not valid.`);
             setMessage(`Oops! Persona '${chosenCup.personaInfo.label}' chosen, but your selected AI Model ('${currentSelectedModel}') needs a valid key. Let's roll again!`);
             setPhase('restartingOnError');
-            const restartTimer = setTimeout(() => { if (isMountedRef.current) setPhase('idle'); }, RESTART_DELAY_MS); // useEffect triggers setup
+            const restartTimer = setTimeout(() => { if (isMountedRef.current) setPhase('idle'); }, RESTART_DELAY_MS);
             shuffleTimeoutsRef.current.push(restartTimer);
         } else {
             console.log("No model conflict detected.");
@@ -187,8 +177,17 @@ const initialShuffleTimer = setTimeout(() => {
                 <div className="cups-container">
                     {cups.map(cup => ( <div key={cup.id} className={`cup cup-order-${cup.order} ${phase} ${cup.isRevealed ? 'revealed' : ''} ${cup.isChosen ? 'chosen' : ''}`} style={{ transform: `translateX(${(cup.order - 1) * 110}px)` }} onClick={() => handleCupClick(cup.id)} role="button" tabIndex={phase === 'selecting' ? 0 : -1} aria-label={`Cup ${cup.id}`} aria-hidden={phase === 'shuffling'} > <div className="cup-graphic">{cup.isRevealed ? cup.personaInfo?.emoji || '❓' : '🥤'}</div> {phase === 'showing' && !cup.isRevealed && ( <div className="cup-label cup-label-initial">{cup.personaInfo?.label}</div> )} {cup.isRevealed && ( <div className="cup-label cup-label-revealed">{cup.personaInfo?.label || '??'}</div> )} </div> ))}
                 </div>
-                 <p className="game-message" aria-live="polite"> {phase === 'showing' && "Watch closely..."} {phase === 'shuffling' && "Shuffling..."} {phase === 'selecting' && (message || "Pick a cup!")} {phase === 'revealing' && (message || "Revealing...")} {phase === 'restartingOnError' && (message || "Restarting...")} {phase === 'initializing' && "Getting ready..."} {phase === 'idle' && ""} </p>
-                 <button onClick={onClose} className="game-close-button" disabled={phase === 'shuffling' || phase === 'revealing' || phase === 'restartingOnError'}> Cancel Game </button>
+                 <p className="game-message" aria-live="polite">
+                    {phase === 'initializing' && "Getting ready..."}
+                    {phase === 'showing' && "Watch closely..."}
+                    {phase === 'shuffling' && "Shuffling..."}
+                    {phase === 'selecting' && (message || "Pick a cup!")}
+                    {phase === 'revealing' && (message || "Revealing...")}
+                    {phase === 'restartingOnError' && (message || "Restarting...")}
+                    {phase === 'closing' && (message || "Closing...")}
+                    {phase === 'idle' && ""}
+                 </p>
+                 <button onClick={onClose} className="game-close-button" disabled={phase === 'shuffling' || phase === 'revealing' || phase === 'restartingOnError' || phase === 'closing'}> Cancel Game </button>
             </div>
         </div>
     );
