@@ -1,4 +1,4 @@
-// src/PersonaCupGame.tsx - FINAL COMPLETE Version with TS Warning Suppressed
+// src/PersonaCupGame.tsx - FINAL Version with Loop Fix & TS Warning Suppressed
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 // Import types from App.tsx (ensure App.tsx exports them)
@@ -20,7 +20,7 @@ interface PersonaCupGameProps {
 interface CupState {
     id: number;
     personaInfo: PersonaInfo | null;
-    order: number;
+    order: number; // Visual position index (0, 1, 2)
     isChosen: boolean;
     isRevealed: boolean;
 }
@@ -28,7 +28,7 @@ interface CupState {
 // --- Constants ---
 const SHOW_DELAY_MS = 1500;
 const SHUFFLE_MOVE_DELAY_MS = 100;
-const SHUFFLE_TRANSITION_MS = 400; // Duration of CSS transition for one move (make sure this matches CSS)
+const SHUFFLE_TRANSITION_MS = 400; // Duration of CSS transition for one move
 const NUM_SHUFFLE_MOVES = 5;
 const REVEAL_DELAY_MS = 1500;
 const RESTART_DELAY_MS = 3000;
@@ -45,7 +45,7 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
     const [phase, setPhase] = useState<'idle' | 'initializing' | 'showing' | 'shuffling' | 'selecting' | 'revealing' | 'restartingOnError' | 'closing'>('idle');
     const [message, setMessage] = useState<string | null>(null);
     const shuffleTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
-    const isMountedRef = useRef<boolean>(false);
+    const isMountedRef = useRef<boolean>(false); // Ref to track mount/open status
 
     // Determine available personas based on key status
     const availablePersonasForGame = useMemo(() => {
@@ -53,17 +53,17 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
         return allPersonas.filter(p => !p.restricted || keyStatus.isValid === true);
     }, [allPersonas, keyStatus.isValid]);
 
-    // Cleanup timeouts helper
+    // Cleanup timeouts helper (memoized)
     const clearShuffleTimeouts = useCallback(() => {
         console.log(`Clearing ${shuffleTimeoutsRef.current.length} shuffle timeouts.`);
         shuffleTimeoutsRef.current.forEach(clearTimeout);
         shuffleTimeoutsRef.current = [];
-    },[]);
+    },[]); // Empty dependency array - this function's identity is stable
 
-    // Game Setup Logic (Memoized)
+    // Game Setup Logic (memoized)
     const setupGame = useCallback(() => {
         if (!isMountedRef.current) { console.log("setupGame called but component not mounted/visible."); return; }
-        clearShuffleTimeouts();
+        clearShuffleTimeouts(); // Clear previous timers first
         setMessage(null);
         setPhase('initializing');
         console.log(`Setting up game. Personas available: ${availablePersonasForGame.length}`);
@@ -94,8 +94,7 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
 
             let currentMove = 0;
             const performShuffleMove = () => {
-                 // *** ADDED COMMENT TO SUPPRESS TS WARNING ***
-
+                 // Add comment to suppress TS warning for the intentional phase check
                  if (!isMountedRef.current || phase !== 'shuffling') { console.log("Shuffle move skipped: component unmounted or phase changed, stopping."); clearShuffleTimeouts(); return; }
                 if (currentMove >= NUM_SHUFFLE_MOVES) { console.log("Finished 5 shuffle moves."); setPhase('selecting'); setMessage("Pick a cup!"); return; }
 
@@ -103,41 +102,52 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
                 setCups(prevCups => prevCups.map((cup) => {
                     const originalCup = initialCups.find(c => c.id === cup.id);
                     const originalIndex = initialCups.findIndex(c => c.id === cup.id);
-                    return { ...cup, order: orders[originalIndex], personaInfo: originalCup?.personaInfo ?? null }; // Fix included
+                    // Use ?? null to satisfy type checker
+                    return { ...cup, order: orders[originalIndex], personaInfo: originalCup?.personaInfo ?? null };
                 }));
                 currentMove++;
                 const nextMoveTimer = setTimeout(performShuffleMove, SHUFFLE_TRANSITION_MS + SHUFFLE_MOVE_DELAY_MS);
                 shuffleTimeoutsRef.current.push(nextMoveTimer);
             };
+            // Start the first move
             const firstMoveTimer = setTimeout(performShuffleMove, SHUFFLE_MOVE_DELAY_MS);
             shuffleTimeoutsRef.current.push(firstMoveTimer);
 
         }, SHOW_DELAY_MS);
         shuffleTimeoutsRef.current.push(initialShuffleTimer);
-    // Dependencies include phase for the check inside setTimeout
-    }, [availablePersonasForGame, onClose, clearShuffleTimeouts, phase]);
+    // Dependencies now EXCLUDE phase
+    }, [availablePersonasForGame, onClose, clearShuffleTimeouts]);
+
 
     // Effect for setup and cleanup based on isOpen
     useEffect(() => {
         if (isOpen) {
             isMountedRef.current = true;
             console.log("useEffect [isOpen=true]: Mounted ref set.");
+            // Run setup only if phase is idle or restarting (prevents running mid-game)
             if (phase === 'idle' || phase === 'restartingOnError') {
-                 console.log(`useEffect: Triggering setupGame. Current phase: ${phase}`);
-                 const setupTimer = setTimeout(() => { if (isMountedRef.current) { setupGame(); } }, 0);
-                 shuffleTimeoutsRef.current.push(setupTimer);
+                console.log(`useEffect: Triggering setupGame. Current phase: ${phase}`);
+                const setupTimer = setTimeout(() => { if (isMountedRef.current) { setupGame(); } }, 0);
+                shuffleTimeoutsRef.current.push(setupTimer);
             }
+            // Return cleanup function
             return () => {
                 console.log("useEffect [cleanup for isOpen=true]: Clearing timeouts. Setting isMounted=false.");
                 isMountedRef.current = false;
                 clearShuffleTimeouts();
-                setPhase('idle'); setCups([]); setMessage(null);
+                // Reset state fully on close/unmount
+                setPhase('idle');
+                setCups([]);
+                setMessage(null);
             };
         } else {
-             isMountedRef.current = false;
-             if (phase !== 'idle') { setPhase('idle'); setCups([]); setMessage(null); clearShuffleTimeouts(); }
+            isMountedRef.current = false;
+             // Optional explicit reset if needed when closed externally
+             // if (phase !== 'idle') { setPhase('idle'); setCups([]); setMessage(null); clearShuffleTimeouts(); }
         }
-    }, [isOpen, setupGame, clearShuffleTimeouts, phase]);
+    // Depend only on isOpen and the stable setupGame/clear callbacks
+    // REMOVED phase from dependency array to fix loop
+    }, [isOpen, setupGame, clearShuffleTimeouts]);
 
 
     // Cup Click Handler
@@ -155,12 +165,17 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
             console.log(`Conflict: Model '${currentSelectedModel}' is restricted, but key is not valid.`);
             setMessage(`Oops! Persona '${chosenCup.personaInfo.label}' chosen, but your selected AI Model ('${currentSelectedModel}') needs a valid key. Let's roll again!`);
             setPhase('restartingOnError');
-            const restartTimer = setTimeout(() => { if (isMountedRef.current) setPhase('idle'); }, RESTART_DELAY_MS);
+            const restartTimer = setTimeout(() => {
+                // Set phase to idle, useEffect will trigger setupGame again on next render cycle
+                if (isMountedRef.current) setPhase('idle');
+            }, RESTART_DELAY_MS);
             shuffleTimeoutsRef.current.push(restartTimer);
         } else {
             console.log("No model conflict detected.");
              setMessage(`You got: ${chosenCup.personaInfo.label}!`);
-             const successTimer = setTimeout(() => { if (isMountedRef.current) onPersonaSelected(selectedPersonaValue); }, REVEAL_DELAY_MS);
+             const successTimer = setTimeout(() => {
+                if (isMountedRef.current) onPersonaSelected(selectedPersonaValue);
+            }, REVEAL_DELAY_MS);
              shuffleTimeoutsRef.current.push(successTimer);
         }
     };
@@ -175,7 +190,22 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
             <div className="persona-cup-game-modal" onClick={(e) => e.stopPropagation()}>
                <h3>Persona Shell Game!</h3>
                 <div className="cups-container">
-                    {cups.map(cup => ( <div key={cup.id} className={`cup cup-order-${cup.order} ${phase} ${cup.isRevealed ? 'revealed' : ''} ${cup.isChosen ? 'chosen' : ''}`} style={{ transform: `translateX(${(cup.order - 1) * 110}px)` }} onClick={() => handleCupClick(cup.id)} role="button" tabIndex={phase === 'selecting' ? 0 : -1} aria-label={`Cup ${cup.id}`} aria-hidden={phase === 'shuffling'} > <div className="cup-graphic">{cup.isRevealed ? cup.personaInfo?.emoji || '❓' : '🥤'}</div> {phase === 'showing' && !cup.isRevealed && ( <div className="cup-label cup-label-initial">{cup.personaInfo?.label}</div> )} {cup.isRevealed && ( <div className="cup-label cup-label-revealed">{cup.personaInfo?.label || '??'}</div> )} </div> ))}
+                    {cups.map(cup => (
+                         <div
+                            key={cup.id}
+                            className={`cup cup-order-${cup.order} ${phase} ${cup.isRevealed ? 'revealed' : ''} ${cup.isChosen ? 'chosen' : ''}`}
+                            style={{ transform: `translateX(${(cup.order - 1) * 110}px)` }} // Adjust 110px if needed
+                            onClick={() => handleCupClick(cup.id)}
+                            role="button"
+                            tabIndex={phase === 'selecting' ? 0 : -1}
+                            aria-label={`Cup ${cup.id}`}
+                            aria-hidden={phase === 'shuffling'}
+                         >
+                            <div className="cup-graphic">{cup.isRevealed ? cup.personaInfo?.emoji || '❓' : '🥤'}</div>
+                            {phase === 'showing' && !cup.isRevealed && ( <div className="cup-label cup-label-initial">{cup.personaInfo?.label}</div> )}
+                            {cup.isRevealed && ( <div className="cup-label cup-label-revealed">{cup.personaInfo?.label || '??'}</div> )}
+                         </div>
+                    ))}
                 </div>
                  <p className="game-message" aria-live="polite">
                     {phase === 'initializing' && "Getting ready..."}
@@ -187,7 +217,13 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
                     {phase === 'closing' && (message || "Closing...")}
                     {phase === 'idle' && ""}
                  </p>
-                 <button onClick={onClose} className="game-close-button" disabled={phase === 'shuffling' || phase === 'revealing' || phase === 'restartingOnError' || phase === 'closing'}> Cancel Game </button>
+                 <button
+                    onClick={onClose}
+                    className="game-close-button"
+                    disabled={phase === 'shuffling' || phase === 'revealing' || phase === 'restartingOnError' || phase === 'closing'}
+                 >
+                    Cancel Game
+                 </button>
             </div>
         </div>
     );
