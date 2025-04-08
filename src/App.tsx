@@ -181,12 +181,24 @@ function App() {
                             <div className="settings-option"> <label htmlFor="access-key-input">Access Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/> <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid?<span>✅ Valid Key ({keyStatus.username || 'User'})</span>:keyStatus.error?<span>❌ {keyStatus.error}</span>:<span>Enter key for restricted features.</span>}</div> </div>
                             {/* Persona Game Button */}
                             <div className="settings-option">
-                                <label>Persona:</label>
-                                <button onClick={() => setIsCupGameVisible(true)} className="settings-action-button" disabled={!canPlayCupGame} title={!canPlayCupGame ? "Need at least 3 personas defined to play" : "Choose persona via game"}>
-                                    🎲 {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.emoji} {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label} (Change...)
-                                </button>
-                                {!canPlayCupGame && (<p className="settings-helper-text">Game requires at least 3 personas defined in code.</p>)}
-                             </div>
+    <label>Persona:</label>
+    <button
+        onClick={() => setIsCupGameVisible(true)}
+        className="settings-action-button"
+        // *** REVERT: Disable based on filtered personas/key status ***
+        disabled={!canPlayCupGame}
+        title={!canPlayCupGame ? "Need valid key for more personas or game requires 3+" : "Choose persona via game"}
+    >
+        🎲 {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.emoji} {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label} (Change...)
+    </button>
+    {/* *** REVERT: Show key requirement message again *** */}
+    {!canPlayCupGame && keyStatus.isValid !== true && (
+         <p className="settings-helper-text">Enter valid key to unlock more personas & play the game.</p>
+    )}
+     {!canPlayCupGame && keyStatus.isValid === true && (
+         <p className="settings-helper-text">Currently selected: {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label}. Need 3+ personas defined for game.</p>
+    )}
+</div>
                             <div className="settings-option"> <label htmlFor="model-select">AI Model:</label> <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select" disabled={ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted&&keyStatus.isValid!==true}>{ALL_AVAILABLE_MODELS_FRONTEND.map((m)=>{const isDisabled=m.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={m.value} value={m.value} disabled={isDisabled} style={style}>{m.label}{m.restricted?' (Key Req.)':''}</option>);})}</select> {keyStatus.isValid!==true&&(RESTRICTED_PERSONAS_VALUES.length>0||RESTRICTED_MODELS_VALUES.length>0)&&(<p className="settings-helper-text">Enter valid key to unlock restricted options.</p>)} </div>
                          </div>
                          {/* Column 2 */}
@@ -213,17 +225,17 @@ function App() {
             )}
 
              {/* Persona Cup Game Modal */}
-            {isCupGameVisible && (
-                <PersonaCupGame
-                    isOpen={isCupGameVisible}
-                    onClose={() => setIsCupGameVisible(false)}
-                    onPersonaSelected={handlePersonaSelectedFromGame}
-                    keyStatus={keyStatus}
-                    currentSelectedModel={selectedModel}
-                    allPersonas={AVAILABLE_PERSONAS}
-                    restrictedModels={RESTRICTED_MODELS_VALUES}
-                />
-            )}
+             {isCupGameVisible && (
+     <PersonaCupGame
+         isOpen={isCupGameVisible}
+         onClose={() => setIsCupGameVisible(false)}
+         onPersonaSelected={handlePersonaSelectedFromGame}
+         keyStatus={keyStatus} // Passed correctly
+         currentSelectedModel={selectedModel}
+         allPersonas={AVAILABLE_PERSONAS} // Pass the full list
+         restrictedModels={RESTRICTED_MODELS_VALUES}
+     />
+ )}
 
             {/* Main Routing and Layout - Render only if modals are not showing */}
             {!showBetaNotice && !showIntroduction && (
