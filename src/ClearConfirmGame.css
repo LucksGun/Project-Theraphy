@@ -1,0 +1,120 @@
+/* src/ClearConfirmGame.css */
+
+.clear-confirm-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7); /* Slightly different overlay maybe */
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1150; /* Above other modals */
+    padding: 15px;
+    box-sizing: border-box;
+    backdrop-filter: blur(2px);
+}
+
+.clear-confirm-modal {
+    background-color: var(--container-bg);
+    color: var(--text-primary);
+    padding: 20px 25px 25px 25px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    text-align: center;
+    border: 1px solid var(--border-color);
+    width: 100%;
+    max-width: 400px; /* Smaller modal */
+}
+
+.clear-confirm-modal h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+.clear-confirm-modal .game-message {
+    min-height: 2.5em; /* Space for messages */
+    margin-bottom: 20px;
+    font-weight: 500;
+    font-size: 0.95em;
+    transition: color 0.3s ease;
+}
+.clear-confirm-modal .game-message.success {
+    color: var(--key-valid-color); /* Use valid color */
+}
+.clear-confirm-modal .game-message.failed {
+    color: var(--key-invalid-color); /* Use invalid color */
+}
+
+
+.timing-bar-container {
+    width: 90%;
+    margin: 0 auto 25px auto; /* Center the bar */
+}
+
+.timing-bar {
+    position: relative;
+    width: 100%;
+    height: 25px; /* Bar height */
+    background-color: var(--remove-button-bg); /* Red background */
+    border-radius: 4px;
+    overflow: hidden; /* Hide indicator overflow */
+    border: 1px solid rgba(0,0,0,0.2);
+}
+
+.timing-bar-green-zone {
+    position: absolute;
+    left: 45%; /* Corresponds to GREEN_ZONE_START_PERCENT */
+    width: 10%; /* Corresponds to GREEN_ZONE_WIDTH_PERCENT */
+    top: 0;
+    bottom: 0;
+    background-color: var(--key-valid-color); /* Green color */
+    opacity: 0.8; /* Slight transparency */
+}
+
+.timing-bar-indicator {
+    position: absolute;
+    top: -8px; /* Position arrow slightly above bar */
+    width: 2%; /* Corresponds to INDICATOR_WIDTH_PERCENT */
+    font-size: 1.5em; /* Size of the arrow */
+    color: var(--text-primary);
+    text-align: center;
+    will-change: left; /* Optimize animation */
+    pointer-events: none; /* Don't interfere with clicks */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+/* Buttons */
+.clear-confirm-modal .stop-button {
+    padding: 10px 25px;
+    font-size: 1.1em;
+    font-weight: bold;
+    background-color: var(--remove-button-hover-bg); /* Red button */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+    margin-right: 10px; /* Space between buttons */
+}
+.clear-confirm-modal .stop-button:hover:not(:disabled) {
+    background-color: var(--remove-button-bg);
+}
+.clear-confirm-modal .stop-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.clear-confirm-modal .cancel-button {
+    padding: 10px 15px;
+    font-size: 1em;
+    background-color: var(--button-secondary-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+.clear-confirm-modal .cancel-button:hover:not(:disabled) {
+    background-color: var(--button-secondary-hover-bg);
+}
+.clear-confirm-modal .cancel-button:disabled {
+     opacity: 0.5;
+     cursor: not-allowed;
+}
