@@ -19,6 +19,8 @@ const ANIMATION_NAMES: { [key: string]: AnimationOutcome } = {
     'plinko-drop-light-2': 'light',
     'plinko-drop-dark-1': 'dark',
     'plinko-drop-dark-2': 'dark',
+    'plinko-drop-dark-3': 'dark',
+    'plinko-drop-light-3': 'light',
     // Add more pairs if you create more animations in CSS
 };
 const ANIMATION_KEYS = Object.keys(ANIMATION_NAMES);

@@ -96,6 +96,14 @@
     80% { top: 85%; transform: translateX(-50%); }  /* Move Right */
     100% { top: 90%; left: 20%; transform: translateX(-50%); } /* End in Light zone */
 }
+@keyframes plinko-drop-light-3 {
+    0% { top: 5%; transform: translateX(-50%); }
+    20% { top: 25%; transform: translateX(-100%); } /* Move Left */
+    40% { top: 45%; transform: translateX(-60%); }  /* Move Right */
+    60% { top: 65%; transform: translateX(-90%); }  /* Move Left */
+    80% { top: 85%; transform: translateX(-50%); }  /* Move Right */
+    100% { top: 90%; left: 20%; transform: translateX(-50%); } /* End in Light zone */
+}
 @keyframes plinko-drop-light-2 {
     0% { top: 5%; transform: translateX(-50%); }
     20% { top: 25%; transform: translateX(-10%); }
@@ -107,6 +115,14 @@
 
 /* Example path ending Dark */
 @keyframes plinko-drop-dark-1 {
+    0% { top: 5%; transform: translateX(-50%); }
+    20% { top: 25%; transform: translateX(0%); }   /* Move Right */
+    40% { top: 45%; transform: translateX(-40%); }  /* Move Left */
+    60% { top: 65%; transform: translateX(10%); }   /* Move Right */
+    80% { top: 85%; transform: translateX(-20%); }  /* Move Left */
+    100% { top: 90%; left: 80%; transform: translateX(-50%); } /* End in Dark zone */
+}
+@keyframes plinko-drop-dark-3 {
     0% { top: 5%; transform: translateX(-50%); }
     20% { top: 25%; transform: translateX(0%); }   /* Move Right */
     40% { top: 45%; transform: translateX(-40%); }  /* Move Left */

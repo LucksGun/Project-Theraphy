@@ -11,10 +11,10 @@ interface ClearConfirmGameProps {
 }
 
 // --- Game Constants ---
-const TARGET_ZONE_WIDTH_DEGREES = 30;
-const DEGREES_PER_SEC = 180; // Speed
+const TARGET_ZONE_WIDTH_DEGREES = 20;
+const DEGREES_PER_SEC = 200; // Speed
 const INDICATOR_OFFSET_DEGREES = -90;
-const REQUIRED_SUCCESSES = 2; // Need 2 successes
+const REQUIRED_SUCCESSES = 1; // Need 2 successes
 const SUCCESS_DELAY_MS = 1500; // Delay after final success
 const NEXT_ROUND_DELAY_MS = 1200; // Delay between successful rounds
 const FAIL_DELAY_MS = 1500; // Delay after failure message
