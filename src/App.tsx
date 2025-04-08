@@ -6,7 +6,7 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-
 import './App.css'; // Ensure your CSS file is correctly imported
 import ChatbotPage from './ChatbotPage'; // Ensure ChatbotPage component is correctly imported
 import AdminPage from './AdminPage'; // Ensure AdminPage component is correctly imported
-import PersonaCupGame from './PersonaCupGame'; // *** Import the new component ***
+import PersonaCupGame from './PersonaCupGame'; // Import the new game component
 
 // --- GA Initialization ---
 const GA_MEASUREMENT_ID = "G-JX58QMMKZY"; // Replace with your actual ID if different
@@ -17,8 +17,7 @@ export interface Message { id: number; text: string; sender: 'user' | 'bot' | 'l
 export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.0-flash-lite' | 'gemini-2.5-pro-exp-03-25' | 'gemini-2.0-flash-thinking-exp-01-21' | 'gemini-2.0-flash-exp-image-generation';
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR';
 export type Persona = 'normal' | 'therapist' | 'university_master';
-// *** Added export here ***
-export interface KeyValidationStatus { isValid: boolean | null; username: string | null; loading: boolean; error?: string | null; }
+export interface KeyValidationStatus { isValid: boolean | null; username: string | null; loading: boolean; error?: string | null; } // Ensure 'export' is here
 export interface UserKeyInfo { key: string; username: string | null; status: 'active' | 'inactive'; created_at: string; }
 export interface FeedbackItem { id: number; email: string | null; rating: number; comment: string; submitted_at: string; is_important: number; }
 export type PersonaInstructionMap = { [key in Persona]?: string };
@@ -100,16 +99,15 @@ function App() {
     const [feedbackError, setFeedbackError] = useState<string | null>(null);
     const [feedbackSuccess, setFeedbackSuccess] = useState<string | null>(null);
     const [currentTheme, setCurrentTheme] = useState<AppTheme>(getInitialTheme);
-    // *** State for Persona Cup Game Modal ***
+    // State for Persona Cup Game Modal
     const [isCupGameVisible, setIsCupGameVisible] = useState<boolean>(false);
 
     const navigate = useNavigate();
 
     // --- Calculate derived state ---
     const allIntroSectionsAcknowledged = Object.values(introSectionsAcknowledged).every(status => status === true);
-    // Calculate available personas for game button enable/disable state
-    const availablePersonasForGame = AVAILABLE_PERSONAS.filter(p => !p.restricted || keyStatus.isValid === true);
-    const canPlayCupGame = availablePersonasForGame.length >= 3; // Check if enough for the game
+    // Calculate available personas for game button enable/disable state (Now uses all defined)
+    const canPlayCupGame = AVAILABLE_PERSONAS.length >= 3;
 
     // --- Effects ---
     // Debounced Key Validation Effect
@@ -134,8 +132,6 @@ function App() {
     const handleMoveButton = () => { const vw = window.innerWidth; const vh = window.innerHeight; const buttonWidth = 180; const buttonHeight = 45; const randomTop = Math.random() * (vh - buttonHeight); const randomLeft = Math.random() * (vw - buttonWidth); setContinueButtonStyle({ position: 'fixed', top: `${randomTop}px`, left: `${randomLeft}px`, zIndex: 1070 }); };
     const handleModelChange=(e:ChangeEvent<HTMLSelectElement>)=>{const m=e.target.value as GeminiModel;if(ALL_MODEL_VALUES.includes(m))setSelectedModel(m);};
     const handleSttLangChange=(e:ChangeEvent<HTMLSelectElement>)=>{setSttLang(e.target.value as SpeechLanguage);};
-    // *** Persona Change is now handled by the game callback ***
-    // const handlePersonaChange=(e:ChangeEvent<HTMLSelectElement>)=>{const p=e.target.value as Persona;if(ALL_PERSONAS.includes(p))setSelectedPersona(p);};
     const toggleSettings=()=>{ setIsSettingsOpen(p=>!p); setIsStaffLoginModalVisible(false); setIsFeedbackModalVisible(false); };
     const handleClearChat=()=>{if(window.confirm("Clear chat history? This cannot be undone.")){const ts=Date.now();const msg:Message={id:ts,text:"Chat cleared.",sender:'bot',timestamp:ts};setMessages([msg]);localStorage.removeItem(CHAT_STORAGE_KEY);setIsSettingsOpen(false);}};
     const handleAccessKeyChange=(e:ChangeEvent<HTMLInputElement>)=>{setEnteredKey(e.target.value);};
@@ -146,11 +142,8 @@ function App() {
     const toggleFeedbackModal = () => { const closing = isFeedbackModalVisible; setIsFeedbackModalVisible(prev => !prev); if (closing) { setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); setFeedbackError(null); setFeedbackSuccess(null); setIsSubmittingFeedback(false); } if (!closing) { setIsSettingsOpen(false); setIsStaffLoginModalVisible(false); } };
     const handleFeedbackSubmit = async (e: React.FormEvent) => { e.preventDefault(); if (feedbackRating === 0) { setFeedbackError("Please select a star rating."); return; } if (!feedbackComment.trim()) { setFeedbackError("Please provide a comment."); return; } if (feedbackComment.length > 2000) { setFeedbackError("Comment is too long (max 2000 characters)."); return; } setIsSubmittingFeedback(true); setFeedbackError(null); setFeedbackSuccess(null); const payload: ApiRequestBody = { action: 'submitFeedback', email: feedbackEmail.trim() || null, rating: feedbackRating, comment: feedbackComment.trim() }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON response' })); if (!res.ok || !data.success) { throw new Error(data?.error || `Submit failed: ${res.statusText}`); } setFeedbackSuccess("Thank you! Your feedback has been submitted."); setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { ReactGA.event({ category: "Feedback", action: "Submit", label: `Rating: ${feedbackRating}` }); } } catch (err) { setFeedbackError(err instanceof Error ? err.message : "Failed to submit feedback."); } finally { setIsSubmittingFeedback(false); } };
     const toggleTheme = useCallback(() => { setCurrentTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light')); }, []);
-    // *** Handler for Persona selected from game ***
-    const handlePersonaSelectedFromGame = (persona: Persona) => {
-        setSelectedPersona(persona);
-        setIsCupGameVisible(false); // Close the game modal
-    };
+    // Handler for Persona selected from game
+    const handlePersonaSelectedFromGame = (persona: Persona) => { setSelectedPersona(persona); setIsCupGameVisible(false); };
 
 
     // --- JSX ---
@@ -186,26 +179,14 @@ function App() {
                          {/* Column 1 */}
                          <div className="settings-column">
                             <div className="settings-option"> <label htmlFor="access-key-input">Access Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/> <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid?<span>✅ Valid Key ({keyStatus.username || 'User'})</span>:keyStatus.error?<span>❌ {keyStatus.error}</span>:<span>Enter key for restricted features.</span>}</div> </div>
-                             {/* *** MODIFIED PERSONA SELECTION *** */}
+                            {/* Persona Game Button */}
                             <div className="settings-option">
                                 <label>Persona:</label>
-                                <button
-                                    onClick={() => setIsCupGameVisible(true)}
-                                    className="settings-action-button" // Use action button style
-                                    disabled={!canPlayCupGame} // Disable if not enough personas
-                                    title={!canPlayCupGame ? "Need valid key or more available personas" : "Choose persona via game"}
-                                >
+                                <button onClick={() => setIsCupGameVisible(true)} className="settings-action-button" disabled={!canPlayCupGame} title={!canPlayCupGame ? "Need at least 3 personas defined to play" : "Choose persona via game"}>
                                     🎲 {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.emoji} {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label} (Change...)
                                 </button>
-                                {!canPlayCupGame && keyStatus.isValid !== true && (
-                                    <p className="settings-helper-text">Enter valid key to unlock more personas & play.</p>
-                                )}
-                                {!canPlayCupGame && keyStatus.isValid === true && (
-                                    // This case means even with a key, there aren't 3+ personas defined in AVAILABLE_PERSONAS
-                                    <p className="settings-helper-text">Currently selected: {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label}. Not enough options for game.</p>
-                                )}
+                                {!canPlayCupGame && (<p className="settings-helper-text">Game requires at least 3 personas defined in code.</p>)}
                              </div>
-                             {/* *** END MODIFIED PERSONA SELECTION *** */}
                             <div className="settings-option"> <label htmlFor="model-select">AI Model:</label> <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select" disabled={ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted&&keyStatus.isValid!==true}>{ALL_AVAILABLE_MODELS_FRONTEND.map((m)=>{const isDisabled=m.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={m.value} value={m.value} disabled={isDisabled} style={style}>{m.label}{m.restricted?' (Key Req.)':''}</option>);})}</select> {keyStatus.isValid!==true&&(RESTRICTED_PERSONAS_VALUES.length>0||RESTRICTED_MODELS_VALUES.length>0)&&(<p className="settings-helper-text">Enter valid key to unlock restricted options.</p>)} </div>
                          </div>
                          {/* Column 2 */}
@@ -231,7 +212,7 @@ function App() {
                  <div className="feedback-modal-overlay"> <div className="feedback-modal"> <h3 id="feedback-title">Submit Feedback</h3> <button onClick={toggleFeedbackModal} className="close-feedback-button" title="Close Feedback">×</button> {feedbackSuccess && <p className="feedback-message success">{feedbackSuccess}</p>} {feedbackError && <p className="feedback-message error">{feedbackError}</p>} {!feedbackSuccess && ( <form onSubmit={handleFeedbackSubmit} className="feedback-form"> <div className="feedback-field"> <label htmlFor="feedback-email">Email (Optional):</label> <input type="email" id="feedback-email" className="settings-input" value={feedbackEmail} onChange={(e) => setFeedbackEmail(e.target.value)} placeholder="your.email@example.com" maxLength={250} disabled={isSubmittingFeedback} /> </div> <div className="feedback-field"> <label>Rating:<span style={{color:'red'}}>*</span></label> <div className="star-rating"> {[1, 2, 3, 4, 5].map(star => ( <button key={star} type="button" aria-pressed={star === feedbackRating} className={`star-button ${star <= feedbackRating ? 'selected' : ''}`} onClick={() => setFeedbackRating(star)} disabled={isSubmittingFeedback} aria-label={`Rate ${star}/5`}>★</button> ))} </div> </div> <div className="feedback-field"> <label htmlFor="feedback-comment">Comment:<span style={{color:'red'}}>*</span></label> <textarea id="feedback-comment" className="settings-input" rows={5} value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)} placeholder="Tell us about your experience, suggestions, or any bugs..." maxLength={2000} required disabled={isSubmittingFeedback} /> </div> <div className="feedback-actions"> <button type="button" onClick={toggleFeedbackModal} className="cancel-feedback-button" disabled={isSubmittingFeedback}>Cancel</button> <button type="submit" className="submit-feedback-button" disabled={isSubmittingFeedback || feedbackRating === 0 || !feedbackComment.trim()}> {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'} </button> </div> </form> )} </div> </div>
             )}
 
-            {/* *** Persona Cup Game Modal *** */}
+             {/* Persona Cup Game Modal */}
             {isCupGameVisible && (
                 <PersonaCupGame
                     isOpen={isCupGameVisible}

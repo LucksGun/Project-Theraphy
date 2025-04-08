@@ -1,4 +1,4 @@
-/* src/PersonaCupGame.css */
+/* src/PersonaCupGame.css - Styles for the Persona Shuffling Cup Game */
 
 .persona-cup-game-overlay {
     position: fixed;
@@ -8,18 +8,18 @@
     align-items: center;
     justify-content: center;
     z-index: 1100; /* Ensure it's above other modals */
-    backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px); /* Optional blur effect */
 }
 
 .persona-cup-game-modal {
-    background-color: var(--container-bg); /* Use theme */
+    background-color: var(--container-bg); /* Use theme variable */
     padding: 25px 40px;
     border-radius: 12px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.4);
     text-align: center;
-    color: var(--text-primary); /* Use theme */
-    border: 1px solid var(--border-color);
-    min-width: 380px;
+    color: var(--text-primary); /* Use theme variable */
+    border: 1px solid var(--border-color); /* Use theme variable */
+    min-width: 380px; /* Ensure minimum width */
 }
 
 .persona-cup-game-modal h3 {
@@ -31,13 +31,12 @@
 
 .cups-container {
     display: flex;
-    /* Use relative positioning for the container to calculate transforms easily */
-    position: relative;
-    justify-content: center; /* Center the middle cup */
-    gap: 30px; /* This gap isn't really used with absolute positioning */
+    position: relative; /* Needed for absolute positioning of cups */
+    justify-content: center; /* Helps center the middle cup visually */
+    gap: 30px; /* Visual gap (actual position set by transform) */
     margin: 30px 0;
-    min-height: 140px; /* Ensure space for cups + labels */
-    padding: 0 20px; /* Padding for side cups */
+    min-height: 140px; /* Space for cups and labels below */
+    padding: 0 20px; /* Padding on sides */
 }
 
 .cup {
@@ -53,79 +52,77 @@
     border-radius: 5px;
     position: absolute; /* Absolute positioning for shuffling */
     bottom: 0;
-    /* Transition for movement (transform) and reveal (opacity/transform) */
-    transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55), /* Shuffle movement */
-                opacity 0.4s ease-in-out; /* Reveal fade */
+    /* Smooth transition for movement (transform) */
+    /* Adjust 0.4s to match SHUFFLE_TRANSITION_MS if changed in JS */
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55),
+                opacity 0.4s ease-in-out;
     transform-origin: center bottom;
     will-change: transform; /* Optimize animation */
 }
 
-/* --- Initial & Shuffle Positioning --- */
-/* We use transform translateX relative to the center */
-/* Adjust the 110px value based on cup width + desired gap */
-.cup.cup-order-0 { transform: translateX(-110px); } /* Left */
-.cup.cup-order-1 { transform: translateX(0px); }   /* Center */
-.cup.cup-order-2 { transform: translateX(110px); } /* Right */
+/* --- Cup Positioning based on 'order' state --- */
+/* Adjust the 110px value if cup width (80px) or desired gap changes */
+/* This assumes the container is centered and transform moves relative to center */
+.cup.cup-order-0 { transform: translateX(-110px); } /* Position Left */
+.cup.cup-order-1 { transform: translateX(0px); }   /* Position Center */
+.cup.cup-order-2 { transform: translateX(110px); } /* Position Right */
 
 
 /* Cup graphic (emoji or img) */
 .cup-graphic {
     font-size: 3.5em; /* Adjust emoji size */
     line-height: 1;
-    transition: transform 0.3s ease-out; /* For reveal lift */
-    /* Add background/image styles if not using emoji */
+    transition: transform 0.3s ease-out; /* For reveal lift animation */
+    user-select: none; /* Prevent text selection on emoji */
 }
 
-/* Labels */
+/* Labels (Initial and Revealed) */
 .cup-label {
     font-size: 0.8em;
     margin-top: 8px;
     font-weight: 500;
     color: var(--text-secondary);
     transition: opacity 0.3s ease-in-out 0.1s; /* Fade in slightly after reveal */
-    opacity: 0;
+    opacity: 0; /* Hidden by default */
     height: 1.2em; /* Reserve space */
-    pointer-events: none;
+    pointer-events: none; /* Labels aren't clickable */
+    user-select: none;
 }
 
-/* State Modifications */
+/* --- State Modifications --- */
+
+/* Show initial label during 'showing' phase */
 .cup.showing .cup-label-initial {
-    opacity: 1; /* Show initial label */
+    opacity: 1;
 }
 
 
 .cup.revealed .cup-graphic {
-    /* Example: Lift the cup slightly */
+    /* Example: Lift the cup graphic slightly */
      transform: translateY(-15px);
 }
 .cup.revealed .cup-label-revealed {
-    opacity: 1; /* Show revealed label */
-    color: var(--text-primary);
+    opacity: 1; /* Show the revealed label */
+    color: var(--text-primary); /* Make revealed label clearer */
 }
 
+/* Highlight the chosen cup */
 .cup.chosen {
-    border: 2px solid var(--user-bubble-bg); /* Highlight chosen cup */
+    border: 2px solid var(--user-bubble-bg); /* Use theme color */
     box-shadow: 0 0 10px var(--user-bubble-bg);
 }
 
-/* Disable clicks when not in selecting phase */
+/* Disable clicks/hover when not in selecting phase */
 .cup:not(.selecting) {
     cursor: default;
 }
-/* Only allow hover effect during selection */
-.cup.selecting:hover {
-   transform: scale(1.05) translateY(-5px) translateX(var(--tx, 0px)); /* Combine transforms */
-    /* Need to re-apply translateX based on order, which is tricky here */
-    /* Maybe simpler just scale: */
-    /* transform: scale(1.05); */
-}
-/* Re-apply correct transform on hover for each position */
+
 .cup.selecting.cup-order-0:hover { transform: scale(1.05) translateY(-5px) translateX(-110px); }
 .cup.selecting.cup-order-1:hover { transform: scale(1.05) translateY(-5px) translateX(0px); }
 .cup.selecting.cup-order-2:hover { transform: scale(1.05) translateY(-5px) translateX(110px); }
 
 
-/* Game Message */
+/* Game Message Area */
 .game-message {
     font-weight: bold;
     min-height: 2em; /* Reserve space for messages */
@@ -133,9 +130,15 @@
     margin-bottom: 10px;
     color: var(--text-primary);
     font-size: 0.95em;
+    transition: color 0.3s ease; /* Smooth color changes if needed */
+}
+/* Style for error/restart message? */
+.persona-cup-game-modal .restartingOnError .game-message {
+    color: var(--key-invalid-color); /* Use theme error color */
 }
 
-/* Close Button */
+
+/* Close/Cancel Button */
 .game-close-button {
     margin-top: 15px;
     padding: 8px 15px;
@@ -144,7 +147,7 @@
     border: 1px solid var(--border-color);
     border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 .game-close-button:hover:not(:disabled) {
     background-color: var(--button-secondary-hover-bg);
@@ -152,11 +155,4 @@
 .game-close-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-}
-
-
-/* Optional subtle shake animation */
-@keyframes shake-slight {
-  0%, 100% { transform: translateX(var(--tx, 0px)) rotate(0deg); } /* Use CSS var for base translate */
-  50% { transform: translateX(var(--tx, 0px)) rotate(1deg); }
 }
