@@ -1,4 +1,4 @@
-// src/ClearConfirmGame.tsx - FINAL COMPLETE Version
+// src/ClearConfirmGame.tsx - FINAL v6 - Simplified Animation Control
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './ClearConfirmGame.css'; // Make sure this CSS file exists and is styled
@@ -7,25 +7,18 @@ import './ClearConfirmGame.css'; // Make sure this CSS file exists and is styled
 interface ClearConfirmGameProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: () => void; // Function to call on successful stop
+    onConfirm: () => void;
 }
 
 // --- Game Constants ---
-const TARGET_ZONE_WIDTH_DEGREES = 30; // How wide the green target zone is
-const DEGREES_PER_SEC = 180; // Speed of rotation (degrees per second)
-const INDICATOR_OFFSET_DEGREES = -90; // Offset indicator start (e.g., -90 makes 0 degrees at the top)
-const SUCCESS_DELAY_MS = 1500; // Delay after success message before closing/confirming
+const TARGET_ZONE_WIDTH_DEGREES = 30;
+const DEGREES_PER_SEC = 180; // Speed
+const INDICATOR_OFFSET_DEGREES = -90;
+const SUCCESS_DELAY_MS = 1500;
 const RESTART_DELAY_MS = 1500; // Delay after failure message before closing
 
 // --- Helper Function ---
-// Checks if angle is within the target zone (handles wrap-around)
-function isAngleInZone(angle: number, start: number, end: number): boolean {
-    // Normalize angle and end relative to the start
-    const normalizedAngle = (angle - start + 360) % 360;
-    const normalizedEnd = (end - start + 360) % 360;
-    // Because the zone has a width, check if the normalized angle is within that width
-    return normalizedAngle <= normalizedEnd;
-}
+function isAngleInZone(angle: number, start: number, end: number): boolean { const normalizedAngle = (angle - start + 360) % 360; const normalizedEnd = (end - start + 360) % 360; return normalizedAngle <= normalizedEnd; }
 
 // --- The Component ---
 const ClearConfirmGame: React.FC<ClearConfirmGameProps> = ({ isOpen, onClose, onConfirm }) => {
@@ -38,133 +31,112 @@ const ClearConfirmGame: React.FC<ClearConfirmGameProps> = ({ isOpen, onClose, on
     const animationFrameRef = useRef<number | null>(null);
     const lastTimestampRef = useRef<number | null>(null);
     const speedRef = useRef(DEGREES_PER_SEC);
-    const isMountedRef = useRef<boolean>(false); // Use ref for mount status
+    const isMountedRef = useRef<boolean>(false);
 
     // --- Animation Loop ---
+    // Wrap animate in useCallback, but it doesn't need isMoving as dependency anymore
+    // as the loop continuation is checked internally and started/stopped externally.
     const animate = useCallback((timestamp: number) => {
-        if (!isMountedRef.current || !isMoving) {
-            // Stop loop if unmounted or explicitly stopped
-            lastTimestampRef.current = null;
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-            animationFrameRef.current = null;
-            return;
-        }
+        if (!isMountedRef.current) return; // Stop if unmounted
 
         if (!lastTimestampRef.current) {
-            lastTimestampRef.current = timestamp; // Initialize timestamp
-            animationFrameRef.current = requestAnimationFrame(animate); // Request next frame
+            lastTimestampRef.current = timestamp;
+            animationFrameRef.current = requestAnimationFrame(animate);
             return;
         }
 
         const deltaTime = (timestamp - lastTimestampRef.current) / 1000;
         lastTimestampRef.current = timestamp;
-        const safeDeltaTime = Math.min(deltaTime, 0.1); // Cap delta time
-
+        const safeDeltaTime = Math.min(deltaTime, 0.1);
         const deltaAngle = speedRef.current * safeDeltaTime;
 
-        // Use functional update for setCurrentAngle
         setCurrentAngle(prevAngle => (prevAngle + deltaAngle) % 360);
 
-        // Continue animation loop
+        // Request next frame implicitly assumes isMoving is true
+        // If isMoving becomes false elsewhere, the check at the start of this function
+        // isn't hit until the *next* frame request, so explicit cancel is needed.
         animationFrameRef.current = requestAnimationFrame(animate);
 
-    }, [isMoving]); // animate depends on isMoving
+    }, []); // No dependencies needed now
 
     // --- Cleanup function ---
     const cleanupAnimation = useCallback(() => {
-        console.log("cleanupAnimation: Cancelling frame and resetting timestamp.");
+        console.log("cleanupAnimation: Cancelling frame.");
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
             animationFrameRef.current = null;
         }
         lastTimestampRef.current = null;
-        setIsMoving(false); // Ensure stopped state
+        // We don't necessarily set isMoving false here, could be called on unmount
     }, []);
 
     // --- Game Setup ---
     const setupGame = useCallback(() => {
         if (!isMountedRef.current) return;
         console.log("setupGame: Starting setup.");
-        cleanupAnimation(); // Clear previous animation first
+        cleanupAnimation(); // Clear previous just in case
         setMessage("Press STOP in the Green Zone!");
         setStatus('playing');
         const randomStartAngle = Math.random() * 360;
         const endAngle = (randomStartAngle + TARGET_ZONE_WIDTH_DEGREES) % 360;
         setTargetZone({ start: randomStartAngle, end: endAngle });
         setCurrentAngle(Math.random() * 360);
-        setIsMoving(true); // This triggers the animation useEffect
-        console.log(`setupGame: Setup complete. Target: ${randomStartAngle.toFixed(1)}°-${endAngle.toFixed(1)}°. Start: ${currentAngle.toFixed(1)}°. isMoving: true.`);
-    }, [cleanupAnimation, currentAngle]); // Exclude currentAngle if random start is desired
 
-    // --- Effect to Start/Stop Animation based on isMoving ---
-    useEffect(() => {
-        if (isMoving) {
-            if (!animationFrameRef.current) {
-                console.log("useEffect[isMoving=true]: Starting animation loop.");
-                lastTimestampRef.current = null;
-                animationFrameRef.current = requestAnimationFrame(animate);
-            }
-        } else {
-             // Cleanup is handled by the effect below or handleStop
-        }
-        // Cleanup function for unmount or if isMoving/animate changes
-        return () => {
-             if (animationFrameRef.current) {
-                 cancelAnimationFrame(animationFrameRef.current);
-                 animationFrameRef.current = null;
-             }
-        };
-    }, [isMoving, animate]);
+        // Start animation directly
+        setIsMoving(true);
+        lastTimestampRef.current = null; // Reset timestamp before starting loop
+        animationFrameRef.current = requestAnimationFrame(animate);
+        console.log(`setupGame: Setup complete. Target: ${randomStartAngle.toFixed(1)}°-${endAngle.toFixed(1)}°. isMoving: true. Animation requested.`);
 
-    // --- Effect to Setup/Cleanup Game on Open/Close ---
+    }, [cleanupAnimation, animate]); // Depends on callbacks
+
+
+    // --- Main Effect for Setup/Cleanup on Open/Close ---
     useEffect(() => {
         if (isOpen) {
-            console.log("useEffect[isOpen=true]: Setting isMountedRef=true.");
             isMountedRef.current = true;
-            setupGame(); // Setup game on open
-            return () => { // Cleanup function runs ONLY when isOpen becomes false or unmount
-                console.log("useEffect [cleanup for isOpen=true]: Cleaning up.");
+            console.log("useEffect[isOpen=true]: Component is visible. Setting up game.");
+            setupGame(); // Setup game when modal opens
+
+            // Return cleanup function for when modal closes or component unmounts
+            return () => {
+                console.log("useEffect[cleanup for isOpen=true]: Cleaning up.");
                 isMountedRef.current = false;
-                cleanupAnimation();
-                setMessage(null); setStatus('playing'); setTargetZone({ start: 0, end: 0 }); // Reset state
+                cleanupAnimation(); // Ensure animation stops
+                // Reset other relevant state if needed when closing
+                setMessage(null);
+                setStatus('playing');
             };
         } else {
-             isMountedRef.current = false; // Ensure flag is false if closed externally
+            isMountedRef.current = false; // Ensure flag is false if closed externally
         }
-    }, [isOpen, setupGame, cleanupAnimation]); // Depend on stable callbacks
+    }, [isOpen, setupGame, cleanupAnimation]); // Depend on isOpen and stable callbacks
 
-
-    // --- Handle Stop ---
+    // --- Handle Stop Button Click ---
     const handleStop = () => {
-        if (!isMoving) return;
-        setIsMoving(false); // Stop the animation FIRST
+        if (!isMoving) return; // Prevent multiple clicks
+        console.log("handleStop: Stopping animation.");
+        setIsMoving(false); // Set state first
+        cleanupAnimation(); // Explicitly cancel animation frame
+
         const stoppedAngle = currentAngle;
         console.log(`Stopped at: ${stoppedAngle.toFixed(1)}°`);
 
         if (isAngleInZone(stoppedAngle, targetZone.start, targetZone.end)) {
-            // SUCCESS
             console.log("Success!");
             setStatus('success');
             setMessage('Success! Chat history will be cleared.');
-            setTimeout(() => {
-                if (isMountedRef.current) { // Check if still mounted before calling callbacks
-                    onConfirm();
-                    onClose();
-                }
-            }, SUCCESS_DELAY_MS); // Use separate constant for success delay
+            setTimeout(() => { if (isMountedRef.current) { onConfirm(); onClose(); } }, SUCCESS_DELAY_MS);
         } else {
-            // FAILURE
             console.log("Failed!");
             setStatus('failed');
             setMessage('Missed! Please try again.');
-            setTimeout(() => {
-                 if (isMountedRef.current) onClose(); // Close modal after delay
-            }, RESTART_DELAY_MS); // *** CORRECTED CONSTANT HERE ***
+            setTimeout(() => { if (isMountedRef.current) onClose(); }, RESTART_DELAY_MS);
         }
     };
 
-    // --- Generate Conic Gradient Style ---
-    const getConicGradientStyle = () => { const { start, end } = targetZone; const redColor = 'var(--confirm-game-red, #dc3545)'; const greenColor = 'var(--confirm-game-green, #198754)'; if (start <= end) { return `conic-gradient(${redColor} 0deg ${start}deg, ${greenColor} ${start}deg ${end}deg, ${redColor} ${end}deg 360deg)`; } else { return `conic-gradient(${greenColor} 0deg ${end}deg, ${redColor} ${end}deg ${start}deg, ${greenColor} ${start}deg 360deg)`; } };
+    // --- Generate Conic Gradient Style --- (Keep As Is)
+    const getConicGradientStyle = () => { /* ... */ const { start, end } = targetZone; const redColor = 'var(--confirm-game-red, #dc3545)'; const greenColor = 'var(--confirm-game-green, #198754)'; if (start <= end) { return `conic-gradient(${redColor} 0deg ${start}deg, ${greenColor} ${start}deg ${end}deg, ${redColor} ${end}deg 360deg)`; } else { return `conic-gradient(${greenColor} 0deg ${end}deg, ${redColor} ${end}deg ${start}deg, ${greenColor} ${start}deg 360deg)`; } };
 
     // Render null if not open
     if (!isOpen) return null;

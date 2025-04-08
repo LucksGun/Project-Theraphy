@@ -40,13 +40,14 @@
 }
 
 .timing-circle {
-    width: 100%;
-    height: 100%;
+    width: 100%; /* Or fixed size */
+    height: 100%; /* Or fixed size */
     border-radius: 50%;
-    border: 3px solid var(--border-color); /* Optional border */
+    border: 3px solid var(--border-color);
     position: relative;
-    /* Background is set dynamically via inline style (conic-gradient) */
-    background-color: var(--button-secondary-bg); /* Fallback background */
+    /* background set by inline style */
+    background-color: var(--button-secondary-bg); /* Fallback */
+    /* MAKE SURE there are no 'animation' or 'transform' rules here */
 }
 
 /* Rotating Arm/Indicator */
