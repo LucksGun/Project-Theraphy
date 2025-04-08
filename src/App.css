@@ -358,6 +358,33 @@ input:checked + .slider:before { transform: translateX(26px); }
     pointer-events: none; /* Container doesn't block clicks */
     z-index: 4;
 }
+/* --- Settings Menu Styles Additions --- */
+
+.settings-option .current-persona-display {
+  font-size: 0.95em; /* Adjust size as needed */
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-top: 4px; /* Space below label */
+  margin-bottom: 8px; /* Space above button */
+  padding: 6px 10px; /* Optional padding */
+  background-color: var(--button-secondary-bg); /* Subtle background */
+  border-radius: 4px;
+  text-align: center; /* Center the text */
+  border: 1px solid var(--settings-select-border); /* Match input border */
+}
+
+
+/* Style for disabled persona change button */
+.settings-option .persona-change-button:disabled {
+    background-color: var(--button-disabled-bg) !important; /* Ensure override */
+    color: var(--button-disabled-text) !important;
+    border-color: var(--button-disabled-bg) !important;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+.settings-option .persona-change-button:disabled:hover {
+     background-color: var(--button-disabled-bg) !important; /* Prevent hover effect */
+}
 .intro-accept-button {
     padding: 10px 20px; border: none; background-color: var(--beta-button-bg); color: var(--beta-button-text); border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500;
     /* Add transitions for smooth movement (top/left) and appearance */

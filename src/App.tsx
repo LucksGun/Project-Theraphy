@@ -153,7 +153,7 @@ function App() {
             {showBetaNotice && (
                  <div className="beta-notice-overlay"><div className="beta-notice-modal"><h2>⚠️ Beta Notice</h2><p>Welcome! This is a beta test version. Features may change or contain bugs.</p><p>Your feedback is valuable!</p><button onClick={handleAcceptBeta} className="beta-accept-button">✔️ Accept & Continue</button></div></div>
             )}
-
+    
             {/* Introduction Modal */}
             {showIntroduction && !showBetaNotice && (
                 <div className="intro-notice-overlay">
@@ -170,7 +170,7 @@ function App() {
                     </div>
                  </div>
             )}
-
+    
             {/* Settings Menu Modal */}
             {isSettingsOpen && (
                  <div className="settings-menu" role="dialog" aria-labelledby="settings-title">
@@ -179,26 +179,48 @@ function App() {
                          {/* Column 1 */}
                          <div className="settings-column">
                             <div className="settings-option"> <label htmlFor="access-key-input">Access Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/> <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid?<span>✅ Valid Key ({keyStatus.username || 'User'})</span>:keyStatus.error?<span>❌ {keyStatus.error}</span>:<span>Enter key for restricted features.</span>}</div> </div>
-                            {/* Persona Game Button */}
+    
+                            {/* *** MODIFIED PERSONA SELECTION - Requires Key to Change *** */}
                             <div className="settings-option">
-    <label>Persona:</label>
-    <button
-        onClick={() => setIsCupGameVisible(true)}
-        className="settings-action-button"
-        // *** REVERT: Disable based on filtered personas/key status ***
-        disabled={!canPlayCupGame}
-        title={!canPlayCupGame ? "Need valid key for more personas or game requires 3+" : "Choose persona via game"}
-    >
-        🎲 {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.emoji} {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label} (Change...)
-    </button>
-    {/* *** REVERT: Show key requirement message again *** */}
-    {!canPlayCupGame && keyStatus.isValid !== true && (
-         <p className="settings-helper-text">Enter valid key to unlock more personas & play the game.</p>
-    )}
-     {!canPlayCupGame && keyStatus.isValid === true && (
-         <p className="settings-helper-text">Currently selected: {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label}. Need 3+ personas defined for game.</p>
-    )}
-</div>
+                                <label>Persona:</label>
+
+                                {/* Display Current Persona */}
+                                <p className="current-persona-display">
+                                     {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.emoji} {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label || selectedPersona}
+                                </p>
+
+                                {/* Button to Change Persona (triggers game) */}
+                                <button
+                                    onClick={() => setIsCupGameVisible(true)}
+                                    className="settings-action-button persona-change-button"
+                                    // *** CORRECTED: Disable if key invalid OR not enough personas for game ***
+                                    disabled={keyStatus.isValid !== true || !canPlayCupGame}
+                                    // Update title to reflect both conditions
+                                    title={
+                                        keyStatus.isValid !== true
+                                            ? "Requires a valid Access Key to change persona"
+                                            : !canPlayCupGame
+                                            ? "Not enough personas defined (need 3+) for game"
+                                            : "Change Persona (Opens Game)"
+                                    }
+                                >
+                                   Change Persona
+                                </button>
+
+                                {/* Helper text shown for different disabled reasons */}
+                                {keyStatus.isValid !== true && ( // Show if key is the issue
+                                    <p className="settings-helper-text">
+                                        Enter a valid Access Key to change personas.
+                                    </p>
+                                )}
+                                {keyStatus.isValid === true && !canPlayCupGame && ( // Show if key is okay BUT not enough personas
+                                    <p className="settings-helper-text">
+                                        Persona changing game requires at least 3 personas defined in code.
+                                    </p>
+                                )}
+                             </div>
+                            {/* *** END MODIFIED PERSONA SELECTION *** */}
+    
                             <div className="settings-option"> <label htmlFor="model-select">AI Model:</label> <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select" disabled={ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted&&keyStatus.isValid!==true}>{ALL_AVAILABLE_MODELS_FRONTEND.map((m)=>{const isDisabled=m.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={m.value} value={m.value} disabled={isDisabled} style={style}>{m.label}{m.restricted?' (Key Req.)':''}</option>);})}</select> {keyStatus.isValid!==true&&(RESTRICTED_PERSONAS_VALUES.length>0||RESTRICTED_MODELS_VALUES.length>0)&&(<p className="settings-helper-text">Enter valid key to unlock restricted options.</p>)} </div>
                          </div>
                          {/* Column 2 */}
@@ -213,30 +235,30 @@ function App() {
                      <button onClick={toggleSettings} className="close-settings-button">Close Settings</button>
                  </div>
             )}
-
+    
             {/* Staff Login Modal */}
             {isStaffLoginModalVisible && (
                  <div className="staff-panel-overlay"> <div className="staff-panel-modal" style={{ maxWidth: '400px' }}> <h3 id="staff-login-title">Staff Login</h3> <button onClick={toggleStaffLoginModal} className="close-staff-panel-button" title="Close Login">×</button> <form onSubmit={(e)=>{e.preventDefault(); handleStaffLogin();}} className="staff-login-section"> <div className="settings-option"> <label htmlFor="staff-key-modal-input">Staff Key:</label> <input type="password" id="staff-key-modal-input" className="settings-input" value={enteredStaffKey} onChange={handleStaffKeyChange} placeholder="Enter staff access key" disabled={isStaffLoginLoading} autoFocus required/> </div> <button type="submit" className="staff-login-button" disabled={isStaffLoginLoading || !enteredStaffKey.trim()}> {isStaffLoginLoading ? 'Verifying...' : 'Login & Enter Admin'} </button> {staffLoginError && <p className="staff-error">{staffLoginError}</p>} <p className="staff-security-warning">Enter key to access admin page.</p> </form> </div> </div>
             )}
-
+    
             {/* Feedback Modal */}
             {isFeedbackModalVisible && (
                  <div className="feedback-modal-overlay"> <div className="feedback-modal"> <h3 id="feedback-title">Submit Feedback</h3> <button onClick={toggleFeedbackModal} className="close-feedback-button" title="Close Feedback">×</button> {feedbackSuccess && <p className="feedback-message success">{feedbackSuccess}</p>} {feedbackError && <p className="feedback-message error">{feedbackError}</p>} {!feedbackSuccess && ( <form onSubmit={handleFeedbackSubmit} className="feedback-form"> <div className="feedback-field"> <label htmlFor="feedback-email">Email (Optional):</label> <input type="email" id="feedback-email" className="settings-input" value={feedbackEmail} onChange={(e) => setFeedbackEmail(e.target.value)} placeholder="your.email@example.com" maxLength={250} disabled={isSubmittingFeedback} /> </div> <div className="feedback-field"> <label>Rating:<span style={{color:'red'}}>*</span></label> <div className="star-rating"> {[1, 2, 3, 4, 5].map(star => ( <button key={star} type="button" aria-pressed={star === feedbackRating} className={`star-button ${star <= feedbackRating ? 'selected' : ''}`} onClick={() => setFeedbackRating(star)} disabled={isSubmittingFeedback} aria-label={`Rate ${star}/5`}>★</button> ))} </div> </div> <div className="feedback-field"> <label htmlFor="feedback-comment">Comment:<span style={{color:'red'}}>*</span></label> <textarea id="feedback-comment" className="settings-input" rows={5} value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)} placeholder="Tell us about your experience, suggestions, or any bugs..." maxLength={2000} required disabled={isSubmittingFeedback} /> </div> <div className="feedback-actions"> <button type="button" onClick={toggleFeedbackModal} className="cancel-feedback-button" disabled={isSubmittingFeedback}>Cancel</button> <button type="submit" className="submit-feedback-button" disabled={isSubmittingFeedback || feedbackRating === 0 || !feedbackComment.trim()}> {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'} </button> </div> </form> )} </div> </div>
             )}
-
+    
              {/* Persona Cup Game Modal */}
-             {isCupGameVisible && (
-     <PersonaCupGame
-         isOpen={isCupGameVisible}
-         onClose={() => setIsCupGameVisible(false)}
-         onPersonaSelected={handlePersonaSelectedFromGame}
-         keyStatus={keyStatus} // Passed correctly
-         currentSelectedModel={selectedModel}
-         allPersonas={AVAILABLE_PERSONAS} // Pass the full list
-         restrictedModels={RESTRICTED_MODELS_VALUES}
-     />
- )}
-
+            {isCupGameVisible && (
+                <PersonaCupGame
+                    isOpen={isCupGameVisible}
+                    onClose={() => setIsCupGameVisible(false)}
+                    onPersonaSelected={handlePersonaSelectedFromGame}
+                    keyStatus={keyStatus}
+                    currentSelectedModel={selectedModel}
+                    allPersonas={AVAILABLE_PERSONAS}
+                    restrictedModels={RESTRICTED_MODELS_VALUES}
+                />
+            )}
+    
             {/* Main Routing and Layout - Render only if modals are not showing */}
             {!showBetaNotice && !showIntroduction && (
                 <Routes>
@@ -264,7 +286,7 @@ function App() {
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
              )}
-
+    
         </div> // End div.App
     );
 }
