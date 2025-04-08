@@ -1,0 +1,126 @@
+/* src/ModelBuilderGame.css */
+
+.model-builder-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1100; padding: 15px; box-sizing: border-box;
+}
+
+.model-builder-modal {
+    background-color: var(--container-bg);
+    color: var(--text-primary);
+    padding: 20px 25px 25px 25px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    border: 1px solid var(--border-color);
+    width: 100%;
+    max-width: 550px; /* Wider for columns */
+    text-align: center;
+}
+
+.model-builder-modal h4 {
+    margin-top: 0; margin-bottom: 10px; font-size: 1.2em;
+}
+
+.model-builder-modal .game-message {
+    min-height: 2em; margin-bottom: 15px; font-weight: 500; font-size: 0.95em;
+    transition: color 0.3s ease;
+}
+.model-builder-modal .game-message.error { color: var(--key-invalid-color); }
+.model-builder-modal .game-message.success { color: var(--key-valid-color); }
+
+.model-parts-container {
+    display: flex;
+    justify-content: space-around; /* Space out columns */
+    margin-bottom: 25px;
+    gap: 15px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.model-part-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.model-part-column h5 {
+    margin: 0 0 8px 0;
+    font-size: 0.9em;
+    color: var(--settings-label-text);
+    text-transform: uppercase;
+}
+
+.part-button {
+    padding: 6px 12px;
+    border: 1px solid var(--settings-select-border);
+    border-radius: 4px;
+    background-color: var(--settings-select-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    font-size: 0.9em;
+    width: 150px; /* Adjust width */
+    text-align: center;
+}
+
+.part-button:hover {
+    border-color: var(--input-focus-border-color);
+    background-color: var(--button-secondary-hover-bg);
+}
+
+.part-button.selected {
+    background-color: var(--user-bubble-bg);
+    color: var(--beta-button-text); /* White text */
+    border-color: var(--user-bubble-bg);
+    font-weight: 600;
+}
+.part-button.selected:hover {
+     background-color: var(--button-primary-hover-bg);
+     border-color: var(--button-primary-hover-bg);
+}
+
+
+.model-builder-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.build-button {
+    padding: 10px 20px;
+    background-color: var(--beta-button-bg); /* Use primary button style */
+    color: var(--beta-button-text);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+.build-button:hover:not(:disabled) {
+    background-color: var(--beta-button-hover-bg);
+}
+.build-button:disabled {
+    background-color: var(--button-disabled-bg);
+    color: var(--button-disabled-text);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.model-builder-actions .cancel-button { /* Reuse cancel style if needed */
+     padding: 10px 15px;
+    font-size: 1em;
+    background-color: var(--button-secondary-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.model-builder-actions .cancel-button:hover {
+     background-color: var(--button-secondary-hover-bg);
+}
