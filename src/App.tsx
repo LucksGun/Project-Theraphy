@@ -1,6 +1,6 @@
 // src/App.tsx - FINAL COMPLETE Version (All Features & Fixes Applied)
 
-import React, { useState, useEffect, ChangeEvent, useRef, useCallback } from 'react';
+import React, { useState, useEffect, ChangeEvent, useRef } from 'react';
 import ReactGA from 'react-ga4';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
@@ -127,7 +127,6 @@ function App() {
     const toggleFeedbackModal = () => { const closing = isFeedbackModalVisible; setIsFeedbackModalVisible(prev => !prev); if (closing) { setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); setFeedbackError(null); setFeedbackSuccess(null); setIsSubmittingFeedback(false); } if (!closing) { setIsSettingsOpen(false); setIsStaffLoginModalVisible(false); setIsClearConfirmGameVisible(false); setIsPlinkoVisible(false); } };
     // *** Added onSubmit={handleFeedbackSubmit} to form tag in JSX below ***
     const handleFeedbackSubmit = async (e: React.FormEvent) => { e.preventDefault(); if (feedbackRating === 0) { setFeedbackError("Please select a star rating."); return; } if (!feedbackComment.trim()) { setFeedbackError("Please provide a comment."); return; } if (feedbackComment.length > 2000) { setFeedbackError("Comment is too long (max 2000 characters)."); return; } setIsSubmittingFeedback(true); setFeedbackError(null); setFeedbackSuccess(null); const payload: ApiRequestBody = { action: 'submitFeedback', email: feedbackEmail.trim() || null, rating: feedbackRating, comment: feedbackComment.trim() }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON response' })); if (!res.ok || !data.success) { throw new Error(data?.error || `Submit failed: ${res.statusText}`); } setFeedbackSuccess("Thank you! Your feedback has been submitted."); setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { ReactGA.event({ category: "Feedback", action: "Submit", label: `Rating: ${feedbackRating}` }); } } catch (err) { setFeedbackError(err instanceof Error ? err.message : "Failed to submit feedback."); } finally { setIsSubmittingFeedback(false); } };
-    const toggleTheme = useCallback(() => { setCurrentTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light')); }, []);
     const handlePersonaSelectedFromGame = (persona: Persona) => { setSelectedPersona(persona); setIsCupGameVisible(false); };
     const handlePlinkoThemeChange = (newTheme: AppTheme) => { console.log(`Plinko decided theme: ${newTheme}. Current: ${currentTheme}`); if (newTheme !== currentTheme) { setCurrentTheme(newTheme); } setIsPlinkoVisible(false); };
 
@@ -161,7 +160,21 @@ function App() {
                 {/* Column 2 */}
                 <div className="settings-column">
                     <div className="settings-option"> <label htmlFor="stt-lang-select">Speech Input Lang:</label> <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"><option value="en-US">English (US)</option><option value="th-TH">ไทย (Thai)</option><option value="es-ES">Español (Spain)</option><option value="fr-FR">Français (France)</option></select> </div>
-                    <div className="settings-option"> <label>Appearance:</label> <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}><button onClick={toggleTheme} id="theme-toggle" className="settings-action-button theme-toggle-button">{currentTheme === 'light' ? '🌙 Force Dark Mode' : '☀️ Force Light Mode'}</button><button onClick={() => setIsPlinkoVisible(true)} className="settings-action-button">❓ Try Random Theme</button></div></div>
+                    <div className="settings-option">
+    <label>Appearance:</label>
+    {/* Single button that shows target theme emoji and launches game */}
+    <button
+        onClick={() => setIsPlinkoVisible(true)} // Open the plinko game modal
+        className="settings-action-button theme-plinko-button" // Use a distinct class if needed
+        title="Try to randomly change theme"
+    >
+        {/* Show emoji for the OPPOSITE theme */}
+        {currentTheme === 'light' ? '🌙' : '☀️'} Change Theme
+    </button>
+    <p className="settings-helper-text">
+        Current theme: {currentTheme === 'light' ? 'Light' : 'Dark'}. Play the game to try and switch!
+    </p>
+</div>
                     <div className="settings-option"> <label>Chat Actions:</label> <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}><button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button><button onClick={() => setIsClearConfirmGameVisible(true)} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat History</button></div> </div>
                     <div className="settings-option"> <label>Admin Area:</label> <button onClick={toggleStaffLoginModal} className="settings-action-button staff-area-button">🔑 Staff Login</button> </div>
                 </div>
