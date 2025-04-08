@@ -1,0 +1,135 @@
+/* src/ThemePlinkoGame.css */
+
+.plinko-game-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1100; padding: 15px; box-sizing: border-box;
+    backdrop-filter: blur(2px);
+}
+
+.plinko-game-modal {
+    background-color: var(--container-bg);
+    color: var(--text-primary);
+    padding: 20px 25px 25px 25px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    text-align: center;
+    border: 1px solid var(--border-color);
+    width: 90%;
+    max-width: 350px; /* Adjust size for board aspect ratio */
+}
+
+.plinko-game-modal h4 {
+    margin-top: 0; margin-bottom: 15px; font-size: 1.2em;
+}
+
+.plinko-board {
+    width: 100%;
+    /* Height determined by aspect ratio of background image or content */
+    aspect-ratio: 2 / 1.5; /* Adjust this ratio to match your board image */
+    background-color: #f0f0f0; /* Fallback color */
+    /* Use your Plinko board image */
+    background-image: url('/path/to/your/plinko-board-image.png'); /* <<< CHANGE THIS PATH */
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    position: relative; /* For positioning ball and labels */
+    margin: 0 auto 15px auto;
+    border: 1px solid var(--border-color);
+    overflow: hidden; /* Hide ball if animation goes slightly out */
+}
+
+:root[data-theme='dark'] .plinko-board {
+    background-color: #333; /* Darker fallback */
+    /* Optionally use a different background image for dark mode */
+    /* background-image: url('/path/to/your/plinko-board-dark.png'); */
+}
+
+.plinko-ball {
+    width: 15px; /* Ball size */
+    height: 15px;
+    background-color: #ff4500; /* OrangeRed ball */
+    border-radius: 50%;
+    position: absolute;
+    top: 5%; /* Start near top entrance */
+    left: 50%;
+    transform: translateX(-50%); /* Center horizontally */
+    /* Animation will be applied here */
+    animation-duration: 3s; /* Adjust duration */
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); /* Adjust easing */
+    animation-fill-mode: forwards; /* Stay at end position */
+    animation-play-state: paused; /* Initially paused */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+.plinko-ball.dropping {
+    animation-play-state: running; /* Start animation */
+}
+
+.plinko-label-light,
+.plinko-label-dark {
+    position: absolute;
+    bottom: 5%; /* Position near bottom exits */
+    font-size: 0.8em;
+    font-weight: bold;
+    color: var(--text-secondary);
+}
+.plinko-label-light { left: 20%; transform: translateX(-50%); } /* Adjust percentages based on image */
+.plinko-label-dark { right: 20%; transform: translateX(50%); } /* Adjust percentages based on image */
+
+
+.plinko-message {
+    min-height: 1.5em; margin-top: 10px; margin-bottom: 15px;
+    font-weight: 500; font-size: 0.9em;
+}
+
+.plinko-button {
+    padding: 8px 15px; font-size: 0.9em; background-color: var(--button-secondary-bg);
+    color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 5px;
+    cursor: pointer; transition: background-color 0.2s ease; margin: 0 5px;
+}
+.plinko-button.cancel:hover { background-color: var(--button-secondary-hover-bg); }
+.plinko-button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+
+/* --- KEYFRAMES for Plinko Drop --- */
+/* Define multiple paths ending in light or dark */
+/* These are simplified examples - adjust X/Y based on your board image */
+
+/* Example path ending Light */
+@keyframes plinko-drop-light-1 {
+    0% { top: 5%; left: 50%; transform: translateX(-50%); }
+    20% { top: 25%; transform: translateX(-60%); } /* Bounce left */
+    40% { top: 45%; transform: translateX(-40%); } /* Bounce right */
+    60% { top: 65%; transform: translateX(-55%); } /* Bounce left */
+    80% { top: 85%; transform: translateX(-35%); } /* Bounce right */
+    100% { top: 90%; left: 20%; transform: translateX(-50%); } /* End in Light zone */
+}
+@keyframes plinko-drop-light-2 {
+    0% { top: 5%; left: 50%; transform: translateX(-50%); }
+    20% { top: 25%; transform: translateX(-40%); }
+    40% { top: 45%; transform: translateX(-60%); }
+    60% { top: 65%; transform: translateX(-45%); }
+    80% { top: 85%; transform: translateX(-25%); }
+    100% { top: 90%; left: 20%; transform: translateX(-50%); } /* End in Light zone */
+}
+
+/* Example path ending Dark */
+@keyframes plinko-drop-dark-1 {
+    0% { top: 5%; left: 50%; transform: translateX(-50%); }
+    20% { top: 25%; transform: translateX(-40%); } /* Bounce right */
+    40% { top: 45%; transform: translateX(-60%); } /* Bounce left */
+    60% { top: 65%; transform: translateX(-45%); } /* Bounce right */
+    80% { top: 85%; transform: translateX(-65%); } /* Bounce left */
+    100% { top: 90%; left: 80%; transform: translateX(-50%); } /* End in Dark zone */
+}
+@keyframes plinko-drop-dark-2 {
+    0% { top: 5%; left: 50%; transform: translateX(-50%); }
+    20% { top: 25%; transform: translateX(-60%); }
+    40% { top: 45%; transform: translateX(-40%); }
+    60% { top: 65%; transform: translateX(-55%); }
+    80% { top: 85%; transform: translateX(-75%); }
+    100% { top: 90%; left: 80%; transform: translateX(-50%); } /* End in Dark zone */
+}
+
+/* Add more keyframes for more varied paths */
