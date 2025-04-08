@@ -347,8 +347,6 @@ html, body, #root {
 /* --- Action Menu Styles --- */
 
 
-
-/* The popup menu container */
 .action-menu-popup {
   position: absolute;
   bottom: calc(100% + 8px); /* Position above the input row with gap */
