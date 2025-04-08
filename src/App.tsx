@@ -1,4 +1,4 @@
-// src/App.tsx - COMPLETE Version with Introduction Modal & Runaway Button
+// src/App.tsx - FINAL COMPLETE Version with Persona Cup Game Integration
 
 import React, { useState, useEffect, ChangeEvent, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
@@ -6,6 +6,7 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-
 import './App.css'; // Ensure your CSS file is correctly imported
 import ChatbotPage from './ChatbotPage'; // Ensure ChatbotPage component is correctly imported
 import AdminPage from './AdminPage'; // Ensure AdminPage component is correctly imported
+import PersonaCupGame from './PersonaCupGame'; // *** Import the new component ***
 
 // --- GA Initialization ---
 const GA_MEASUREMENT_ID = "G-JX58QMMKZY"; // Replace with your actual ID if different
@@ -16,7 +17,8 @@ export interface Message { id: number; text: string; sender: 'user' | 'bot' | 'l
 export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.0-flash-lite' | 'gemini-2.5-pro-exp-03-25' | 'gemini-2.0-flash-thinking-exp-01-21' | 'gemini-2.0-flash-exp-image-generation';
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR';
 export type Persona = 'normal' | 'therapist' | 'university_master';
-interface KeyValidationStatus { isValid: boolean | null; username: string | null; loading: boolean; error?: string | null; }
+// *** Added export here ***
+export interface KeyValidationStatus { isValid: boolean | null; username: string | null; loading: boolean; error?: string | null; }
 export interface UserKeyInfo { key: string; username: string | null; status: 'active' | 'inactive'; created_at: string; }
 export interface FeedbackItem { id: number; email: string | null; rating: number; comment: string; submitted_at: string; is_important: number; }
 export type PersonaInstructionMap = { [key in Persona]?: string };
@@ -30,8 +32,7 @@ const STT_LANG_STORAGE_KEY = 'selectedSttLang';
 const ACCESS_KEY_STORAGE_KEY = 'userAccessKey';
 const PERSONA_STORAGE_KEY = 'selectedPersona';
 const THEME_STORAGE_KEY = 'selectedAppTheme';
-// *** ADD KEY FOR INTRODUCTION ***
-const INTRODUCTION_SEEN_KEY = 'introductionSeenV1'; // Versioning allows updates
+const INTRODUCTION_SEEN_KEY = 'introductionSeenV1';
 
 // --- Configurations (Exported) ---
 export interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
@@ -75,40 +76,14 @@ const initialAcknowledgementState = introductionSections.reduce((acc, section) =
 // --- App Component ---
 function App() {
     // --- State ---
-    const [messages, setMessages] = useState<Message[]>(() => {
-        // *** Restored existing logic ***
-        const stored = localStorage.getItem(CHAT_STORAGE_KEY);
-        let initial: Message[] = [];
-        try {
-            initial = stored && stored !== '[]' ? JSON.parse(stored) : [];
-            if (!Array.isArray(initial)) throw new Error("Bad format");
-            initial = initial.filter(m => m.sender !== 'loading');
-        } catch (e) {
-            console.error("Bad stored msgs:", e);
-            localStorage.removeItem(CHAT_STORAGE_KEY);
-            initial = [];
-        }
-        if (initial.length === 0) {
-            const ts = Date.now();
-            return [{ id: ts, text: "Welcome!", sender: 'bot', timestamp: ts }];
-        } else {
-            return initial;
-        }
-    });
+    const [messages, setMessages] = useState<Message[]>(() => { const stored = localStorage.getItem(CHAT_STORAGE_KEY); let initial: Message[] = []; try { initial = stored && stored !== '[]' ? JSON.parse(stored) : []; if (!Array.isArray(initial)) throw new Error("Bad format"); initial = initial.filter(m => m.sender !== 'loading'); } catch (e) { console.error("Bad stored msgs:", e); localStorage.removeItem(CHAT_STORAGE_KEY); initial = []; } if (initial.length === 0) { const ts = Date.now(); return [{ id: ts, text: "Welcome!", sender: 'bot', timestamp: ts }]; } else { return initial; } });
     const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
     const [showIntroduction, setShowIntroduction] = useState<boolean>(false);
     const [introSectionsAcknowledged, setIntroSectionsAcknowledged] = useState<{ [key: string]: boolean }>(initialAcknowledgementState);
-    const [continueButtonStyle, setContinueButtonStyle] = useState<React.CSSProperties>({});
+    const [continueButtonStyle, setContinueButtonStyle] = useState<React.CSSProperties>({}); // For runaway button
     const [enteredKey, setEnteredKey] = useState<string>(() => localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '');
     const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash');
-    const [sttLang, setSttLang] = useState<SpeechLanguage>(() => {
-        // *** Restored existing logic ***
-        const stored = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null;
-        if (stored && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(stored)) {
-            return stored;
-        }
-        return 'en-US';
-    });
+    const [sttLang, setSttLang] = useState<SpeechLanguage>(() => { const stored = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null; if (stored && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(stored)) { return stored; } return 'en-US'; });
     const [selectedPersona, setSelectedPersona] = useState<Persona>(DEFAULT_UNRESTRICTED_PERSONA);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const [keyStatus, setKeyStatus] = useState<KeyValidationStatus>({ isValid: null, username: null, loading: false, error: null });
@@ -125,226 +100,59 @@ function App() {
     const [feedbackError, setFeedbackError] = useState<string | null>(null);
     const [feedbackSuccess, setFeedbackSuccess] = useState<string | null>(null);
     const [currentTheme, setCurrentTheme] = useState<AppTheme>(getInitialTheme);
+    // *** State for Persona Cup Game Modal ***
+    const [isCupGameVisible, setIsCupGameVisible] = useState<boolean>(false);
 
     const navigate = useNavigate();
 
     // --- Calculate derived state ---
     const allIntroSectionsAcknowledged = Object.values(introSectionsAcknowledged).every(status => status === true);
+    // Calculate available personas for game button enable/disable state
+    const availablePersonasForGame = AVAILABLE_PERSONAS.filter(p => !p.restricted || keyStatus.isValid === true);
+    const canPlayCupGame = availablePersonasForGame.length >= 3; // Check if enough for the game
 
     // --- Effects ---
     // Debounced Key Validation Effect
-    useEffect(() => {
-        // *** Restored existing logic ***
-        const keyTrimmed = enteredKey.trim();
-        if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
-        const currentModel = selectedModel;
-        const currentPersona = selectedPersona;
-        if (!keyTrimmed) {
-            setKeyStatus({ isValid: null, username: null, loading: false, error: null });
-            if (RESTRICTED_MODELS_VALUES.includes(currentModel)) setSelectedModel('gemini-2.0-flash');
-            if (RESTRICTED_PERSONAS_VALUES.includes(currentPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
-            return;
-        }
-        setKeyStatus(p => ({ ...p, loading: true, isValid: null, error: null, username: null }));
-        debounceTimeoutRef.current = setTimeout(async () => {
-            try {
-                const r = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'validateKey', accessKey: keyTrimmed }) });
-                const d = await r.json().catch(() => ({ error: `Invalid JSON` }));
-                if (!r.ok) throw new Error(d?.error || `Validation failed: ${r.status}`);
-                if (d.isValid) {
-                    setKeyStatus({ isValid: true, username: d.username || 'User', loading: false, error: null });
-                    const sM = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null;
-                    if (sM && ALL_MODEL_VALUES.includes(sM)) setSelectedModel(sM); else setSelectedModel(currentModel);
-                    const sP = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null;
-                    if (sP && ALL_PERSONAS.includes(sP)) setSelectedPersona(sP); else setSelectedPersona(currentPersona);
-                } else {
-                    setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key.' });
-                    if (RESTRICTED_MODELS_VALUES.includes(currentModel)) setSelectedModel('gemini-2.0-flash');
-                    if (RESTRICTED_PERSONAS_VALUES.includes(currentPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
-                }
-            } catch (e) {
-                const msg = e instanceof Error ? e.message : "Validation network error.";
-                setKeyStatus({ isValid: false, username: null, loading: false, error: msg });
-                if (RESTRICTED_MODELS_VALUES.includes(currentModel)) setSelectedModel('gemini-2.0-flash');
-                if (RESTRICTED_PERSONAS_VALUES.includes(currentPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
-            }
-        }, VALIDATION_DEBOUNCE_MS);
-        return () => { if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current); };
-    }, [enteredKey, selectedModel, selectedPersona]);
-
-    // Initial Load Effect (Modified for Sequential Modals)
-    useEffect(() => {
-        const accepted = localStorage.getItem(BETA_ACCEPTED_KEY);
-        if (accepted !== 'true') {
-            setShowBetaNotice(true);
-        } else {
-            const introSeen = localStorage.getItem(INTRODUCTION_SEEN_KEY);
-            if (introSeen !== 'true') {
-                setShowIntroduction(true);
-                setIntroSectionsAcknowledged(initialAcknowledgementState);
-            }
-        }
-        const initialKey = localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '';
-        const storedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null;
-        const storedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null;
-        let initialModel: GeminiModel = 'gemini-2.0-flash';
-        if (storedModel && ALL_MODEL_VALUES.includes(storedModel)) initialModel = storedModel;
-        setSelectedModel(initialModel);
-        let initialPersona: Persona = DEFAULT_UNRESTRICTED_PERSONA;
-        if (storedPersona && ALL_PERSONAS.includes(storedPersona)) initialPersona = storedPersona;
-        setSelectedPersona(initialPersona);
-        if (initialKey.trim()) {
-            const validateInitialKey = async (k: string, m: GeminiModel, p: Persona) => {
-                setKeyStatus(pr => ({ ...pr, loading: true }));
-                try {
-                    const r = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'validateKey', accessKey: k }) });
-                    const d = await r.json().catch(() => ({ error: 'Invalid JSON' }));
-                    if (r.ok && d.isValid) {
-                        setKeyStatus({ isValid: true, username: d.username || 'User', loading: false, error: null });
-                        setSelectedModel(m); setSelectedPersona(p);
-                    } else {
-                        setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key' });
-                        if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.0-flash');
-                        if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
-                    }
-                } catch (e) {
-                    setKeyStatus({ isValid: false, username: null, loading: false, error: 'Validation failed' });
-                    if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.0-flash');
-                    if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
-                }
-            };
-            validateInitialKey(initialKey, initialModel, initialPersona);
-        } else {
-            if (RESTRICTED_MODELS_VALUES.includes(initialModel)) setSelectedModel('gemini-2.0-flash');
-            if (RESTRICTED_PERSONAS_VALUES.includes(initialPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
+    useEffect(() => { const keyTrimmed = enteredKey.trim(); if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current); const currentModel = selectedModel; const currentPersona = selectedPersona; if (!keyTrimmed) { setKeyStatus({ isValid: null, username: null, loading: false, error: null }); if (RESTRICTED_MODELS_VALUES.includes(currentModel)) setSelectedModel('gemini-2.0-flash'); if (RESTRICTED_PERSONAS_VALUES.includes(currentPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); return; } setKeyStatus(p => ({ ...p, loading: true, isValid: null, error: null, username: null })); debounceTimeoutRef.current = setTimeout(async () => { try { const r = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'validateKey', accessKey: keyTrimmed }) }); const d = await r.json().catch(() => ({ error: `Invalid JSON` })); if (!r.ok) throw new Error(d?.error || `Validation failed: ${r.status}`); if (d.isValid) { setKeyStatus({ isValid: true, username: d.username || 'User', loading: false, error: null }); const sM = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null; if (sM && ALL_MODEL_VALUES.includes(sM)) setSelectedModel(sM); else setSelectedModel(currentModel); const sP = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null; if (sP && ALL_PERSONAS.includes(sP)) setSelectedPersona(sP); else setSelectedPersona(currentPersona); } else { setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key.' }); if (RESTRICTED_MODELS_VALUES.includes(currentModel)) setSelectedModel('gemini-2.0-flash'); if (RESTRICTED_PERSONAS_VALUES.includes(currentPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } catch (e) { const msg = e instanceof Error ? e.message : "Validation network error."; setKeyStatus({ isValid: false, username: null, loading: false, error: msg }); if (RESTRICTED_MODELS_VALUES.includes(currentModel)) setSelectedModel('gemini-2.0-flash'); if (RESTRICTED_PERSONAS_VALUES.includes(currentPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } }, VALIDATION_DEBOUNCE_MS); return () => { if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current); }; }, [enteredKey, selectedModel, selectedPersona]);
+    // Initial Load Effect
+    useEffect(() => { const accepted = localStorage.getItem(BETA_ACCEPTED_KEY); if (accepted !== 'true') { setShowBetaNotice(true); } else { const introSeen = localStorage.getItem(INTRODUCTION_SEEN_KEY); if (introSeen !== 'true') { setShowIntroduction(true); setIntroSectionsAcknowledged(initialAcknowledgementState); } } const initialKey = localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || ''; const storedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null; const storedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null; let initialModel: GeminiModel = 'gemini-2.0-flash'; if (storedModel && ALL_MODEL_VALUES.includes(storedModel)) initialModel = storedModel; setSelectedModel(initialModel); let initialPersona: Persona = DEFAULT_UNRESTRICTED_PERSONA; if (storedPersona && ALL_PERSONAS.includes(storedPersona)) initialPersona = storedPersona; setSelectedPersona(initialPersona); if (initialKey.trim()) { const validateInitialKey = async (k: string, m: GeminiModel, p: Persona) => { setKeyStatus(pr => ({ ...pr, loading: true })); try { const r = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'validateKey', accessKey: k }) }); const d = await r.json().catch(() => ({ error: 'Invalid JSON' })); if (r.ok && d.isValid) { setKeyStatus({ isValid: true, username: d.username || 'User', loading: false, error: null }); setSelectedModel(m); setSelectedPersona(p); } else { setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key' }); if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.0-flash'); if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } catch (e) { setKeyStatus({ isValid: false, username: null, loading: false, error: 'Validation failed' }); if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.0-flash'); if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } }; validateInitialKey(initialKey, initialModel, initialPersona); } else { if (RESTRICTED_MODELS_VALUES.includes(initialModel)) setSelectedModel('gemini-2.0-flash'); if (RESTRICTED_PERSONAS_VALUES.includes(initialPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } }, []);
     // Persistence Effects
-    useEffect(() => {
-        // *** Restored existing logic ***
-        const messagesToSave = messages.filter(m => m.sender !== 'loading');
-        if (messagesToSave.length > 1 || (messagesToSave.length === 1 && messagesToSave[0].sender !== 'bot')) {
-            localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave));
-        } else if (messagesToSave.length === 0 || (messagesToSave.length === 1 && messagesToSave[0].sender === 'bot' && messagesToSave[0].text === "Chat cleared.")) { // Handle empty or cleared state
-             localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([]));
-        }
-    }, [messages]);
+    useEffect(() => { const messagesToSave = messages.filter(m => m.sender !== 'loading'); if (messagesToSave.length > 1 || (messagesToSave.length === 1 && messagesToSave[0].sender !== 'bot')) { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave)); } else if (messagesToSave.length === 0 || (messagesToSave.length === 1 && messagesToSave[0].sender === 'bot' && messagesToSave[0].text === "Chat cleared.")) { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([])); } }, [messages]);
     useEffect(() => { localStorage.setItem(MODEL_STORAGE_KEY, selectedModel); }, [selectedModel]);
     useEffect(() => { localStorage.setItem(STT_LANG_STORAGE_KEY, sttLang); }, [sttLang]);
     useEffect(() => { localStorage.setItem(ACCESS_KEY_STORAGE_KEY, enteredKey); }, [enteredKey]);
     useEffect(() => { localStorage.setItem(PERSONA_STORAGE_KEY, selectedPersona); }, [selectedPersona]);
     useEffect(() => { localStorage.setItem(THEME_STORAGE_KEY, currentTheme); document.documentElement.setAttribute('data-theme', currentTheme); }, [currentTheme]);
-    useEffect(() => {
-        // *** Restored existing logic ***
-        let timer: NodeJS.Timeout | null = null;
-        if (feedbackSuccess) {
-            timer = setTimeout(() => setFeedbackSuccess(null), 3000);
-        }
-        return () => { if (timer) clearTimeout(timer); };
-    }, [feedbackSuccess]);
-    useEffect(() => {
-        if (showIntroduction && allIntroSectionsAcknowledged) {
-            console.log("All sections acknowledged, resetting button style.");
-            setContinueButtonStyle({});
-        }
-    }, [allIntroSectionsAcknowledged, showIntroduction]);
-
+    useEffect(() => { let timer: NodeJS.Timeout | null = null; if (feedbackSuccess) { timer = setTimeout(() => setFeedbackSuccess(null), 3000); } return () => { if (timer) clearTimeout(timer); }; }, [feedbackSuccess]);
+    // Effect to reset runaway button position
+    useEffect(() => { if (showIntroduction && allIntroSectionsAcknowledged) { setContinueButtonStyle({}); } }, [allIntroSectionsAcknowledged, showIntroduction]);
 
     // --- Event Handlers ---
-    const handleAcceptBeta = () => {
-        localStorage.setItem(BETA_ACCEPTED_KEY, 'true');
-        setShowBetaNotice(false);
-        const introSeen = localStorage.getItem(INTRODUCTION_SEEN_KEY);
-        if (introSeen !== 'true') {
-            setShowIntroduction(true);
-            setIntroSectionsAcknowledged(initialAcknowledgementState);
-        }
-    };
+    const handleAcceptBeta = () => { localStorage.setItem(BETA_ACCEPTED_KEY, 'true'); setShowBetaNotice(false); const introSeen = localStorage.getItem(INTRODUCTION_SEEN_KEY); if (introSeen !== 'true') { setShowIntroduction(true); setIntroSectionsAcknowledged(initialAcknowledgementState); } };
     const handleSectionToggle = (sectionKey: string) => { setIntroSectionsAcknowledged(prev => ({ ...prev, [sectionKey]: !prev[sectionKey] })); };
     const handleAcceptIntroduction = () => { if (!allIntroSectionsAcknowledged) return; localStorage.setItem(INTRODUCTION_SEEN_KEY, 'true'); setShowIntroduction(false); };
-    // Inside App component in App.tsx
-// Inside App component in App.tsx
-
-const handleMoveButton = () => {
-    // Get viewport dimensions
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-
-    // Estimate button size (can be refined if needed)
-    const buttonWidth = 180;
-    const buttonHeight = 45;
-
-    // Calculate random positions within viewport bounds
-    // Allow it to go near edges, but try to keep most of it visible
-    const randomTop = Math.random() * (vh - buttonHeight);
-    const randomLeft = Math.random() * (vw - buttonWidth);
-
-    console.log(`Moving button (fixed) to: T ${randomTop.toFixed(0)}px, L ${randomLeft.toFixed(0)}px`);
-
-    setContinueButtonStyle({
-        position: 'fixed', // *** CHANGE: Use fixed positioning ***
-        top: `${randomTop}px`, // Use pixel values for viewport positioning
-        left: `${randomLeft}px`,
-        zIndex: 1070 // *** Ensure it's above the overlay (overlay is 1060) ***
-        // The transition effect will still apply from CSS
-    });
-};
-
-// The useEffect that resets continueButtonStyle to {} when
-// allIntroSectionsAcknowledged becomes true remains the same.
-// It will remove position:fixed, allowing CSS to position it back.
-    const handleModelChange = (e: ChangeEvent<HTMLSelectElement>) => { const m = e.target.value as GeminiModel; if (ALL_MODEL_VALUES.includes(m)) setSelectedModel(m); };
-    const handleSttLangChange = (e: ChangeEvent<HTMLSelectElement>) => { setSttLang(e.target.value as SpeechLanguage); };
-    const handlePersonaChange = (e: ChangeEvent<HTMLSelectElement>) => { const p = e.target.value as Persona; if (ALL_PERSONAS.includes(p)) setSelectedPersona(p); };
-    const toggleSettings = () => { setIsSettingsOpen(p => !p); setIsStaffLoginModalVisible(false); setIsFeedbackModalVisible(false); };
-    const handleClearChat = () => { if (window.confirm("Clear chat history? This cannot be undone.")) { const ts = Date.now(); const msg: Message = { id: ts, text: "Chat cleared.", sender: 'bot', timestamp: ts }; setMessages([msg]); localStorage.removeItem(CHAT_STORAGE_KEY); setIsSettingsOpen(false); } };
-    const handleAccessKeyChange = (e: ChangeEvent<HTMLInputElement>) => { setEnteredKey(e.target.value); };
-    const handleExportChat = () => {
-        // *** Restored existing logic ***
-        const msgs = messages.filter(m => m.sender !== 'loading');
-        if (msgs.length === 0 || (msgs.length === 1 && msgs[0].sender === 'bot' && msgs[0].text === "Welcome!")) return alert("Chat is empty or only contains the welcome message.");
-        let c = `Chat Export\nTimestamp: ${new Date().toLocaleString()}\nModel: ${selectedModel}\nPersona: ${selectedPersona}\nUser: ${keyStatus.isValid ? keyStatus.username : 'N/A (No valid key)'}\nTheme: ${currentTheme}\n----\n\n`;
-        msgs.forEach(m => { const t = new Date(m.timestamp).toLocaleString(); c += `[${t}] ${m.sender === 'user' ? 'User' : 'Bot'}:\n${m.text}\n${m.imageUrl ? `(Image Attachment: ${m.imageUrl.substring(0,50)}...)\n` : ''}\n`; });
-        try {
-            const b = new Blob([c], { type: 'text/plain;charset=utf-8' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); const f = `theraphy-chat-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`; a.href = u; a.download = f; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(u); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") ReactGA.event({ category: "Chat", action: "Export", label: `Msg Count: ${msgs.length}` }); setIsSettingsOpen(false);
-        } catch (e) { console.error("Export failed:", e); alert("Failed to export chat."); }
-    };
+    const handleMoveButton = () => { const vw = window.innerWidth; const vh = window.innerHeight; const buttonWidth = 180; const buttonHeight = 45; const randomTop = Math.random() * (vh - buttonHeight); const randomLeft = Math.random() * (vw - buttonWidth); setContinueButtonStyle({ position: 'fixed', top: `${randomTop}px`, left: `${randomLeft}px`, zIndex: 1070 }); };
+    const handleModelChange=(e:ChangeEvent<HTMLSelectElement>)=>{const m=e.target.value as GeminiModel;if(ALL_MODEL_VALUES.includes(m))setSelectedModel(m);};
+    const handleSttLangChange=(e:ChangeEvent<HTMLSelectElement>)=>{setSttLang(e.target.value as SpeechLanguage);};
+    // *** Persona Change is now handled by the game callback ***
+    // const handlePersonaChange=(e:ChangeEvent<HTMLSelectElement>)=>{const p=e.target.value as Persona;if(ALL_PERSONAS.includes(p))setSelectedPersona(p);};
+    const toggleSettings=()=>{ setIsSettingsOpen(p=>!p); setIsStaffLoginModalVisible(false); setIsFeedbackModalVisible(false); };
+    const handleClearChat=()=>{if(window.confirm("Clear chat history? This cannot be undone.")){const ts=Date.now();const msg:Message={id:ts,text:"Chat cleared.",sender:'bot',timestamp:ts};setMessages([msg]);localStorage.removeItem(CHAT_STORAGE_KEY);setIsSettingsOpen(false);}};
+    const handleAccessKeyChange=(e:ChangeEvent<HTMLInputElement>)=>{setEnteredKey(e.target.value);};
+    const handleExportChat=()=>{ const msgs = messages.filter(m => m.sender !== 'loading'); if (msgs.length === 0 || (msgs.length === 1 && msgs[0].sender === 'bot' && msgs[0].text === "Welcome!")) return alert("Chat is empty or only contains the welcome message."); let c = `Chat Export\nTimestamp: ${new Date().toLocaleString()}\nModel: ${selectedModel}\nPersona: ${selectedPersona}\nUser: ${keyStatus.isValid ? keyStatus.username : 'N/A (No valid key)'}\nTheme: ${currentTheme}\n----\n\n`; msgs.forEach(m => { const t = new Date(m.timestamp).toLocaleString(); c += `[${t}] ${m.sender === 'user' ? 'User' : 'Bot'}:\n${m.text}\n${m.imageUrl ? `(Image Attachment: ${m.imageUrl.substring(0,50)}...)\n` : ''}\n`; }); try { const b = new Blob([c], { type: 'text/plain;charset=utf-8' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); const f = `theraphy-chat-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`; a.href = u; a.download = f; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(u); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") ReactGA.event({ category: "Chat", action: "Export", label: `Msg Count: ${msgs.length}` }); setIsSettingsOpen(false); } catch (e) { console.error("Export failed:", e); alert("Failed to export chat."); } };
     const toggleStaffLoginModal = () => { setIsStaffLoginModalVisible(prev => !prev); if (isStaffLoginModalVisible) { setEnteredStaffKey(''); setStaffLoginError(null); } setIsSettingsOpen(false); setIsFeedbackModalVisible(false); };
-    const handleStaffKeyChange = (e: ChangeEvent<HTMLInputElement>) => { setEnteredStaffKey(e.target.value); setStaffLoginError(null); };
-    const handleStaffLogin = async () => {
-        // *** Restored existing logic ***
-        if (!enteredStaffKey.trim()) { setStaffLoginError("Staff key is required."); return; }
-        setIsStaffLoginLoading(true); setStaffLoginError(null);
-        try {
-            const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'staffLogin', staffKey: enteredStaffKey }) });
-            const data = await res.json().catch(() => ({ error: 'Invalid JSON response from server.' }));
-            if (!res.ok || !data.isValid) { throw new Error(data?.error || `Login Failed (Status: ${res.status})`); }
-            sessionStorage.setItem('staffKey', enteredStaffKey); setIsStaffLoginModalVisible(false); setEnteredStaffKey(''); navigate('/admin');
-        } catch (e) { setStaffLoginError(e instanceof Error ? e.message : "Login failed due to an unknown error."); sessionStorage.removeItem('staffKey'); }
-        finally { setIsStaffLoginLoading(false); }
-    };
+    const handleStaffKeyChange = (e: ChangeEvent<HTMLInputElement>) => { setEnteredStaffKey(e.target.value); setStaffLoginError(null);};
+    const handleStaffLogin = async () => { if (!enteredStaffKey.trim()) { setStaffLoginError("Staff key is required."); return; } setIsStaffLoginLoading(true); setStaffLoginError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'staffLogin', staffKey: enteredStaffKey }) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON response from server.' })); if (!res.ok || !data.isValid) { throw new Error(data?.error || `Login Failed (Status: ${res.status})`); } sessionStorage.setItem('staffKey', enteredStaffKey); setIsStaffLoginModalVisible(false); setEnteredStaffKey(''); navigate('/admin'); } catch (e) { setStaffLoginError(e instanceof Error ? e.message : "Login failed due to an unknown error."); sessionStorage.removeItem('staffKey'); } finally { setIsStaffLoginLoading(false); } };
     const toggleFeedbackModal = () => { const closing = isFeedbackModalVisible; setIsFeedbackModalVisible(prev => !prev); if (closing) { setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); setFeedbackError(null); setFeedbackSuccess(null); setIsSubmittingFeedback(false); } if (!closing) { setIsSettingsOpen(false); setIsStaffLoginModalVisible(false); } };
-    const handleFeedbackSubmit = async (e: React.FormEvent) => {
-        // *** Restored existing logic ***
-        e.preventDefault(); if (feedbackRating === 0) { setFeedbackError("Please select a star rating."); return; } if (!feedbackComment.trim()) { setFeedbackError("Please provide a comment."); return; } if (feedbackComment.length > 2000) { setFeedbackError("Comment is too long (max 2000 characters)."); return; }
-        setIsSubmittingFeedback(true); setFeedbackError(null); setFeedbackSuccess(null);
-        const payload: ApiRequestBody = { action: 'submitFeedback', email: feedbackEmail.trim() || null, rating: feedbackRating, comment: feedbackComment.trim() };
-        try {
-            const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            const data = await res.json().catch(() => ({ error: 'Invalid JSON response' }));
-            if (!res.ok || !data.success) { throw new Error(data?.error || `Submit failed: ${res.statusText}`); }
-            setFeedbackSuccess("Thank you! Your feedback has been submitted."); setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment('');
-            // setTimeout(() => { toggleFeedbackModal(); }, 2500); // Auto close handled by effect now
-            if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { ReactGA.event({ category: "Feedback", action: "Submit", label: `Rating: ${feedbackRating}` }); }
-        } catch (err) { setFeedbackError(err instanceof Error ? err.message : "Failed to submit feedback."); }
-        finally { setIsSubmittingFeedback(false); }
-    };
+    const handleFeedbackSubmit = async (e: React.FormEvent) => { e.preventDefault(); if (feedbackRating === 0) { setFeedbackError("Please select a star rating."); return; } if (!feedbackComment.trim()) { setFeedbackError("Please provide a comment."); return; } if (feedbackComment.length > 2000) { setFeedbackError("Comment is too long (max 2000 characters)."); return; } setIsSubmittingFeedback(true); setFeedbackError(null); setFeedbackSuccess(null); const payload: ApiRequestBody = { action: 'submitFeedback', email: feedbackEmail.trim() || null, rating: feedbackRating, comment: feedbackComment.trim() }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON response' })); if (!res.ok || !data.success) { throw new Error(data?.error || `Submit failed: ${res.statusText}`); } setFeedbackSuccess("Thank you! Your feedback has been submitted."); setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { ReactGA.event({ category: "Feedback", action: "Submit", label: `Rating: ${feedbackRating}` }); } } catch (err) { setFeedbackError(err instanceof Error ? err.message : "Failed to submit feedback."); } finally { setIsSubmittingFeedback(false); } };
     const toggleTheme = useCallback(() => { setCurrentTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light')); }, []);
+    // *** Handler for Persona selected from game ***
+    const handlePersonaSelectedFromGame = (persona: Persona) => {
+        setSelectedPersona(persona);
+        setIsCupGameVisible(false); // Close the game modal
+    };
 
 
-    // --- JSX ---
     // --- JSX ---
     return (
         <div className="App">
@@ -354,46 +162,18 @@ const handleMoveButton = () => {
             )}
 
             {/* Introduction Modal */}
-            {showIntroduction && !showBetaNotice && ( // Show only if Beta is done
+            {showIntroduction && !showBetaNotice && (
                 <div className="intro-notice-overlay">
-                    <div className="intro-notice-modal" style={{ position: 'relative' }}> {/* Removed inline overflow */}
+                    <div className="intro-notice-modal" style={{ position: 'relative' }}>
                         <h2>วิธีใช้งาน Project Theraphy</h2>
-                        <p style={{ textAlign: 'center', marginBottom: '20px' }}>
-                            โปรดอ่านและกดยืนยันในแต่ละหัวข้อเพื่อเริ่มใช้งาน:
-                        </p>
-
+                        <p style={{ textAlign: 'center', marginBottom: '20px' }}>โปรดอ่านและกดยืนยันในแต่ละหัวข้อเพื่อเริ่มใช้งาน:</p>
                         {introductionSections.map(section => (
                             <div className="intro-section" key={section.key}>
-                                <div className="intro-section-content">
-                                    <h4>{section.title}</h4>
-                                    {/* Use pre-wrap to respect newline characters (\n) */}
-                                    <p style={{ whiteSpace: 'pre-wrap' }}>{section.text}</p>
-                                </div>
-                                <div className="intro-section-toggle">
-                                    <label className="switch" title={`ยืนยันว่าอ่านหัวข้อ ${section.title}`}>
-                                        <input
-                                            type="checkbox"
-                                            checked={introSectionsAcknowledged[section.key]}
-                                            onChange={() => handleSectionToggle(section.key)}
-                                        />
-                                        <span className="slider round"></span>
-                                    </label>
-                                </div>
+                                <div className="intro-section-content"><h4>{section.title}</h4><p style={{ whiteSpace: 'pre-wrap' }}>{section.text}</p></div>
+                                <div className="intro-section-toggle"><label className="switch" title={`ยืนยันว่าอ่านหัวข้อ ${section.title}`}><input type="checkbox" checked={introSectionsAcknowledged[section.key]} onChange={() => handleSectionToggle(section.key)} /><span className="slider round"></span></label></div>
                             </div>
                         ))}
-
-                        {/* Button Container for positioning */}
-                        <div className="intro-button-container">
-                             <button
-                                style={continueButtonStyle} // Apply dynamic styles for position
-                                onClick={allIntroSectionsAcknowledged ? handleAcceptIntroduction : handleMoveButton} // Change action based on state
-                                className={`intro-accept-button ${!allIntroSectionsAcknowledged ? 'button-runaway' : ''}`}
-                                title={!allIntroSectionsAcknowledged ? "โปรดยืนยันทุกหัวข้อก่อน!" : "เริ่มแชท"}
-                             >
-                                {/* Text changes based on state */}
-                                {allIntroSectionsAcknowledged ? "เริ่มแชท (Start Chat)" : "ยืนยันให้ครบก่อน"}
-                             </button>
-                        </div>
+                        <div className="intro-button-container"><button style={continueButtonStyle} onClick={allIntroSectionsAcknowledged ? handleAcceptIntroduction : handleMoveButton} className={`intro-accept-button ${!allIntroSectionsAcknowledged ? 'button-runaway' : ''}`} title={!allIntroSectionsAcknowledged ? "โปรดยืนยันทุกหัวข้อก่อน!" : "เริ่มแชท"}>{allIntroSectionsAcknowledged ? "เริ่มแชท (Start Chat)" : "ยืนยันให้ครบก่อน"}</button></div>
                     </div>
                  </div>
             )}
@@ -403,13 +183,32 @@ const handleMoveButton = () => {
                  <div className="settings-menu" role="dialog" aria-labelledby="settings-title">
                      <h3 id="settings-title">Settings</h3>
                      <div className="settings-grid">
-                         {/* Column 1: Key, Persona, Model */}
+                         {/* Column 1 */}
                          <div className="settings-column">
-                             <div className="settings-option"> <label htmlFor="access-key-input">Access Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/> <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid?<span>✅ Valid Key ({keyStatus.username || 'User'})</span>:keyStatus.error?<span>❌ {keyStatus.error}</span>:<span>Enter key for restricted features.</span>}</div> </div>
-                             <div className="settings-option"> <label htmlFor="persona-select">Persona:</label> <select id="persona-select" value={selectedPersona} onChange={handlePersonaChange} className="settings-select" disabled={AVAILABLE_PERSONAS.find(p=>p.value===selectedPersona)?.restricted&&keyStatus.isValid!==true}>{AVAILABLE_PERSONAS.map((p)=>{const isDisabled=p.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={p.value} value={p.value} disabled={isDisabled} style={style}>{p.emoji} {p.label}{p.restricted?' (Key Req.) ':''}</option>);})}</select> </div>
-                             <div className="settings-option"> <label htmlFor="model-select">AI Model:</label> <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select" disabled={ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted&&keyStatus.isValid!==true}>{ALL_AVAILABLE_MODELS_FRONTEND.map((m)=>{const isDisabled=m.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={m.value} value={m.value} disabled={isDisabled} style={style}>{m.label}{m.restricted?' (Key Req.)':''}</option>);})}</select> {keyStatus.isValid!==true&&(RESTRICTED_PERSONAS_VALUES.length>0||RESTRICTED_MODELS_VALUES.length>0)&&(<p className="settings-helper-text">Enter valid key to unlock restricted options.</p>)} </div>
+                            <div className="settings-option"> <label htmlFor="access-key-input">Access Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/> <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid?<span>✅ Valid Key ({keyStatus.username || 'User'})</span>:keyStatus.error?<span>❌ {keyStatus.error}</span>:<span>Enter key for restricted features.</span>}</div> </div>
+                             {/* *** MODIFIED PERSONA SELECTION *** */}
+                            <div className="settings-option">
+                                <label>Persona:</label>
+                                <button
+                                    onClick={() => setIsCupGameVisible(true)}
+                                    className="settings-action-button" // Use action button style
+                                    disabled={!canPlayCupGame} // Disable if not enough personas
+                                    title={!canPlayCupGame ? "Need valid key or more available personas" : "Choose persona via game"}
+                                >
+                                    🎲 {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.emoji} {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label} (Change...)
+                                </button>
+                                {!canPlayCupGame && keyStatus.isValid !== true && (
+                                    <p className="settings-helper-text">Enter valid key to unlock more personas & play.</p>
+                                )}
+                                {!canPlayCupGame && keyStatus.isValid === true && (
+                                    // This case means even with a key, there aren't 3+ personas defined in AVAILABLE_PERSONAS
+                                    <p className="settings-helper-text">Currently selected: {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label}. Not enough options for game.</p>
+                                )}
+                             </div>
+                             {/* *** END MODIFIED PERSONA SELECTION *** */}
+                            <div className="settings-option"> <label htmlFor="model-select">AI Model:</label> <select id="model-select" value={selectedModel} onChange={handleModelChange} className="settings-select" disabled={ALL_AVAILABLE_MODELS_FRONTEND.find(m=>m.value===selectedModel)?.restricted&&keyStatus.isValid!==true}>{ALL_AVAILABLE_MODELS_FRONTEND.map((m)=>{const isDisabled=m.restricted&&keyStatus.isValid!==true;const style=isDisabled?{color:'#888',fontStyle:'italic'}:{};return(<option key={m.value} value={m.value} disabled={isDisabled} style={style}>{m.label}{m.restricted?' (Key Req.)':''}</option>);})}</select> {keyStatus.isValid!==true&&(RESTRICTED_PERSONAS_VALUES.length>0||RESTRICTED_MODELS_VALUES.length>0)&&(<p className="settings-helper-text">Enter valid key to unlock restricted options.</p>)} </div>
                          </div>
-                         {/* Column 2: Language, Theme, Actions */}
+                         {/* Column 2 */}
                          <div className="settings-column">
                              <div className="settings-option"> <label htmlFor="stt-lang-select">Speech Input Lang:</label> <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"><option value="en-US">English (US)</option><option value="th-TH">ไทย (Thai)</option><option value="es-ES">Español (Spain)</option><option value="fr-FR">Français (France)</option></select> </div>
                              <div className="settings-option"><label htmlFor="theme-toggle">Appearance:</label><button onClick={toggleTheme} id="theme-toggle" className="settings-action-button theme-toggle-button">{currentTheme === 'light' ? '🌙 Switch to Dark Mode' : '☀️ Switch to Light Mode'}</button></div>
@@ -430,6 +229,19 @@ const handleMoveButton = () => {
             {/* Feedback Modal */}
             {isFeedbackModalVisible && (
                  <div className="feedback-modal-overlay"> <div className="feedback-modal"> <h3 id="feedback-title">Submit Feedback</h3> <button onClick={toggleFeedbackModal} className="close-feedback-button" title="Close Feedback">×</button> {feedbackSuccess && <p className="feedback-message success">{feedbackSuccess}</p>} {feedbackError && <p className="feedback-message error">{feedbackError}</p>} {!feedbackSuccess && ( <form onSubmit={handleFeedbackSubmit} className="feedback-form"> <div className="feedback-field"> <label htmlFor="feedback-email">Email (Optional):</label> <input type="email" id="feedback-email" className="settings-input" value={feedbackEmail} onChange={(e) => setFeedbackEmail(e.target.value)} placeholder="your.email@example.com" maxLength={250} disabled={isSubmittingFeedback} /> </div> <div className="feedback-field"> <label>Rating:<span style={{color:'red'}}>*</span></label> <div className="star-rating"> {[1, 2, 3, 4, 5].map(star => ( <button key={star} type="button" aria-pressed={star === feedbackRating} className={`star-button ${star <= feedbackRating ? 'selected' : ''}`} onClick={() => setFeedbackRating(star)} disabled={isSubmittingFeedback} aria-label={`Rate ${star}/5`}>★</button> ))} </div> </div> <div className="feedback-field"> <label htmlFor="feedback-comment">Comment:<span style={{color:'red'}}>*</span></label> <textarea id="feedback-comment" className="settings-input" rows={5} value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)} placeholder="Tell us about your experience, suggestions, or any bugs..." maxLength={2000} required disabled={isSubmittingFeedback} /> </div> <div className="feedback-actions"> <button type="button" onClick={toggleFeedbackModal} className="cancel-feedback-button" disabled={isSubmittingFeedback}>Cancel</button> <button type="submit" className="submit-feedback-button" disabled={isSubmittingFeedback || feedbackRating === 0 || !feedbackComment.trim()}> {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'} </button> </div> </form> )} </div> </div>
+            )}
+
+            {/* *** Persona Cup Game Modal *** */}
+            {isCupGameVisible && (
+                <PersonaCupGame
+                    isOpen={isCupGameVisible}
+                    onClose={() => setIsCupGameVisible(false)}
+                    onPersonaSelected={handlePersonaSelectedFromGame}
+                    keyStatus={keyStatus}
+                    currentSelectedModel={selectedModel}
+                    allPersonas={AVAILABLE_PERSONAS}
+                    restrictedModels={RESTRICTED_MODELS_VALUES}
+                />
             )}
 
             {/* Main Routing and Layout - Render only if modals are not showing */}
