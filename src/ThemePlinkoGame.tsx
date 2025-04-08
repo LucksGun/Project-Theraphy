@@ -106,7 +106,7 @@ const ThemePlinkoGame: React.FC<ThemePlinkoGameProps> = ({
             }
 
             // Close modal after a delay
-            setTimeout(onClose, 2500); // Show result for 2.5 seconds
+            setTimeout(onClose, 1500); // Show result for 2.5 seconds
         }
     };
 

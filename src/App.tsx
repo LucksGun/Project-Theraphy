@@ -169,7 +169,7 @@ function App() {
 
                                      {/* Plinko Game Button */}
                                      <button onClick={() => setIsPlinkoVisible(true)} className="settings-action-button theme-plinko-button" title="Change Theme" >
-                                         {currentTheme === 'light' ? '🌙' : '☀️'} Try Random Theme Change
+                                         {currentTheme === 'light' ? '🌙' : '☀️'} Change Theme
                                      </button>
                                      {/* Helper Text Paragraph is now GONE */}
                                 </div>
