@@ -1,137 +1,125 @@
-// src/ClearConfirmGame.tsx - FINAL v6 - Simplified Animation Control
+// src/ClearConfirmGame.tsx - Requires 2 Successful Stops
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import './ClearConfirmGame.css'; // Make sure this CSS file exists and is styled
+import './ClearConfirmGame.css';
 
-// --- Component Props ---
 interface ClearConfirmGameProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
 }
 
-// --- Game Constants ---
-const TARGET_ZONE_WIDTH_DEGREES = 20;
-const DEGREES_PER_SEC = 200; // Speed
+// Game Constants
+const TARGET_ZONE_WIDTH_DEGREES = 30;
+const DEGREES_PER_SEC = 180; // Speed
 const INDICATOR_OFFSET_DEGREES = -90;
-const SUCCESS_DELAY_MS = 1500;
-const RESTART_DELAY_MS = 1500; // Delay after failure message before closing
+const REQUIRED_SUCCESSES = 2; // <<-- Need 2 successes
+const SUCCESS_DELAY_MS = 1500; // Delay after final success
+const NEXT_ROUND_DELAY_MS = 1000; // Shorter delay between rounds
+const FAIL_DELAY_MS = 1500; // Delay after failure message
 
-// --- Helper Function ---
-function isAngleInZone(angle: number, start: number, end: number): boolean { const normalizedAngle = (angle - start + 360) % 360; const normalizedEnd = (end - start + 360) % 360; return normalizedAngle <= normalizedEnd; }
+// Helper Function (Keep As Is)
+function isAngleInZone(angle: number, start: number, end: number): boolean { /* ... */ const normalizedAngle = (angle - start + 360) % 360; const normalizedEnd = (end - start + 360) % 360; return normalizedAngle <= normalizedEnd; }
 
-// --- The Component ---
+// The Component
 const ClearConfirmGame: React.FC<ClearConfirmGameProps> = ({ isOpen, onClose, onConfirm }) => {
     const [currentAngle, setCurrentAngle] = useState(0);
     const [targetZone, setTargetZone] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
     const [isMoving, setIsMoving] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [status, setStatus] = useState<'playing' | 'success' | 'failed'>('playing');
+    // *** NEW STATE: Track success count ***
+    const [successCount, setSuccessCount] = useState(0);
 
     const animationFrameRef = useRef<number | null>(null);
     const lastTimestampRef = useRef<number | null>(null);
     const speedRef = useRef(DEGREES_PER_SEC);
     const isMountedRef = useRef<boolean>(false);
+    const gameTimeoutsRef = useRef<NodeJS.Timeout[]>([]); // Ref to store all timeouts
 
-    // --- Animation Loop ---
-    // Wrap animate in useCallback, but it doesn't need isMoving as dependency anymore
-    // as the loop continuation is checked internally and started/stopped externally.
-    const animate = useCallback((timestamp: number) => {
-        if (!isMountedRef.current) return; // Stop if unmounted
-
-        if (!lastTimestampRef.current) {
-            lastTimestampRef.current = timestamp;
-            animationFrameRef.current = requestAnimationFrame(animate);
-            return;
-        }
-
-        const deltaTime = (timestamp - lastTimestampRef.current) / 1000;
-        lastTimestampRef.current = timestamp;
-        const safeDeltaTime = Math.min(deltaTime, 0.1);
-        const deltaAngle = speedRef.current * safeDeltaTime;
-
-        setCurrentAngle(prevAngle => (prevAngle + deltaAngle) % 360);
-
-        // Request next frame implicitly assumes isMoving is true
-        // If isMoving becomes false elsewhere, the check at the start of this function
-        // isn't hit until the *next* frame request, so explicit cancel is needed.
-        animationFrameRef.current = requestAnimationFrame(animate);
-
-    }, []); // No dependencies needed now
-
-    // --- Cleanup function ---
-    const cleanupAnimation = useCallback(() => {
-        console.log("cleanupAnimation: Cancelling frame.");
-        if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-            animationFrameRef.current = null;
-        }
-        lastTimestampRef.current = null;
-        // We don't necessarily set isMoving false here, could be called on unmount
+    // --- Cleanup timeouts ---
+    const clearGameTimeouts = useCallback(() => {
+        console.log(`Clearing ${gameTimeoutsRef.current.length} game timeouts.`);
+        gameTimeoutsRef.current.forEach(clearTimeout);
+        gameTimeoutsRef.current = [];
     }, []);
 
-    // --- Game Setup ---
-    const setupGame = useCallback(() => {
+    // --- Animation Loop --- (Keep As Is)
+    const animate = useCallback((timestamp: number) => { /* ... (same as previous version) ... */ if (!isMountedRef.current || !isMoving) { lastTimestampRef.current = null; if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null; return; } if (!lastTimestampRef.current) { lastTimestampRef.current = timestamp; animationFrameRef.current = requestAnimationFrame(animate); return; } const deltaTime = (timestamp - lastTimestampRef.current) / 1000; lastTimestampRef.current = timestamp; const safeDeltaTime = Math.min(deltaTime, 0.1); const deltaAngle = speedRef.current * safeDeltaTime; setCurrentAngle(prevAngle => (prevAngle + deltaAngle) % 360); animationFrameRef.current = requestAnimationFrame(animate); }, [isMoving]);
+
+    // --- Cleanup Animation --- (Keep As Is)
+    const cleanupAnimation = useCallback(() => { console.log("cleanupAnimation: Cancelling frame."); if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null; } lastTimestampRef.current = null; setIsMoving(false); }, []);
+
+    // --- Game Setup / Round Start ---
+    const setupRound = useCallback(() => {
         if (!isMountedRef.current) return;
-        console.log("setupGame: Starting setup.");
-        cleanupAnimation(); // Clear previous just in case
-        setMessage("Press STOP in the Green Zone!");
+        console.log(`setupRound: Starting round ${successCount + 1}.`);
+        cleanupAnimation(); // Ensure previous animation is stopped
+        setMessage(`Press STOP in the Green Zone! (${successCount}/${REQUIRED_SUCCESSES})`);
         setStatus('playing');
         const randomStartAngle = Math.random() * 360;
         const endAngle = (randomStartAngle + TARGET_ZONE_WIDTH_DEGREES) % 360;
         setTargetZone({ start: randomStartAngle, end: endAngle });
         setCurrentAngle(Math.random() * 360);
+        setIsMoving(true); // Start animation
+        console.log(`setupRound: Setup complete. Target: ${randomStartAngle.toFixed(1)}°-${endAngle.toFixed(1)}°. isMoving: true.`);
+    }, [cleanupAnimation, successCount]); // Depends on successCount for message
 
-        // Start animation directly
-        setIsMoving(true);
-        lastTimestampRef.current = null; // Reset timestamp before starting loop
-        animationFrameRef.current = requestAnimationFrame(animate);
-        console.log(`setupGame: Setup complete. Target: ${randomStartAngle.toFixed(1)}°-${endAngle.toFixed(1)}°. isMoving: true. Animation requested.`);
-
-    }, [cleanupAnimation, animate]); // Depends on callbacks
-
-
-    // --- Main Effect for Setup/Cleanup on Open/Close ---
+    // --- Effect to Setup/Cleanup Game on Open/Close ---
     useEffect(() => {
         if (isOpen) {
             isMountedRef.current = true;
-            console.log("useEffect[isOpen=true]: Component is visible. Setting up game.");
-            setupGame(); // Setup game when modal opens
-
-            // Return cleanup function for when modal closes or component unmounts
-            return () => {
+            console.log("useEffect[isOpen=true]: Component is visible. Resetting and setting up game.");
+            setSuccessCount(0); // Reset count when opening
+            setupRound(); // Start the first round
+            return () => { // Cleanup on close/unmount
                 console.log("useEffect[cleanup for isOpen=true]: Cleaning up.");
                 isMountedRef.current = false;
-                cleanupAnimation(); // Ensure animation stops
-                // Reset other relevant state if needed when closing
-                setMessage(null);
-                setStatus('playing');
+                cleanupAnimation();
+                clearGameTimeouts(); // Clear any pending success/fail timeouts
+                setMessage(null); setStatus('playing'); setSuccessCount(0);
             };
         } else {
-            isMountedRef.current = false; // Ensure flag is false if closed externally
+            isMountedRef.current = false;
         }
-    }, [isOpen, setupGame, cleanupAnimation]); // Depend on isOpen and stable callbacks
+    }, [isOpen, setupRound, cleanupAnimation]); // Depend on isOpen and stable callbacks
+
 
     // --- Handle Stop Button Click ---
     const handleStop = () => {
-        if (!isMoving) return; // Prevent multiple clicks
-        console.log("handleStop: Stopping animation.");
-        setIsMoving(false); // Set state first
-        cleanupAnimation(); // Explicitly cancel animation frame
+        if (!isMoving) return;
+        setIsMoving(false); // Stop the animation FIRST
+        cleanupAnimation(); // Cancel the animation frame explicitly
 
         const stoppedAngle = currentAngle;
         console.log(`Stopped at: ${stoppedAngle.toFixed(1)}°`);
 
         if (isAngleInZone(stoppedAngle, targetZone.start, targetZone.end)) {
-            console.log("Success!");
-            setStatus('success');
-            setMessage('Success! Chat history will be cleared.');
-            setTimeout(() => { if (isMountedRef.current) { onConfirm(); onClose(); } }, SUCCESS_DELAY_MS);
+            // SUCCESS on this round
+            const newSuccessCount = successCount + 1;
+            setSuccessCount(newSuccessCount);
+            console.log(`Success! Count: ${newSuccessCount}/${REQUIRED_SUCCESSES}`);
+
+            if (newSuccessCount === REQUIRED_SUCCESSES) {
+                // FINAL SUCCESS
+                setStatus('success');
+                setMessage(`Success! (${newSuccessCount}/${REQUIRED_SUCCESSES}) Chat history will be cleared.`);
+                const successTimer = setTimeout(() => { if (isMountedRef.current) { onConfirm(); onClose(); } }, SUCCESS_DELAY_MS);
+                gameTimeoutsRef.current.push(successTimer);
+            } else {
+                // Intermediate Success - Start next round
+                setStatus('playing'); // Keep status as playing technically
+                setMessage(`Nice! (${newSuccessCount}/${REQUIRED_SUCCESSES}) Get ready for the next round...`);
+                const nextRoundTimer = setTimeout(() => { if (isMountedRef.current) setupRound(); }, NEXT_ROUND_DELAY_MS);
+                gameTimeoutsRef.current.push(nextRoundTimer);
+            }
         } else {
-            console.log("Failed!");
+            // FAILURE - Game Over
+            console.log("Failed! Game Over.");
             setStatus('failed');
-            setMessage('Missed! Please try again.');
-            setTimeout(() => { if (isMountedRef.current) onClose(); }, RESTART_DELAY_MS);
+            setMessage(`Missed! (${successCount}/${REQUIRED_SUCCESSES}) Game Over. Please try again.`);
+            const failTimer = setTimeout(() => { if (isMountedRef.current) onClose(); }, FAIL_DELAY_MS);
+            gameTimeoutsRef.current.push(failTimer);
         }
     };
 
@@ -146,16 +134,27 @@ const ClearConfirmGame: React.FC<ClearConfirmGameProps> = ({ isOpen, onClose, on
         <div className="clear-confirm-overlay" onClick={onClose}>
             <div className="clear-confirm-modal" onClick={(e) => e.stopPropagation()}>
                 <h4>Confirm Clear Chat</h4>
+
+                {/* Progress Indicator */}
+                <p className="progress-indicator">
+                    Successes: {successCount} / {REQUIRED_SUCCESSES}
+                </p>
+
+                {/* Game Message */}
                 <p className={`game-message ${status}`}>{message || ' '}</p>
+
+                {/* Circle Game Area */}
                 <div className="timing-circle-container">
-                    <div className="timing-circle" style={{ background: getConicGradientStyle() }} >
-                        <div className="timing-indicator-arm" style={{ transform: `rotate(${currentAngle + INDICATOR_OFFSET_DEGREES}deg)` }} >
+                    <div className="timing-circle" style={{ background: getConicGradientStyle() }}>
+                        <div className="timing-indicator-arm" style={{ transform: `rotate(${currentAngle + INDICATOR_OFFSET_DEGREES}deg)` }}>
                             <div className="timing-indicator-dot"></div>
                         </div>
                     </div>
                 </div>
-                <button onClick={handleStop} className="stop-button" disabled={!isMoving || status !== 'playing'} > STOP </button>
-                <button onClick={onClose} className="cancel-button" disabled={status === 'success' || status === 'failed'} > Cancel </button>
+
+                {/* Buttons */}
+                <button onClick={handleStop} className="stop-button" disabled={!isMoving || status !== 'playing'}> STOP </button>
+                <button onClick={onClose} className="cancel-button" disabled={status === 'success' || status === 'failed'}> Cancel </button>
             </div>
         </div>
     );

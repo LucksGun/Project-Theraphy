@@ -62,7 +62,15 @@
     will-change: transform; /* Optimize rotation */
     /* Initial rotation set by inline style */
 }
+/* Add to ClearConfirmGame.css */
 
+.clear-confirm-modal .progress-indicator {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    margin-top: -5px; /* Adjust spacing */
+    font-weight: 500;
+}
 .timing-indicator-dot {
     position: absolute;
     right: -5px; /* Position dot at the end of the arm */
