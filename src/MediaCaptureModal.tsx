@@ -94,9 +94,17 @@ const MediaCaptureModal: React.FC<MediaCaptureModalProps> = ({ stream, onCapture
                 console.error("Could not get 2D context from canvas.");
                 setError("Failed to prepare image capture context.");
             }
-        } catch (captureError) {
-             console.error("Error during image capture:", captureError);
-             setError(`Failed to capture image: ${captureError.message}`);
+          } catch (captureError) {
+            console.error("Error during image capture:", captureError);
+            // Check if captureError is an Error object
+            if (captureError instanceof Error) {
+                setError(`Failed to capture image: ${captureError.message}`);
+            } else {
+                // Handle cases where something other than an Error was thrown
+                setError(`Failed to capture image: Unknown error occurred.`);
+                // Or stringify it if appropriate, but be cautious:
+                // setError(`Failed to capture image: ${String(captureError)}`);
+            }
         }
     } else {
          console.warn("Capture called but video/canvas not ready or video size is 0.");
