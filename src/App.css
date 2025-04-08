@@ -1,4 +1,4 @@
-/* src/App.css - COMPLETE Consolidated Version */
+/* src/App.css - FINAL COMPLETE Version (including Yellow Button) */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
@@ -70,6 +70,15 @@
   --settings-staff-border: #dee2e6;
   --settings-staff-hover-bg: #e9ecef;
   --settings-staff-hover-border: #ced4da;
+  /* --- NEW Yellow Button Colors --- */
+  --button-yellow-bg: #ffc107;
+  --button-yellow-text: #212529;
+  --button-yellow-border: #ffc107;
+  --button-yellow-hover-bg: #ffca2c;
+  --button-yellow-hover-border: #ffc107;
+  --button-yellow-disabled-bg: #fff3cd;
+  --button-yellow-disabled-text: #664d03;
+  --button-yellow-disabled-border: #ffeeba;
   /* Syntax Highlighting (Base) */
   --code-bg: #f1f1f1;
   --code-text: #333;
@@ -145,6 +154,15 @@
   --settings-staff-border: #505050;
   --settings-staff-hover-bg: #404040;
   --settings-staff-hover-border: #606060;
+  /* --- NEW Yellow Button Colors (Dark) --- */
+  --button-yellow-bg: #e9b400;
+  --button-yellow-text: #1a1a1a;
+  --button-yellow-border: #e9b400;
+  --button-yellow-hover-bg: #f5c518;
+  --button-yellow-hover-border: #e9b400;
+  --button-yellow-disabled-bg: #4d401a;
+  --button-yellow-disabled-text: #ab985a;
+  --button-yellow-disabled-border: #6b5a23;
    /* Syntax Highlighting */
   --code-bg: #282c34;
   --code-text: #abb2bf;
@@ -156,65 +174,34 @@
 
 /* Basic Reset & Font */
 html, body, #root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  font-family: 'Inter', sans-serif;
-  background-color: var(--page-bg);
-  overflow: hidden; /* Keep this to prevent body scroll */
-  color: var(--text-primary);
+  height: 100%; margin: 0; padding: 0; font-family: 'Inter', sans-serif;
+  background-color: var(--page-bg); overflow: hidden; color: var(--text-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
-
-button, input, select, textarea {
-  font-family: inherit;
-  color: inherit;
-  background-color: transparent;
-  box-sizing: border-box;
-}
+button, input, select, textarea { font-family: inherit; color: inherit; background-color: transparent; box-sizing: border-box; }
 
 /* --- Main App Layout Fix --- */
-.App {
-  display: flex;
-  flex-direction: column;
-  height: 100vh; /* Use viewport height */
-  overflow: hidden; /* Prevent this main wrapper from scrolling */
-}
+.App { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
 /* Add transitions to other elements */
-.App, .App-header, .chatbot-container, .chatbot-input-area, .settings-menu, .staff-panel-modal, .beta-notice-modal, .feedback-modal, .analysis-form-modal, input, select, textarea, button, .message, .intro-notice-modal { /* Added intro modal */
+.App, .App-header, .chatbot-container, .chatbot-input-area, .settings-menu, .staff-panel-modal, .beta-notice-modal, .feedback-modal, .analysis-form-modal, input, select, textarea, button, .message, .intro-notice-modal {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 .message.user, .message.bot { transition: background-color 0.3s ease, color 0.3s ease; }
 
-/* Make scrollbars less obtrusive */
+/* Scrollbars */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; } /* Transparent track */
-::-webkit-scrollbar-thumb { background: var(--text-secondary); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; } /* Add border to simulate padding */
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-secondary); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-primary); }
-/* For Firefox */
 * { scrollbar-width: thin; scrollbar-color: var(--text-secondary) transparent; }
 
 /* --- Header Styles --- */
-.App-header {
-  padding: 10px 15px;
-  background-color: var(--header-bg);
-  border-bottom: 1px solid var(--border-color);
-  text-align: center;
-  flex-shrink: 0; /* Keep */
-  box-shadow: 0 1px 3px var(--shadow-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  box-sizing: border-box;
-  z-index: 10;
-  min-height: 50px;
-}
+.App-header { padding: 10px 15px; background-color: var(--header-bg); border-bottom: 1px solid var(--border-color); text-align: center; flex-shrink: 0; box-shadow: 0 1px 3px var(--shadow-color); display: flex; justify-content: space-between; align-items: center; position: relative; box-sizing: border-box; z-index: 10; min-height: 50px; }
 .App-header h1 { margin: 0; font-size: 1.15em; font-weight: 600; color: var(--text-primary); white-space: nowrap; flex-grow: 1; text-align: center; }
 .settings-button { background: none; border: none; padding: 5px; font-size: 22px; cursor: pointer; color: var(--text-secondary); opacity: 0.9; transition: opacity 0.2s ease; line-height: 1; flex-shrink: 0; }
 .settings-button:hover { opacity: 1; color: var(--text-primary); }
-.header-spacer-right { width: calc(32px * 2 + 5px); flex-shrink: 0; } /* Adjust width based on number of buttons */
+.header-spacer-right { width: calc(32px * 2 + 5px); flex-shrink: 0; }
 
 /* --- Settings Menu / Shared Modal Styles --- */
 .settings-menu { position: fixed; top: 55px; left: 15px; background-color: var(--settings-menu-bg); border: 1px solid var(--settings-menu-border); border-radius: 8px; padding: 20px; box-shadow: 0 5px 15px var(--settings-menu-shadow); z-index: 1000; min-width: 450px; width: max-content; max-width: 600px; display: flex; flex-direction: column; max-height: calc(100vh - 70px); overflow-y: auto; }
@@ -222,7 +209,7 @@ button, input, select, textarea {
 .settings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; align-items: start; margin-bottom: 15px; }
 .settings-column { display: flex; flex-direction: column; gap: 18px; }
 .settings-option { display: flex; flex-direction: column; gap: 6px; }
-.settings-option label { font-weight: 500; font-size: 0.85em; color: var(--settings-label-text); }
+.settings-option label { font-weight: 500; font-size: 0.85em; color: var(--settings-label-text); margin-bottom: 2px; /* Added small margin */ }
 .settings-helper-text { font-size: 0.8em; color: var(--text-secondary); margin-top: 5px; margin-bottom: 0; line-height: 1.4; }
 .settings-key-status { font-size: 0.8em; margin-top: 6px; height: 1.2em; font-weight: 500; }
 .key-loading { font-style: italic; color: var(--text-secondary); }
@@ -246,6 +233,14 @@ button, input, select, textarea {
 .theme-toggle-button { background-color: var(--button-secondary-bg); color: var(--text-primary); border: 1px solid var(--settings-menu-border); justify-content: center; }
 .theme-toggle-button:hover { background-color: var(--button-secondary-hover-bg); }
 
+/* Current Persona Display Text */
+.settings-option .current-persona-display { font-size: 0.95em; font-weight: 500; color: var(--text-primary); margin-top: 4px; margin-bottom: 8px; padding: 6px 10px; background-color: var(--button-secondary-bg); border-radius: 4px; text-align: center; border: 1px solid var(--settings-select-border); display: block; }
+/* Change Persona Button (Yellow) */
+.settings-option .persona-change-button { justify-content: center; text-align: center; background-color: var(--button-yellow-bg); color: var(--button-yellow-text); border: 1px solid var(--button-yellow-border); }
+.settings-option .persona-change-button:hover:not(:disabled) { background-color: var(--button-yellow-hover-bg); border-color: var(--button-yellow-hover-border); color: var(--button-yellow-text); }
+.settings-option .persona-change-button:disabled { background-color: var(--button-yellow-disabled-bg) !important; color: var(--button-yellow-disabled-text) !important; border-color: var(--button-yellow-disabled-border) !important; cursor: not-allowed; opacity: 0.75; }
+.settings-option .persona-change-button:disabled:hover { background-color: var(--button-yellow-disabled-bg) !important; border-color: var(--button-yellow-disabled-border) !important; opacity: 0.75; }
+
 /* Staff Login Modal */
 .staff-panel-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 1100; padding: 15px; box-sizing: border-box; }
 .staff-panel-modal { background-color: var(--settings-menu-bg); padding: 25px 30px; border-radius: 8px; border: 1px solid var(--settings-menu-border); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; position: relative; }
@@ -263,7 +258,7 @@ button, input, select, textarea {
 
 /* Analysis Form Modal */
 .analysis-form-overlay { position: fixed; top:0;left:0;right:0;bottom:0; background-color:var(--beta-overlay-bg); display:flex; align-items:center; justify-content:center; z-index:1050; padding:15px; box-sizing:border-box; }
-.analysis-form-modal { background-color:var(--settings-menu-bg); padding:25px 30px; border-radius:8px; border:1px solid var(--settings-menu-border); box-shadow:0 5px 15px var(--settings-menu-shadow); max-width:600px; width:100%; box-sizing:border-box; max-height:90vh; overflow-y:auto; position: relative; /* Added for close button */ }
+.analysis-form-modal { background-color:var(--settings-menu-bg); padding:25px 30px; border-radius:8px; border:1px solid var(--settings-menu-border); box-shadow:0 5px 15px var(--settings-menu-shadow); max-width:600px; width:100%; box-sizing:border-box; max-height:90vh; overflow-y:auto; position: relative; }
 .analysis-form-modal h3 { text-align:center; font-size:1.1em; font-weight:600; color:var(--text-primary); margin-top:0; margin-bottom:15px; flex-shrink:0; }
 .analysis-form-modal form { display:flex; flex-direction:column; gap:15px; }
 .analysis-form-modal textarea.settings-input { min-height:100px; resize:vertical; line-height:1.5; }
@@ -296,7 +291,7 @@ button, input, select, textarea {
 .star-button.selected { color: #ffc107; }
 .star-button:hover { opacity: 0.8; }
 .star-button:disabled { cursor: default; opacity: 0.6; }
-.feedback-field label span { color: var(--key-invalid-color); margin-left: 3px; } /* Required indicator */
+.feedback-field label span { color: var(--key-invalid-color); margin-left: 3px; }
 .feedback-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
 .cancel-feedback-button, .submit-feedback-button { padding: 10px 20px; border-radius: 5px; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease; font-size: 0.95em; }
 .cancel-feedback-button { background-color: var(--button-secondary-bg); color: var(--text-primary); border: 1px solid var(--border-color); }
@@ -311,35 +306,16 @@ button, input, select, textarea {
 :root[data-theme='dark'] .feedback-message.error { background-color: #4d2d30; }
 
 /* --- Introduction Notice Styles --- */
-.intro-notice-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background-color: var(--beta-overlay-bg);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1060; /* High z-index */
-  padding: 15px; box-sizing: border-box;
-}
-.intro-notice-modal {
-  background-color: var(--beta-modal-bg);
-  padding: 25px 30px; border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-  max-width: 650px; width: 100%; box-sizing: border-box;
-  max-height: 90vh; /* Allow scrolling */
-  overflow-y: auto;  /* Enable scrolling */
-  position: relative; /* Needed for button container positioning */
-  padding-bottom: 80px; /* Space for the default button position */
-}
+.intro-notice-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--beta-overlay-bg); display: flex; align-items: center; justify-content: center; z-index: 1060; padding: 15px; box-sizing: border-box; }
+.intro-notice-modal { background-color: var(--beta-modal-bg); padding: 25px 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); max-width: 650px; width: 100%; box-sizing: border-box; max-height: 90vh; overflow-y: auto; position: relative; padding-bottom: 80px; }
 .intro-notice-modal h2 { margin-top: 0; color: var(--text-primary); font-size: 1.3em; margin-bottom: 15px; text-align: center; }
 .intro-notice-modal p { margin-bottom: 15px; line-height: 1.6; color: var(--beta-text-color); font-size: 0.95em; text-align: left; }
-
-/* Intro Sections */
 .intro-section { display: flex; justify-content: space-between; align-items: center; padding: 12px 5px 12px 0; border-bottom: 1px solid var(--border-color); gap: 20px; }
 .intro-section:last-of-type { border-bottom: none; padding-bottom: 5px; }
 .intro-section-content { flex-grow: 1; text-align: left; }
 .intro-section-content h4 { margin: 0 0 5px 0; font-size: 1.05em; font-weight: 600; color: var(--text-primary); }
-.intro-section-content p { margin: 0; font-size: 0.9em; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; } /* Handles \n */
+.intro-section-content p { margin: 0; font-size: 0.9em; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; }
 .intro-section-toggle { flex-shrink: 0; }
-
-/* CSS Toggle Switch Styles */
 .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--button-secondary-bg); border: 1px solid var(--border-color); transition: .3s; }
@@ -349,62 +325,14 @@ input:focus + .slider { box-shadow: 0 0 1px var(--user-bubble-bg); }
 input:checked + .slider:before { transform: translateX(26px); }
 .slider.round { border-radius: 24px; }
 .slider.round:before { border-radius: 50%; }
-
-/* Intro Button Container & Runaway Button Styles */
-.intro-button-container {
-    position: absolute; /* Position relative to modal bottom padding area */
-    bottom: 25px; left: 0; right: 0;
-    display: flex; justify-content: center; align-items: center;
-    pointer-events: none; /* Container doesn't block clicks */
-    z-index: 4;
-}
-/* --- Settings Menu Styles Additions --- */
-
-.settings-option .current-persona-display {
-  font-size: 0.95em; /* Adjust size as needed */
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-top: 4px; /* Space below label */
-  margin-bottom: 8px; /* Space above button */
-  padding: 6px 10px; /* Optional padding */
-  background-color: var(--button-secondary-bg); /* Subtle background */
-  border-radius: 4px;
-  text-align: center; /* Center the text */
-  border: 1px solid var(--settings-select-border); /* Match input border */
-}
-
-
-/* Style for disabled persona change button */
-.settings-option .persona-change-button:disabled {
-    background-color: var(--button-disabled-bg) !important; /* Ensure override */
-    color: var(--button-disabled-text) !important;
-    border-color: var(--button-disabled-bg) !important;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-.settings-option .persona-change-button:disabled:hover {
-     background-color: var(--button-disabled-bg) !important; /* Prevent hover effect */
-}
-.intro-accept-button {
-    padding: 10px 20px; border: none; background-color: var(--beta-button-bg); color: var(--beta-button-text); border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500;
-    /* Add transitions for smooth movement (top/left) and appearance */
-    transition: background-color 0.2s ease, top 0.4s ease-out, left 0.4s ease-out, opacity 0.3s ease;
-    position: relative; /* Default state, centered by container */
-    z-index: 5; /* Above container */
-    pointer-events: auto; /* Button IS clickable */
-    min-width: 180px; text-align: center;
-}
+.intro-button-container { position: absolute; bottom: 25px; left: 0; right: 0; display: flex; justify-content: center; align-items: center; pointer-events: none; z-index: 4; }
+.intro-accept-button { padding: 10px 20px; border: none; background-color: var(--beta-button-bg); color: var(--beta-button-text); border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: background-color 0.2s ease, top 0.4s ease-out, left 0.4s ease-out, opacity 0.3s ease; position: relative; z-index: 5; pointer-events: auto; min-width: 180px; text-align: center; }
 .intro-accept-button:hover { background-color: var(--beta-button-hover-bg); }
-/* Style when it acts as the "runaway" button (not all sections acknowledged) */
-.intro-accept-button.button-runaway { opacity: 0.8; /* Looks slightly disabled */ }
+.intro-accept-button.button-runaway { opacity: 0.8; }
 .intro-accept-button.button-runaway:hover { background-color: var(--beta-button-bg); opacity: 0.8; }
-
-/* Scrollbar styling for the intro modal */
 .intro-notice-modal::-webkit-scrollbar { width: 6px; }
 .intro-notice-modal::-webkit-scrollbar-thumb { background: var(--text-secondary); border-radius: 3px; }
 .intro-notice-modal { scrollbar-width: thin; scrollbar-color: var(--text-secondary) transparent; }
-/* --- End Introduction Notice Styles --- */
-
 
 /* --- ChatbotPage Styles --- */
 .chatbot-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; background-color: var(--messages-bg); }
@@ -441,9 +369,7 @@ input:checked + .slider:before { transform: translateX(26px); }
 
 /* --- Input Area Adjustments --- */
 .chatbot-input-area { display: flex; flex-direction: column; padding: 8px; border-top: 1px solid var(--border-color); background-color: var(--input-bg); flex-shrink: 0; }
-/* Container for previews + input row */
-.chatbot-input-area > div:last-of-type { display: flex; flex-direction: column; }
-/* Wrapper for input row itself, needed for menu positioning */
+.chatbot-input-area > div:last-child { display: flex; flex-direction: column; }
 .chatbot-input-area .input-row-wrapper { position: relative; width: 100%; }
 .chatbot-input-area .input-row { display: flex; align-items: center; gap: 5px; width: 100%; }
 .chatbot-input-area input[type="text"].chatbot-input { flex-grow: 1; padding: 10px 15px; border: 1px solid var(--input-border-color); border-radius: 18px; font-size: 0.95rem; outline: none; background-color: var(--container-bg); color: var(--text-primary); box-shadow: none; min-height: 40px; box-sizing: border-box; }
@@ -478,70 +404,46 @@ input:checked + .slider:before { transform: translateX(26px); }
 .action-menu-item svg { font-size: 1.1em; color: var(--text-secondary); flex-shrink: 0; }
 .action-menu-item:hover:not(:disabled) svg { color: var(--text-primary); }
 
-
 /* --- Responsive Styles --- */
 @media (max-width: 900px) {
-  .App-header { padding: 8px 10px; min-height: 0; }
-  .App-header h1 { font-size: 1.0em; }
-  .settings-button { font-size: 20px; padding: 4px; }
-  .header-spacer-right { width: calc(28px * 2 + 5px); }
+  .App-header { padding: 8px 10px; min-height: 0; } .App-header h1 { font-size: 1.0em; } .settings-button { font-size: 20px; padding: 4px; } .header-spacer-right { width: calc(28px * 2 + 5px); }
   .chatbot-messages { padding: 15px 10px 20px 10px; gap: 15px; font-size: 0.95rem; }
-  .chatbot-input-area { padding: 8px; }
-  .chatbot-input-area .input-row { gap: 5px; } /* Target inner row */
+  .chatbot-input-area { padding: 8px; } .chatbot-input-area .input-row { gap: 5px; }
   .message { max-width: 85%; border-radius: 14px; padding: 9px 14px; }
   .chatbot-input-area input[type="text"].chatbot-input { padding: 9px 14px; font-size: 0.9rem; min-height: 38px; border-radius: 14px; }
   .chatbot-input-area .input-button, .chatbot-input-area .send-button { width: 38px; height: 38px; font-size: 1.1em; border-radius: 12px; }
-  .image-preview-area { padding: 4px 8px; margin-bottom: 8px;}
-  .image-preview-thumbnail { max-height: 35px; max-width: 50px; }
-  .suggestions-container { gap: 5px; margin-left: 10px; }
-  .suggestion-button { padding: 4px 10px; font-size: 0.8em; }
+  .image-preview-area { padding: 4px 8px; margin-bottom: 8px;} .image-preview-thumbnail { max-height: 35px; max-width: 50px; }
+  .suggestions-container { gap: 5px; margin-left: 10px; } .suggestion-button { padding: 4px 10px; font-size: 0.8em; }
   .settings-menu { min-width: 0; width: calc(100% - 20px); padding: 15px; top: 50px; left: 10px; right: 10px; max-height: calc(100vh - 60px); }
-  .settings-grid { grid-template-columns: 1fr; gap: 0; }
-  .settings-column { gap: 15px; }
-  .settings-column:not(:last-child) { margin-bottom: 15px; }
-  .analysis-form-modal { padding: 20px; max-height: 85vh; }
-  .staff-panel-modal { width: 95%; max-width: 95%; padding: 20px; }
-  .message pre code { font-size: 0.85em !important; }
-  .message-meta { font-size: 0.65em; }
-  .tts-button { font-size: 1.1em; }
+  .settings-grid { grid-template-columns: 1fr; gap: 0; } .settings-column { gap: 15px; } .settings-column:not(:last-child) { margin-bottom: 15px; }
+  .analysis-form-modal { padding: 20px; max-height: 85vh; } .staff-panel-modal { width: 95%; max-width: 95%; padding: 20px; }
+  .message pre code { font-size: 0.85em !important; } .message-meta { font-size: 0.65em; } .tts-button { font-size: 1.1em; }
   .message-wrapper-bot .message-meta, .message-wrapper-user .message-meta { margin-left: 10px; margin-right: 10px; }
-  .intro-notice-modal { max-width: 95%; padding: 20px 25px; padding-bottom: 70px; } /* Adjust padding */
+  .intro-notice-modal { max-width: 95%; padding: 20px 25px; padding-bottom: 70px; }
 }
 
 @media (max-width: 500px) {
   .chatbot-messages { padding: 15px 8px 20px 8px; gap: 12px; }
-  .message { max-width: 90%; padding: 8px 12px; }
-  .message-timestamp { font-size: 0.65em; }
-  .chatbot-input-area { padding: 6px; }
-  .chatbot-input-area .input-row { gap: 4px; } /* Target inner row */
+  .message { max-width: 90%; padding: 8px 12px; } .message-timestamp { font-size: 0.65em; }
+  .chatbot-input-area { padding: 6px; } .chatbot-input-area .input-row { gap: 4px; }
   .chatbot-input-area input[type="text"].chatbot-input { padding: 8px 12px; font-size: 0.9rem; min-height: 36px; border-radius: 12px;}
   .chatbot-input-area .input-button, .chatbot-input-area .send-button { width: 36px; height: 36px; font-size: 1.0em; border-radius: 10px; }
   .image-preview-thumbnail { max-height: 30px; max-width: 45px; }
-  .suggestions-container { gap: 4px; margin-left: 8px; }
-  .suggestion-button { padding: 4px 8px; font-size: 0.75em; }
+  .suggestions-container { gap: 4px; margin-left: 8px; } .suggestion-button { padding: 4px 8px; font-size: 0.75em; }
   .settings-menu { padding: 12px; top: 45px; left: 5px; right: 5px; width: calc(100% - 10px); max-height: calc(100vh - 55px); }
-  .settings-column { gap: 12px; }
-  .settings-column:not(:last-child) { margin-bottom: 12px; }
-  .settings-option label { font-size: 0.8em; }
-  .settings-select, .settings-input { font-size: 0.85em; padding: 6px 8px;}
-  .settings-action-button { font-size: 0.85em; padding: 8px 10px; gap: 6px; }
-  .settings-helper-text { font-size: 0.75em; }
+  .settings-column { gap: 12px; } .settings-column:not(:last-child) { margin-bottom: 12px; }
+  .settings-option label { font-size: 0.8em; } .settings-select, .settings-input { font-size: 0.85em; padding: 6px 8px;}
+  .settings-action-button { font-size: 0.85em; padding: 8px 10px; gap: 6px; } .settings-helper-text { font-size: 0.75em; }
   .close-settings-button { font-size: 0.85em; padding: 8px 12px; }
-  .analysis-form-modal { padding: 15px; }
-  .analysis-form-actions { gap: 6px; }
+  .analysis-form-modal { padding: 15px; } .analysis-form-actions { gap: 6px; }
   .analysis-form-actions .close-settings-button, .analysis-form-actions .beta-accept-button { font-size: 0.9em; padding: 6px 12px; }
-  .beta-notice-modal { padding: 20px 20px; }
-  .beta-notice-modal h2 { font-size: 1.2em; }
-  .beta-notice-modal p { font-size: 0.9em; }
+  .beta-notice-modal { padding: 20px 20px; } .beta-notice-modal h2 { font-size: 1.2em; } .beta-notice-modal p { font-size: 0.9em; }
   .beta-accept-button { font-size: 0.9rem; padding: 8px 16px; }
-  .staff-panel-modal { padding: 15px; }
-  .staff-panel-modal h3 { font-size: 1.15em; margin-bottom: 15px; }
-  .message pre code { font-size: 0.82em !important; }
-  .message-meta { font-size: 0.6em; gap: 3px; }
-  .tts-button { font-size: 1em; }
+  .staff-panel-modal { padding: 15px; } .staff-panel-modal h3 { font-size: 1.15em; margin-bottom: 15px; }
+  .message pre code { font-size: 0.82em !important; } .message-meta { font-size: 0.6em; gap: 3px; } .tts-button { font-size: 1em; }
   .message-wrapper-bot .message-meta, .message-wrapper-user .message-meta { margin-left: 8px; margin-right: 8px; }
-  .intro-notice-modal { padding: 15px 20px; padding-bottom: 65px; } /* Adjust padding */
-  .intro-section { flex-direction: column; align-items: flex-start; gap: 8px; } /* Stack text and toggle */
-  .intro-section-toggle { align-self: flex-end; margin-top: 5px; } /* Move toggle to right */
-  .action-menu-popup { bottom: calc(100% + 5px); left: -5px; } /* Adjust menu position */
+  .intro-notice-modal { padding: 15px 20px; padding-bottom: 65px; }
+  .intro-section { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .intro-section-toggle { align-self: flex-end; margin-top: 5px; }
+  .action-menu-popup { bottom: calc(100% + 5px); left: -5px; }
 }

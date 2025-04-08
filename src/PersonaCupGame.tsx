@@ -26,10 +26,10 @@ interface CupState {
 }
 
 // --- Constants ---
-const SHOW_DELAY_MS = 1500;
+const SHOW_DELAY_MS = 2000;
 const SHUFFLE_MOVE_DELAY_MS = 100;
-const SHUFFLE_TRANSITION_MS = 400;
-const NUM_SHUFFLE_MOVES = 5;
+const SHUFFLE_TRANSITION_MS = 500;
+const NUM_SHUFFLE_MOVES = 6;
 const REVEAL_DELAY_MS = 1500;
 const RESTART_DELAY_MS = 3000;
 
