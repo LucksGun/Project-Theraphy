@@ -1,4 +1,4 @@
-/* src/App.css - Consolidated Version */
+/* src/App.css - COMPLETE Consolidated Version */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
@@ -315,35 +315,31 @@ button, input, select, textarea {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   background-color: var(--beta-overlay-bg);
   display: flex; align-items: center; justify-content: center;
-  z-index: 1060; /* Above most things */
+  z-index: 1060; /* High z-index */
   padding: 15px; box-sizing: border-box;
 }
 .intro-notice-modal {
   background-color: var(--beta-modal-bg);
   padding: 25px 30px; border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-  max-width: 650px; /* Wider for sections */
-  width: 100%; box-sizing: border-box;
-  max-height: 90vh; overflow-y: auto;
-  position: relative; /* For button positioning */
-  overflow: hidden; /* Prevent runaway button escaping */
-  padding-bottom: 80px; /* Space for button */
+  max-width: 650px; width: 100%; box-sizing: border-box;
+  max-height: 90vh; /* Allow scrolling */
+  overflow-y: auto;  /* Enable scrolling */
+  position: relative; /* Needed for button container positioning */
+  padding-bottom: 80px; /* Space for the default button position */
 }
 .intro-notice-modal h2 { margin-top: 0; color: var(--text-primary); font-size: 1.3em; margin-bottom: 15px; text-align: center; }
 .intro-notice-modal p { margin-bottom: 15px; line-height: 1.6; color: var(--beta-text-color); font-size: 0.95em; text-align: left; }
-.intro-notice-modal ul { padding-left: 25px; margin-bottom: 15px; text-align: left; }
-.intro-notice-modal li { margin-bottom: 8px; }
-.intro-notice-modal p:last-of-type { margin-bottom: 25px; }
 
 /* Intro Sections */
 .intro-section { display: flex; justify-content: space-between; align-items: center; padding: 12px 5px 12px 0; border-bottom: 1px solid var(--border-color); gap: 20px; }
 .intro-section:last-of-type { border-bottom: none; padding-bottom: 5px; }
 .intro-section-content { flex-grow: 1; text-align: left; }
 .intro-section-content h4 { margin: 0 0 5px 0; font-size: 1.05em; font-weight: 600; color: var(--text-primary); }
-.intro-section-content p { margin: 0; font-size: 0.9em; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; } /* Handle newlines */
+.intro-section-content p { margin: 0; font-size: 0.9em; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; } /* Handles \n */
 .intro-section-toggle { flex-shrink: 0; }
 
-/* Simple CSS Toggle Switch Styles */
+/* CSS Toggle Switch Styles */
 .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--button-secondary-bg); border: 1px solid var(--border-color); transition: .3s; }
@@ -355,15 +351,25 @@ input:checked + .slider:before { transform: translateX(26px); }
 .slider.round:before { border-radius: 50%; }
 
 /* Intro Button Container & Runaway Button */
-.intro-button-container { position: absolute; bottom: 25px; left: 0; right: 0; display: flex; justify-content: center; align-items: center; pointer-events: none; /* Container doesn't block clicks */ }
+.intro-button-container {
+    position: absolute; /* Position relative to modal bottom padding area */
+    bottom: 25px; left: 0; right: 0;
+    display: flex; justify-content: center; align-items: center;
+    pointer-events: none; /* Container doesn't block clicks */
+    z-index: 4;
+}
 .intro-accept-button {
-  padding: 10px 20px; border: none; background-color: var(--beta-button-bg); color: var(--beta-button-text); border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500;
-  transition: background-color 0.2s ease, top 0.4s ease-out, left 0.4s ease-out, opacity 0.3s ease; /* Added opacity transition */
-  position: relative; z-index: 5; pointer-events: auto; min-width: 180px; text-align: center;
+    padding: 10px 20px; border: none; background-color: var(--beta-button-bg); color: var(--beta-button-text); border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500;
+    /* Add transitions for smooth movement and appearance changes */
+    transition: background-color 0.2s ease, top 0.4s ease-out, left 0.4s ease-out, opacity 0.3s ease;
+    position: relative; /* Default state, centered by container */
+    z-index: 5; /* Above container */
+    pointer-events: auto; /* Button IS clickable */
+    min-width: 180px; text-align: center;
 }
 .intro-accept-button:hover { background-color: var(--beta-button-hover-bg); }
-.intro-accept-button.button-runaway { opacity: 0.8; /* Make it look slightly disabled */ }
-.intro-accept-button.button-runaway:hover { background-color: var(--beta-button-bg); /* Prevent hover change when runaway */ opacity: 0.8; }
+.intro-accept-button.button-runaway { opacity: 0.8; /* Looks slightly disabled */ }
+.intro-accept-button.button-runaway:hover { background-color: var(--beta-button-bg); opacity: 0.8; }
 
 
 /* --- ChatbotPage Styles --- */
@@ -401,9 +407,7 @@ input:checked + .slider:before { transform: translateX(26px); }
 
 /* --- Input Area Adjustments --- */
 .chatbot-input-area { display: flex; flex-direction: column; padding: 8px; border-top: 1px solid var(--border-color); background-color: var(--input-bg); flex-shrink: 0; }
-/* Wrapper for the button/input row */
-.chatbot-input-area > div:last-child { display: flex; flex-direction: column; } /* Make container stack previews and input row */
-/* The actual input row */
+.chatbot-input-area > div:last-child { display: flex; flex-direction: column; } /* Stack previews and input row */
 .chatbot-input-area .input-row-wrapper { position: relative; width: 100%; } /* For Action Menu Popup */
 .chatbot-input-area .input-row { display: flex; align-items: center; gap: 5px; width: 100%; }
 .chatbot-input-area input[type="text"].chatbot-input { flex-grow: 1; padding: 10px 15px; border: 1px solid var(--input-border-color); border-radius: 18px; font-size: 0.95rem; outline: none; background-color: var(--container-bg); color: var(--text-primary); box-shadow: none; min-height: 40px; box-sizing: border-box; }
@@ -501,7 +505,7 @@ input:checked + .slider:before { transform: translateX(26px); }
   .tts-button { font-size: 1em; }
   .message-wrapper-bot .message-meta, .message-wrapper-user .message-meta { margin-left: 8px; margin-right: 8px; }
   .intro-notice-modal { padding: 15px 20px; padding-bottom: 65px; } /* Adjust padding */
-  .intro-section { flex-direction: column; align-items: flex-start; gap: 8px; } /* Stack text and toggle on small screens */
-  .intro-section-toggle { align-self: flex-end; } /* Move toggle to right */
-  .action-menu-popup { bottom: calc(100% + 5px); left: -5px; /* Adjust position */ }
+  .intro-section { flex-direction: column; align-items: flex-start; gap: 8px; } /* Stack text and toggle */
+  .intro-section-toggle { align-self: flex-end; margin-top: 5px; } /* Move toggle to right */
+  .action-menu-popup { bottom: calc(100% + 5px); left: -5px; } /* Adjust menu position */
 }

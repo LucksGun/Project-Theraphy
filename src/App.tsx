@@ -264,7 +264,37 @@ function App() {
     };
     const handleSectionToggle = (sectionKey: string) => { setIntroSectionsAcknowledged(prev => ({ ...prev, [sectionKey]: !prev[sectionKey] })); };
     const handleAcceptIntroduction = () => { if (!allIntroSectionsAcknowledged) return; localStorage.setItem(INTRODUCTION_SEEN_KEY, 'true'); setShowIntroduction(false); };
-    const handleMoveButton = () => { const randomTop = Math.random() * 70 + 15; const randomLeft = Math.random() * 70 + 15; setContinueButtonStyle({ position: 'absolute', top: `${randomTop}%`, left: `${randomLeft}%`, zIndex: 10 }); };
+    // Inside App component in App.tsx
+// Inside App component in App.tsx
+
+const handleMoveButton = () => {
+    // Get viewport dimensions
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Estimate button size (can be refined if needed)
+    const buttonWidth = 180;
+    const buttonHeight = 45;
+
+    // Calculate random positions within viewport bounds
+    // Allow it to go near edges, but try to keep most of it visible
+    const randomTop = Math.random() * (vh - buttonHeight);
+    const randomLeft = Math.random() * (vw - buttonWidth);
+
+    console.log(`Moving button (fixed) to: T ${randomTop.toFixed(0)}px, L ${randomLeft.toFixed(0)}px`);
+
+    setContinueButtonStyle({
+        position: 'fixed', // *** CHANGE: Use fixed positioning ***
+        top: `${randomTop}px`, // Use pixel values for viewport positioning
+        left: `${randomLeft}px`,
+        zIndex: 1070 // *** Ensure it's above the overlay (overlay is 1060) ***
+        // The transition effect will still apply from CSS
+    });
+};
+
+// The useEffect that resets continueButtonStyle to {} when
+// allIntroSectionsAcknowledged becomes true remains the same.
+// It will remove position:fixed, allowing CSS to position it back.
     const handleModelChange = (e: ChangeEvent<HTMLSelectElement>) => { const m = e.target.value as GeminiModel; if (ALL_MODEL_VALUES.includes(m)) setSelectedModel(m); };
     const handleSttLangChange = (e: ChangeEvent<HTMLSelectElement>) => { setSttLang(e.target.value as SpeechLanguage); };
     const handlePersonaChange = (e: ChangeEvent<HTMLSelectElement>) => { const p = e.target.value as Persona; if (ALL_PERSONAS.includes(p)) setSelectedPersona(p); };
