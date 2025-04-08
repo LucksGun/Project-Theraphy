@@ -160,19 +160,21 @@ function App() {
                 {/* Column 2 */}
                 <div className="settings-column">
                     <div className="settings-option"> <label htmlFor="stt-lang-select">Speech Input Lang:</label> <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"><option value="en-US">English (US)</option><option value="th-TH">ไทย (Thai)</option><option value="es-ES">Español (Spain)</option><option value="fr-FR">Français (France)</option></select> </div>
+
+
                     <div className="settings-option">
     <label>Appearance:</label>
     {/* Single button that shows target theme emoji and launches game */}
     <button
         onClick={() => setIsPlinkoVisible(true)} // Open the plinko game modal
-        className="settings-action-button theme-plinko-button" // Use a distinct class if needed
+        className="settings-action-button theme-plinko-button" // Use specific class
         title="Try to randomly change theme"
     >
         {/* Show emoji for the OPPOSITE theme */}
-        {currentTheme === 'light' ? '🌙' : '☀️'} Change Theme
+        {currentTheme === 'light' ? '🌙' : '☀️'} Try Random Theme Change
     </button>
     <p className="settings-helper-text">
-        Current theme: {currentTheme === 'light' ? 'Light' : 'Dark'}. Play the game to try and switch!
+        Current theme is {currentTheme}. Play the game for a chance to switch!
     </p>
 </div>
                     <div className="settings-option"> <label>Chat Actions:</label> <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}><button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button><button onClick={() => setIsClearConfirmGameVisible(true)} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat History</button></div> </div>

@@ -396,6 +396,48 @@ input:checked + .slider:before { transform: translateX(26px); }
 .suggestion-button:disabled { color: #adb5bd; border-color: var(--input-border-color); cursor: default; background-color: var(--suggestion-bg); opacity: 0.7; }
 :root[data-theme='dark'] .suggestion-button:disabled { color: #707070; border-color: var(--input-border-color); }
 
+/* Add or Modify in App.css */
+
+/* Ensure base action button uses flex for alignment */
+.settings-action-button {
+  display: flex;
+  align-items: center; /* Vertical center */
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left; /* Align text left by default */
+  font-weight: 500;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  border: 1px solid transparent; /* Default no border */
+}
+
+/* Specific styles for the Plinko trigger button */
+.theme-plinko-button {
+    justify-content: center; /* <<< Center content horizontally */
+    border: 1px solid var(--settings-select-border); /* <<< Add border using select border color */
+    background-color: var(--button-secondary-bg); /* Match other secondary buttons */
+    color: var(--text-primary);
+}
+.theme-plinko-button:hover {
+     background-color: var(--button-secondary-hover-bg);
+     border-color: #adb5bd; /* Slightly darker border on hover */
+}
+
+/* Keep theme-toggle-button styles if needed */
+.theme-toggle-button {
+    justify-content: center; /* Also center this one */
+    border: 1px solid var(--settings-select-border);
+    background-color: var(--button-secondary-bg);
+    color: var(--text-primary);
+}
+ .theme-toggle-button:hover {
+    background-color: var(--button-secondary-hover-bg);
+    border-color: #adb5bd;
+}
+
 /* --- Action Menu Styles --- */
 .action-menu-popup { position: absolute; bottom: calc(100% + 8px); left: 0; background-color: var(--container-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 12px var(--shadow-color); z-index: 100; padding: 5px; display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
 .action-menu-item { display: flex; align-items: center; gap: 8px; background: none; border: none; padding: 8px 12px; text-align: left; width: 100%; cursor: pointer; border-radius: 4px; color: var(--text-primary); font-size: 0.9em; transition: background-color 0.2s ease; }

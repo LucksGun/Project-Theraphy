@@ -147,9 +147,6 @@ const ThemePlinkoGame: React.FC<ThemePlinkoGameProps> = ({
                 </p>
 
                 {/* Show Drop Again button only after animation ends AND before closing timeout */}
-                 {!isAnimating && result !== null && (
-                    <button onClick={startGame} className="plinko-button">Drop Again</button>
-                 )}
                  <button onClick={onClose} className="plinko-button cancel">Close</button>
 
             </div>
