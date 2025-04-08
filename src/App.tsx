@@ -345,6 +345,7 @@ const handleMoveButton = () => {
 
 
     // --- JSX ---
+    // --- JSX ---
     return (
         <div className="App">
             {/* Beta Notice Modal */}
@@ -353,32 +354,43 @@ const handleMoveButton = () => {
             )}
 
             {/* Introduction Modal */}
-            {showIntroduction && !showBetaNotice && (
+            {showIntroduction && !showBetaNotice && ( // Show only if Beta is done
                 <div className="intro-notice-overlay">
-                    <div className="intro-notice-modal" style={{ position: 'relative', overflow: 'hidden' }}>
+                    <div className="intro-notice-modal" style={{ position: 'relative' }}> {/* Removed inline overflow */}
                         <h2>วิธีใช้งาน Project Theraphy</h2>
-                        <p style={{ textAlign: 'center', marginBottom: '20px' }}>โปรดอ่านและกดยืนยันในแต่ละหัวข้อเพื่อเริ่มใช้งาน:</p>
+                        <p style={{ textAlign: 'center', marginBottom: '20px' }}>
+                            โปรดอ่านและกดยืนยันในแต่ละหัวข้อเพื่อเริ่มใช้งาน:
+                        </p>
+
                         {introductionSections.map(section => (
                             <div className="intro-section" key={section.key}>
                                 <div className="intro-section-content">
                                     <h4>{section.title}</h4>
+                                    {/* Use pre-wrap to respect newline characters (\n) */}
                                     <p style={{ whiteSpace: 'pre-wrap' }}>{section.text}</p>
                                 </div>
                                 <div className="intro-section-toggle">
                                     <label className="switch" title={`ยืนยันว่าอ่านหัวข้อ ${section.title}`}>
-                                        <input type="checkbox" checked={introSectionsAcknowledged[section.key]} onChange={() => handleSectionToggle(section.key)} />
+                                        <input
+                                            type="checkbox"
+                                            checked={introSectionsAcknowledged[section.key]}
+                                            onChange={() => handleSectionToggle(section.key)}
+                                        />
                                         <span className="slider round"></span>
                                     </label>
                                 </div>
                             </div>
                         ))}
+
+                        {/* Button Container for positioning */}
                         <div className="intro-button-container">
                              <button
-                                style={continueButtonStyle}
-                                onClick={allIntroSectionsAcknowledged ? handleAcceptIntroduction : handleMoveButton}
+                                style={continueButtonStyle} // Apply dynamic styles for position
+                                onClick={allIntroSectionsAcknowledged ? handleAcceptIntroduction : handleMoveButton} // Change action based on state
                                 className={`intro-accept-button ${!allIntroSectionsAcknowledged ? 'button-runaway' : ''}`}
                                 title={!allIntroSectionsAcknowledged ? "โปรดยืนยันทุกหัวข้อก่อน!" : "เริ่มแชท"}
                              >
+                                {/* Text changes based on state */}
                                 {allIntroSectionsAcknowledged ? "เริ่มแชท (Start Chat)" : "ยืนยันให้ครบก่อน"}
                              </button>
                         </div>

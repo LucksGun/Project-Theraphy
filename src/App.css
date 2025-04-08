@@ -350,7 +350,7 @@ input:checked + .slider:before { transform: translateX(26px); }
 .slider.round { border-radius: 24px; }
 .slider.round:before { border-radius: 50%; }
 
-/* Intro Button Container & Runaway Button */
+/* Intro Button Container & Runaway Button Styles */
 .intro-button-container {
     position: absolute; /* Position relative to modal bottom padding area */
     bottom: 25px; left: 0; right: 0;
@@ -360,7 +360,7 @@ input:checked + .slider:before { transform: translateX(26px); }
 }
 .intro-accept-button {
     padding: 10px 20px; border: none; background-color: var(--beta-button-bg); color: var(--beta-button-text); border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500;
-    /* Add transitions for smooth movement and appearance changes */
+    /* Add transitions for smooth movement (top/left) and appearance */
     transition: background-color 0.2s ease, top 0.4s ease-out, left 0.4s ease-out, opacity 0.3s ease;
     position: relative; /* Default state, centered by container */
     z-index: 5; /* Above container */
@@ -368,8 +368,15 @@ input:checked + .slider:before { transform: translateX(26px); }
     min-width: 180px; text-align: center;
 }
 .intro-accept-button:hover { background-color: var(--beta-button-hover-bg); }
+/* Style when it acts as the "runaway" button (not all sections acknowledged) */
 .intro-accept-button.button-runaway { opacity: 0.8; /* Looks slightly disabled */ }
 .intro-accept-button.button-runaway:hover { background-color: var(--beta-button-bg); opacity: 0.8; }
+
+/* Scrollbar styling for the intro modal */
+.intro-notice-modal::-webkit-scrollbar { width: 6px; }
+.intro-notice-modal::-webkit-scrollbar-thumb { background: var(--text-secondary); border-radius: 3px; }
+.intro-notice-modal { scrollbar-width: thin; scrollbar-color: var(--text-secondary) transparent; }
+/* --- End Introduction Notice Styles --- */
 
 
 /* --- ChatbotPage Styles --- */
@@ -407,8 +414,10 @@ input:checked + .slider:before { transform: translateX(26px); }
 
 /* --- Input Area Adjustments --- */
 .chatbot-input-area { display: flex; flex-direction: column; padding: 8px; border-top: 1px solid var(--border-color); background-color: var(--input-bg); flex-shrink: 0; }
-.chatbot-input-area > div:last-child { display: flex; flex-direction: column; } /* Stack previews and input row */
-.chatbot-input-area .input-row-wrapper { position: relative; width: 100%; } /* For Action Menu Popup */
+/* Container for previews + input row */
+.chatbot-input-area > div:last-of-type { display: flex; flex-direction: column; }
+/* Wrapper for input row itself, needed for menu positioning */
+.chatbot-input-area .input-row-wrapper { position: relative; width: 100%; }
 .chatbot-input-area .input-row { display: flex; align-items: center; gap: 5px; width: 100%; }
 .chatbot-input-area input[type="text"].chatbot-input { flex-grow: 1; padding: 10px 15px; border: 1px solid var(--input-border-color); border-radius: 18px; font-size: 0.95rem; outline: none; background-color: var(--container-bg); color: var(--text-primary); box-shadow: none; min-height: 40px; box-sizing: border-box; }
 .chatbot-input-area input[type="text"].chatbot-input::placeholder { color: var(--text-secondary); opacity: 0.9; }
@@ -417,13 +426,13 @@ input:checked + .slider:before { transform: translateX(26px); }
 .chatbot-input-area .send-button { background-color: var(--button-primary-bg); color: white; }
 .chatbot-input-area .send-button:hover:not(:disabled) { background-color: var(--button-primary-hover-bg); }
 .chatbot-input-area .send-button:disabled { background-color: var(--button-disabled-bg); color: var(--button-disabled-text); cursor: default; opacity: 0.7; }
-.chatbot-input-area .input-button { /* Default style for other buttons like mic, action toggle */ background-color: var(--button-secondary-bg); color: var(--text-secondary); border: 1px solid var(--input-border-color); }
+.chatbot-input-area .input-button { background-color: var(--button-secondary-bg); color: var(--text-secondary); border: 1px solid var(--input-border-color); }
 .chatbot-input-area .input-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); border-color: #adb5bd; color: var(--text-primary); }
 .chatbot-input-area .input-button:disabled { background-color: #e9ecef !important; color: #adb5bd !important; border-color: #dee2e6 !important; cursor: default; opacity: 0.7; }
 :root[data-theme='dark'] .chatbot-input-area .input-button:disabled { background-color: #2a2a2a !important; color: #707070 !important; border-color: #404040 !important; }
 .chatbot-input-area .mic-button.recording { background-color: var(--mic-recording-bg, #dc3545) !important; color: white; border-color: var(--mic-recording-hover-bg, #bb2d3b) !important; }
 .chatbot-input-area .mic-button.recording:hover:not(:disabled) { background-color: var(--mic-recording-hover-bg, #bb2d3b) !important; }
-.image-preview-area { display: flex; align-items: center; padding: 5px 8px; background-color: var(--image-preview-bg); border-bottom: 1px solid var(--border-color); margin-bottom: 8px; flex-shrink: 0; border-radius: 4px; width: 100%; } /* Ensure it takes full width */
+.image-preview-area { display: flex; align-items: center; padding: 5px 8px; background-color: var(--image-preview-bg); border-bottom: 1px solid var(--border-color); margin-bottom: 8px; flex-shrink: 0; border-radius: 4px; width: 100%; }
 .image-preview-thumbnail { max-height: 40px; max-width: 60px; margin-right: 8px; border-radius: 4px; object-fit: cover; }
 .image-preview-area span { font-size: 0.85em; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 8px; }
 .remove-image-button { background: var(--remove-button-bg); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; line-height: 16px; text-align: center; cursor: pointer; font-size: 11px; font-weight: bold; flex-shrink: 0; margin-left: auto; }
