@@ -24,18 +24,22 @@ const ANIMATION_NAMES: { [key: string]: AnimationOutcome } = {
 const ANIMATION_KEYS = Object.keys(ANIMATION_NAMES);
 
 // Define Pin Layout (Example - Adjust top/left percentages for your desired look)
+// *** NEW Pin Layout Definition ***
 const pinLayout = [
-    // Row 1
+    // Row 1 (Top Center)
     { top: '20%', left: '50%' },
-    // Row 2
-    { top: '35%', left: '35%' }, { top: '35%', left: '65%' },
-    // Row 3
-    { top: '50%', left: '20%' }, { top: '50%', left: '50%' }, { top: '50%', left: '80%' },
-    // Row 4
-    { top: '65%', left: '35%' }, { top: '65%', left: '65%' },
-     // Row 5 (Optional - near bottom outlets)
-    { top: '80%', left: '50%' },
+    // Row 2 (Offset from Row 1)
+    { top: '32%', left: '40%' }, { top: '32%', left: '60%' },
+    // Row 3 (Offset from Row 2)
+    { top: '44%', left: '30%' }, { top: '44%', left: '50%' }, { top: '44%', left: '70%' },
+    // Row 4 (Widest row, offset from Row 3)
+    { top: '56%', left: '20%' }, { top: '56%', left: '40%' }, { top: '56%', left: '60%' }, { top: '56%', left: '80%' },
+     // Row 5 (Like Row 3)
+    { top: '68%', left: '30%' }, { top: '68%', left: '50%' }, { top: '68%', left: '70%' },
+    // Row 6 (Like Row 2 - near bottom)
+    { top: '80%', left: '40%' }, { top: '80%', left: '60%' },
 ];
+// *** END NEW Pin Layout Definition ***
 
 // The Component
 const ThemePlinkoGame: React.FC<ThemePlinkoGameProps> = ({
