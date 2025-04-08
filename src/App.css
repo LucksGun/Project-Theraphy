@@ -344,6 +344,63 @@ html, body, #root {
 .loading-indicator span:nth-child(1) { animation-delay: -0.32s; }
 .loading-indicator span:nth-child(2) { animation-delay: -0.16s; }
 @keyframes bounce { 0%, 80%, 100% { transform: scale(0); opacity: 0.5; } 40% { transform: scale(1.0); opacity: 1; } }
+/* --- Action Menu Styles --- */
+
+
+
+/* The popup menu container */
+.action-menu-popup {
+  position: absolute;
+  bottom: calc(100% + 8px); /* Position above the input row with gap */
+  left: 0; /* Align with the left edge of the input area */
+  background-color: var(--container-bg); /* Use container background */
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  z-index: 100; /* Ensure it's above other elements */
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Gap between menu items */
+  min-width: 180px; /* Adjust as needed */
+}
+
+/* Individual items/buttons within the menu */
+.action-menu-item {
+  display: flex; /* Align icon and text */
+  align-items: center;
+  gap: 8px; /* Space between icon and text */
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  border-radius: 4px; /* Slight rounding */
+  color: var(--text-primary);
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+}
+
+.action-menu-item:hover:not(:disabled) {
+  background-color: var(--button-secondary-hover-bg); /* Use secondary hover color */
+}
+
+.action-menu-item:disabled {
+  color: var(--button-disabled-text);
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* Optional: Style the icons within the menu items */
+.action-menu-item svg {
+  font-size: 1.1em;
+  color: var(--text-secondary); /* Slightly muted icon color */
+  flex-shrink: 0;
+}
+.action-menu-item:hover:not(:disabled) svg {
+ color: var(--text-primary); /* Match text color on hover */
+}
 
 
 /* --- Input Area Adjustments --- */
