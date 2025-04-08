@@ -1,37 +1,41 @@
-// src/ClearConfirmGame.tsx
+// src/ClearConfirmGame.tsx - Updated with Rotating Circle Logic
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import './ClearConfirmGame.css'; // We'll create this CSS file next
+import './ClearConfirmGame.css'; // Styles for the circle game
 
 interface ClearConfirmGameProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: () => void; // Function to call on successful stop
+    onConfirm: () => void;
 }
 
 // Game Constants
-const BAR_WIDTH_PERCENT = 100; // Use percentage for flexibility
-const INDICATOR_WIDTH_PERCENT = 2; // Width of the sliding arrow/indicator
-const GREEN_ZONE_START_PERCENT = 45; // Start of green zone (e.g., 45%)
-const GREEN_ZONE_WIDTH_PERCENT = 10; // Width of green zone (e.g., 10%)
-const GREEN_ZONE_END_PERCENT = GREEN_ZONE_START_PERCENT + GREEN_ZONE_WIDTH_PERCENT;
-const INITIAL_SPEED_PERCENT_PER_SEC = 50; // Speed (e.g., 50% of bar width per second)
-// Optional: Increase speed over time? (Add state and logic if needed)
+const TARGET_ZONE_WIDTH_DEGREES = 30; // How wide the green target zone is (e.g., 30 degrees)
+const DEGREES_PER_SEC = 180; // Speed of rotation (degrees per second) - Increased from before
+const INDICATOR_OFFSET_DEGREES = -90; // Offset indicator start (e.g., -90 makes 0 degrees at the top)
+
+// Helper to check if angle is within the target zone (handles wrap-around)
+function isAngleInZone(angle: number, start: number, end: number): boolean {
+    const normalizedAngle = (angle - start + 360) % 360;
+    const normalizedEnd = (end - start + 360) % 360;
+    return normalizedAngle <= normalizedEnd;
+}
 
 const ClearConfirmGame: React.FC<ClearConfirmGameProps> = ({ isOpen, onClose, onConfirm }) => {
-    const [positionPercent, setPositionPercent] = useState(0); // 0 to 100
-    const [direction, setDirection] = useState(1); // 1 for right, -1 for left
+    const [currentAngle, setCurrentAngle] = useState(0); // 0 to 360 degrees
+    const [targetZone, setTargetZone] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
     const [isMoving, setIsMoving] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [status, setStatus] = useState<'playing' | 'success' | 'failed'>('playing');
 
     const animationFrameRef = useRef<number | null>(null);
     const lastTimestampRef = useRef<number | null>(null);
-    const speedRef = useRef(INITIAL_SPEED_PERCENT_PER_SEC); // Use ref for speed within animation loop
+    const speedRef = useRef(DEGREES_PER_SEC); // Use ref for speed
 
+    // Animation Loop using requestAnimationFrame
     const animate = useCallback((timestamp: number) => {
-        if (!lastTimestampRef.current) {
-            lastTimestampRef.current = timestamp;
+        if (!isMoving || !lastTimestampRef.current) {
+            lastTimestampRef.current = timestamp; // Initialize timestamp
             animationFrameRef.current = requestAnimationFrame(animate);
             return;
         }
@@ -39,73 +43,62 @@ const ClearConfirmGame: React.FC<ClearConfirmGameProps> = ({ isOpen, onClose, on
         const deltaTime = (timestamp - lastTimestampRef.current) / 1000; // Seconds elapsed
         lastTimestampRef.current = timestamp;
 
-        setPositionPercent(prevPosition => {
-            let newPosition = prevPosition + direction * speedRef.current * deltaTime;
-            let newDirection = direction;
+        // Update angle using functional update to get latest value
+        setCurrentAngle(prevAngle => (prevAngle + speedRef.current * deltaTime) % 360);
 
-            // Bounce logic
-            if (newPosition >= BAR_WIDTH_PERCENT - INDICATOR_WIDTH_PERCENT) {
-                newPosition = BAR_WIDTH_PERCENT - INDICATOR_WIDTH_PERCENT;
-                newDirection = -1;
-            } else if (newPosition <= 0) {
-                newPosition = 0;
-                newDirection = 1;
-            }
+        // Continue animation only if still moving
+        if(isMoving) {
+             animationFrameRef.current = requestAnimationFrame(animate);
+        }
+    }, [isMoving]); // Depend on isMoving
 
-            // Only update direction state if it actually changes
-            if (newDirection !== direction) {
-                setDirection(newDirection);
-            }
-            return newPosition;
-        });
+    // --- Game Setup ---
+    const setupGame = useCallback(() => {
+        setMessage("Press STOP in the Green Zone!");
+        setStatus('playing');
 
-        animationFrameRef.current = requestAnimationFrame(animate);
-    }, [direction]); // Dependency: direction (to use current value in bounce logic)
+        // Calculate random target zone
+        const randomStartAngle = Math.random() * 360;
+        const endAngle = (randomStartAngle + TARGET_ZONE_WIDTH_DEGREES) % 360;
+        setTargetZone({ start: randomStartAngle, end: endAngle });
+        console.log(`Target Zone: ${randomStartAngle.toFixed(1)}° to ${endAngle.toFixed(1)}°`);
 
-    // Start/Stop animation based on isMoving state
+        // Set random starting angle for the indicator
+        setCurrentAngle(Math.random() * 360);
+
+        // Start animation
+        setIsMoving(true);
+    }, []); // No dependencies needed if it only runs once on open
+
+    // Effect to start/stop animation and setup game
     useEffect(() => {
-        if (isMoving) {
-            console.log("Starting animation");
-            lastTimestampRef.current = null; // Reset timestamp for delta calculation
-            animationFrameRef.current = requestAnimationFrame(animate);
+        if (isOpen) {
+            setupGame(); // Setup game when modal opens
         } else {
-            console.log("Stopping animation");
+             setIsMoving(false); // Stop animation if closed externally
+        }
+
+        // Cleanup animation frame on unmount or when isOpen becomes false
+        return () => {
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
                 animationFrameRef.current = null;
             }
-        }
-        // Cleanup function
-        return () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
+            setIsMoving(false); // Ensure stopped state
         };
-    }, [isMoving, animate]);
+    }, [isOpen, setupGame]); // Depend on isOpen and setupGame
 
-    // Effect to start game when modal opens
-    useEffect(() => {
-        if (isOpen) {
-            setPositionPercent(Math.random() * (BAR_WIDTH_PERCENT - INDICATOR_WIDTH_PERCENT)); // Start at random position
-            setDirection(Math.random() > 0.5 ? 1 : -1); // Random start direction
-            setMessage("Press STOP in the Green Zone!");
-            setStatus('playing');
-            setIsMoving(true); // Start animation
-        } else {
-            setIsMoving(false); // Ensure animation stops if closed externally
-        }
-    }, [isOpen]);
 
+    // --- Handle Stop Button Click ---
     const handleStop = () => {
-        if (!isMoving) return; // Prevent multiple clicks
+        if (!isMoving) return;
         setIsMoving(false); // Stop the animation
 
-        const currentPosition = positionPercent; // Capture position at time of click
-        const indicatorCenter = currentPosition + INDICATOR_WIDTH_PERCENT / 2;
+        const stoppedAngle = currentAngle; // Capture angle at time of click
 
-        console.log(`Stopped at: ${indicatorCenter.toFixed(1)}%`);
+        console.log(`Stopped at: ${stoppedAngle.toFixed(1)}°`);
 
-        if (indicatorCenter >= GREEN_ZONE_START_PERCENT && indicatorCenter <= GREEN_ZONE_END_PERCENT) {
+        if (isAngleInZone(stoppedAngle, targetZone.start, targetZone.end)) {
             // SUCCESS
             console.log("Success!");
             setStatus('success');
@@ -113,7 +106,7 @@ const ClearConfirmGame: React.FC<ClearConfirmGameProps> = ({ isOpen, onClose, on
             setTimeout(() => {
                 onConfirm(); // Call the actual clear chat function
                 onClose();   // Close the modal
-            }, 1500); // Delay to show success message
+            }, 1500);
         } else {
             // FAILURE
             console.log("Failed!");
@@ -121,7 +114,31 @@ const ClearConfirmGame: React.FC<ClearConfirmGameProps> = ({ isOpen, onClose, on
             setMessage('Missed! Please try again.');
             setTimeout(() => {
                 onClose(); // Close modal, user must reopen manually
-            }, 1500); // Delay to show failure message
+            }, 1500);
+        }
+    };
+
+    // --- Generate Conic Gradient Style ---
+    // Handles wrap-around case for the gradient
+    const getConicGradientStyle = () => {
+        const { start, end } = targetZone;
+        const redColor = 'var(--confirm-game-red, #dc3545)'; // Fallback colors
+        const greenColor = 'var(--confirm-game-green, #198754)';
+
+        if (start <= end) {
+            // Normal case
+            return `conic-gradient(
+                ${redColor} 0deg ${start}deg,
+                ${greenColor} ${start}deg ${end}deg,
+                ${redColor} ${end}deg 360deg
+            )`;
+        } else {
+            // Wrap-around case (e.g., start=350, end=20)
+            return `conic-gradient(
+                ${greenColor} 0deg ${end}deg,
+                ${redColor} ${end}deg ${start}deg,
+                ${greenColor} ${start}deg 360deg
+            )`;
         }
     };
 
@@ -132,29 +149,33 @@ const ClearConfirmGame: React.FC<ClearConfirmGameProps> = ({ isOpen, onClose, on
         <div className="clear-confirm-overlay" onClick={onClose}>
             <div className="clear-confirm-modal" onClick={(e) => e.stopPropagation()}>
                 <h4>Confirm Clear Chat</h4>
-                <p className={`game-message ${status}`}>{message}</p>
+                <p className={`game-message ${status}`}>{message || ' '}</p>
 
-                <div className="timing-bar-container">
-                    <div className="timing-bar">
-                        <div className="timing-bar-green-zone"></div>
+                <div className="timing-circle-container">
+                    <div
+                        className="timing-circle"
+                        style={{ background: getConicGradientStyle() }} // Apply dynamic gradient
+                    >
                         <div
-                            className="timing-bar-indicator"
-                            style={{ left: `${positionPercent}%` }}
-                        >▲</div> {/* Indicator */}
+                            className="timing-indicator-arm"
+                            style={{ transform: `rotate(${currentAngle + INDICATOR_OFFSET_DEGREES}deg)` }}
+                        >
+                            <div className="timing-indicator-dot"></div> {/* The rotating dot */}
+                        </div>
                     </div>
                 </div>
 
                 <button
                     onClick={handleStop}
                     className="stop-button"
-                    disabled={!isMoving || status !== 'playing'} // Disable after stopping
+                    disabled={!isMoving || status !== 'playing'}
                 >
                     STOP
                 </button>
                  <button
                     onClick={onClose}
                     className="cancel-button"
-                    disabled={status === 'success' || status === 'failed'} // Disable after game ends
+                    disabled={status === 'success' || status === 'failed'}
                  >
                      Cancel
                  </button>
