@@ -29,7 +29,7 @@ interface CupState {
 const SHOW_DELAY_MS = 2000;
 const SHUFFLE_MOVE_DELAY_MS = 100;
 const SHUFFLE_TRANSITION_MS = 500;
-const NUM_SHUFFLE_MOVES = 7;
+const NUM_SHUFFLE_MOVES = 4;
 const REVEAL_DELAY_MS = 1500;
 const RESTART_DELAY_MS = 3000;
 
@@ -190,7 +190,7 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
     return (
         <div className="persona-cup-game-overlay" onClick={onClose}>
             <div className="persona-cup-game-modal" onClick={(e) => e.stopPropagation()}>
-               <h3>Persona Shell Game!</h3>
+               <h3></h3>
                 <div className="cups-container">
                     {cups.map(cup => ( <div key={cup.id} className={`cup cup-order-${cup.order} ${phase} ${cup.isRevealed ? 'revealed' : ''} ${cup.isChosen ? 'chosen' : ''}`} style={{ transform: `translateX(${(cup.order - 1) * 110}px)` }} onClick={() => handleCupClick(cup.id)} role="button" tabIndex={phase === 'selecting' ? 0 : -1} aria-label={`Cup ${cup.id}`} aria-hidden={phase === 'shuffling'} > <div className="cup-graphic">{cup.isRevealed ? cup.personaInfo?.emoji || '❓' : '🥤'}</div> {phase === 'showing' && !cup.isRevealed && ( <div className="cup-label cup-label-initial">{cup.personaInfo?.label}</div> )} {cup.isRevealed && ( <div className="cup-label cup-label-revealed">{cup.personaInfo?.label || '??'}</div> )} </div> ))}
                 </div>
