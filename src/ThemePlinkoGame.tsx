@@ -106,7 +106,7 @@ const ThemePlinkoGame: React.FC<ThemePlinkoGameProps> = ({
             }
 
             // Close modal after a delay
-            setTimeout(onClose, 1500); // Show result for 2.5 seconds
+            setTimeout(onClose, 1200); // Show result for 2.5 seconds
         }
     };
 
@@ -116,7 +116,7 @@ const ThemePlinkoGame: React.FC<ThemePlinkoGameProps> = ({
     return (
         <div className="plinko-game-overlay" onClick={onClose}>
             <div className="plinko-game-modal" onClick={(e) => e.stopPropagation()}>
-                <h4>Theme Plinko!</h4>
+                <h4></h4>
 
                 <div className="plinko-board" ref={boardRef}>
                     {/* Render Pins */}
