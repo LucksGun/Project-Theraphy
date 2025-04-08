@@ -1,9 +1,9 @@
-// src/PersonaCupGame.tsx - FINAL v4 - Corrected useCallback Dependency for setupGame
+// src/PersonaCupGame.tsx - FINAL v5 - Correct useEffect Deps & Restart Logic
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-// Import types from App.tsx (ensure App.tsx exports them)
+// Import types from App.tsx
 import { Persona, PersonaInfo, KeyValidationStatus, GeminiModel } from './App';
-import './PersonaCupGame.css'; // Import the CSS for styling
+import './PersonaCupGame.css';
 
 // --- Component Props ---
 interface PersonaCupGameProps {
@@ -28,7 +28,7 @@ interface CupState {
 // --- Constants ---
 const SHOW_DELAY_MS = 1500;
 const SHUFFLE_MOVE_DELAY_MS = 100;
-const SHUFFLE_TRANSITION_MS = 400; // Duration of CSS transition for one move
+const SHUFFLE_TRANSITION_MS = 400;
 const NUM_SHUFFLE_MOVES = 5;
 const REVEAL_DELAY_MS = 1500;
 const RESTART_DELAY_MS = 3000;
@@ -46,7 +46,8 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
     const [message, setMessage] = useState<string | null>(null);
     const shuffleTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
     const isMountedRef = useRef<boolean>(false);
-    const initialCupsRef = useRef<CupState[]>([]); // Ref to store initial cup setup
+    const initialCupsRef = useRef<CupState[]>([]);
+    const hasSetupRun = useRef<boolean>(false); // Ref to track initial setup
 
     // Determine available personas based on key status
     const availablePersonasForGame = useMemo(() => {
@@ -59,9 +60,9 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
         console.log(`Clearing ${shuffleTimeoutsRef.current.length} shuffle timeouts.`);
         shuffleTimeoutsRef.current.forEach(clearTimeout);
         shuffleTimeoutsRef.current = [];
-    },[]); // Stable reference
+    },[]);
 
-    // Game Setup Logic (memoized with CORRECT dependencies)
+    // Game Setup Logic (memoized)
     const setupGame = useCallback(() => {
         if (!isMountedRef.current) { console.log("setupGame called but component not mounted/visible."); return; }
         clearShuffleTimeouts();
@@ -80,21 +81,13 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
 
         const shuffledPersonas = shuffleArray(availablePersonasForGame);
         const gamePersonas = shuffledPersonas.slice(0, 3);
-        console.log("Personas in this round:", gamePersonas.map(p=>p.value));
-        // Store initial setup in ref AND state
         initialCupsRef.current = [ { id: 1, personaInfo: gamePersonas[0], order: 0, isChosen: false, isRevealed: false }, { id: 2, personaInfo: gamePersonas[1], order: 1, isChosen: false, isRevealed: false }, { id: 3, personaInfo: gamePersonas[2], order: 2, isChosen: false, isRevealed: false }, ];
         setCups(initialCupsRef.current);
-        setPhase('showing'); // Set phase AFTER setting cups
+        setPhase('showing');
 
-        // Start Shuffling Timer
         console.log("Setting timer to start shuffle...");
         const initialShuffleTimer = setTimeout(() => {
-             if (!isMountedRef.current) return; // Check mount status ONLY
-             // Read current phase using a ref or functional update if needed, but direct read *should* be ok here
-             // as this timeout runs after the 'showing' phase is likely committed.
-             // Let's assume direct phase read is okay for the start condition.
-             // if (phase !== 'showing') return; // This check might be too strict due to timing
-
+             if (!isMountedRef.current) return;
             setPhase('shuffling');
             setMessage("Shuffling...");
             console.log("Shuffle timer fired, starting moves...");
@@ -102,10 +95,7 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
             let currentMove = 0;
             const performShuffleMove = () => {
                  if (!isMountedRef.current) { console.log("Shuffle move skipped: component unmounted or closed."); clearShuffleTimeouts(); return; }
-                // The check for `phase !== 'shuffling'` was removed in previous step, keep it removed.
-
                 if (currentMove >= NUM_SHUFFLE_MOVES) { console.log("Finished 5 shuffle moves."); setPhase('selecting'); setMessage("Pick a cup!"); return; }
-
                 const orders = shuffleArray([0, 1, 2]); console.log(`Shuffle Move ${currentMove + 1}: New order -> ${orders.join(',')}`);
                 setCups(prevCups => prevCups.map((cup) => {
                     const originalCup = initialCupsRef.current.find(c => c.id === cup.id);
@@ -116,13 +106,11 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
                 const nextMoveTimer = setTimeout(performShuffleMove, SHUFFLE_TRANSITION_MS + SHUFFLE_MOVE_DELAY_MS);
                 shuffleTimeoutsRef.current.push(nextMoveTimer);
             };
-            // Start the first move
             const firstMoveTimer = setTimeout(performShuffleMove, SHUFFLE_MOVE_DELAY_MS);
             shuffleTimeoutsRef.current.push(firstMoveTimer);
-
         }, SHOW_DELAY_MS);
         shuffleTimeoutsRef.current.push(initialShuffleTimer);
-    // *** REMOVED 'phase' from dependency array ***
+    // CORRECTED Dependencies: Exclude phase
     }, [availablePersonasForGame, onClose, clearShuffleTimeouts]);
 
 
@@ -131,24 +119,34 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
         if (isOpen) {
             isMountedRef.current = true;
             console.log("useEffect [isOpen=true]: Mounted ref set.");
-            if (phase === 'idle' || phase === 'restartingOnError') {
-                console.log(`useEffect: Triggering setupGame. Current phase: ${phase}`);
+
+            // Trigger setup only ONCE when opening using the ref flag
+            if (!hasSetupRun.current) {
+                console.log(`useEffect: Triggering setupGame (initial).`);
+                hasSetupRun.current = true; // Mark setup as having run for this opening
+                // Timeout 0 ensures this runs after initial render potentially
                 const setupTimer = setTimeout(() => { if (isMountedRef.current) { setupGame(); } }, 0);
                 shuffleTimeoutsRef.current.push(setupTimer);
             }
+
+            // Return cleanup function - runs when isOpen becomes false or unmount
             return () => {
                 console.log("useEffect [cleanup for isOpen=true]: Clearing timeouts. Setting isMounted=false.");
                 isMountedRef.current = false;
                 clearShuffleTimeouts();
-                setPhase('idle'); setCups([]); setMessage(null);
+                // Reset state fully on close/unmount
+                setPhase('idle');
+                setCups([]);
+                setMessage(null);
+                hasSetupRun.current = false; // Reset setup flag for next opening
             };
         } else {
+            // If closed externally, ensure flags are reset
+            hasSetupRun.current = false;
             isMountedRef.current = false;
-            if (phase !== 'idle') { setPhase('idle'); setCups([]); setMessage(null); clearShuffleTimeouts(); }
         }
-     // Depend only on isOpen and the stable setupGame/clear callbacks
-     // Phase IS needed here to re-trigger setup after restartOnError sets phase to idle
-    }, [isOpen, setupGame, clearShuffleTimeouts, phase]);
+     // *** CORRECTED Dependencies: Removed phase ***
+    }, [isOpen, setupGame, clearShuffleTimeouts]);
 
 
     // Cup Click Handler
@@ -167,8 +165,11 @@ const PersonaCupGame: React.FC<PersonaCupGameProps> = ({
             setMessage(`Oops! Persona '${chosenCup.personaInfo.label}' chosen, but your selected AI Model ('${currentSelectedModel}') needs a valid key. Let's roll again!`);
             setPhase('restartingOnError');
             const restartTimer = setTimeout(() => {
-                // Set phase to idle, the useEffect watching phase will trigger setupGame again
-                if (isMountedRef.current) setPhase('idle');
+                // *** CHANGE: Call setupGame directly to restart ***
+                if (isMountedRef.current) {
+                    console.log("Restarting game due to model conflict...");
+                    setupGame(); // Re-setup the game
+                }
             }, RESTART_DELAY_MS);
             shuffleTimeoutsRef.current.push(restartTimer);
         } else {
