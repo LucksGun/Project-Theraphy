@@ -227,8 +227,8 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     padding: 20px;
     box-shadow: 0 5px 15px var(--settings-menu-shadow);
     z-index: 1000;
-    width: max-content; /* Allow width to adjust */
-    max-width: 550px; /* Max width for main settings */
+    width: max-content;
+    max-width: 700px; /* <<< CONFIRM THIS VALUE IS INCREASED (e.g., 700px) */
     display: flex;
     flex-direction: column;
     max-height: calc(100vh - 70px);
@@ -536,14 +536,21 @@ input:checked + .slider:before { transform: translateX(26px); }
     .suggestion-button { padding: 4px 10px; font-size: 0.8em; }
     /* Adjust settings modal width/position */
     .settings-menu {
-        min-width: 0;
-        width: calc(100% - 20px);
-        padding: 15px;
-        top: 50px;
-        left: 10px;
-        right: 10px;
-        max-height: calc(100vh - 60px);
-        max-width: calc(100% - 20px); /* Override max-width for mobile */
+        position: fixed;
+        top: 55px;
+        left: 15px;
+        background-color: var(--settings-menu-bg);
+        border: 1px solid var(--settings-menu-border);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 5px 15px var(--settings-menu-shadow);
+        z-index: 1000;
+        width: max-content;
+        max-width: 700px; /* <<< CONFIRM THIS VALUE IS INCREASED (e.g., 700px) */
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 70px);
+        overflow-y: auto;
     }
     .settings-menu .settings-column { gap: 15px; } /* Adjust gap */
     .analysis-form-modal { padding: 20px; max-height: 85vh; }
@@ -577,9 +584,8 @@ input:checked + .slider:before { transform: translateX(26px); }
         padding: 20px;
         box-shadow: 0 5px 15px var(--settings-menu-shadow);
         z-index: 1000;
-        width: max-content; /* Allow width to adjust */
-        /* max-width: 550px; */ /* Old width */
-        max-width: 700px; /* << INCREASED WIDTH */
+        width: max-content;
+        max-width: 700px; /* <<< CONFIRM THIS VALUE IS INCREASED (e.g., 700px) */
         display: flex;
         flex-direction: column;
         max-height: calc(100vh - 70px);

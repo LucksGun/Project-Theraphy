@@ -337,16 +337,15 @@ function App() {
 
                         {/* Advanced Settings Button */}
                         <div className="settings-option">
-                            <label>Advanced Configuration:</label>
-                             <button
-                                onClick={openAdvancedSettingsFromMain}
-                                className="settings-action-button advanced-settings-trigger-button"
-                                disabled={!canAccessAdvanced}
-                                title={!canAccessAdvanced ? "Requires a valid Access Key" : "Configure Model, Persona & Key"}
-                            >
-                                🔑 Advanced Settings...
-                            </button>
-                            {!canAccessAdvanced && (<p className="settings-helper-text">Enter key to access.</p>)}
+             <label>Advanced Configuration:</label>
+              <button
+                 onClick={openAdvancedSettingsFromMain}
+                 className="settings-action-button advanced-settings-trigger-button"
+                 // NO 'disabled' attribute here based on key status
+                 title="Configure Model, Persona & Key" // Static title
+             >
+                 🔑 Advanced Settings...
+             </button>
                         </div>
 
                         <div className="settings-option"> <label>Admin Area:</label> <button onClick={toggleStaffLoginModal} className="settings-action-button staff-area-button">🔑 Staff Login</button> </div>
