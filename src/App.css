@@ -275,20 +275,29 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 
 /* NEW Advanced Settings Trigger Button */
 .advanced-settings-trigger-button {
-    background-color: var(--settings-staff-bg); /* Example: Use staff button style */
-    color: var(--settings-staff-text);
-    border-color: var(--settings-staff-border);
+    /* background-color: var(--settings-staff-bg); */ /* Old */
+    /* color: var(--settings-staff-text); */ /* Old */
+    /* border-color: var(--settings-staff-border); */ /* Old */
+    background-color: var(--button-green-bg); /* << GREEN */
+    color: var(--button-green-text); /* << GREEN */
+    border-color: var(--button-green-border); /* << GREEN */
 }
 .advanced-settings-trigger-button:hover:not(:disabled) {
-    background-color: var(--settings-staff-hover-bg);
-    border-color: var(--settings-staff-hover-border);
+    /* background-color: var(--settings-staff-hover-bg); */ /* Old */
+    /* border-color: var(--settings-staff-hover-border); */ /* Old */
+    background-color: var(--button-green-hover-bg); /* << GREEN HOVER */
+    border-color: var(--button-green-hover-border); /* << GREEN HOVER */
+    color: var(--button-green-text); /* Ensure text color stays correct */
 }
 .advanced-settings-trigger-button:disabled {
-    background-color: var(--button-disabled-bg) !important;
-    color: var(--button-disabled-text) !important;
-    border-color: var(--button-disabled-border) !important; /* Explicit border */
+    /* background-color: var(--button-disabled-bg) !important; */ /* Old disabled */
+    /* color: var(--button-disabled-text) !important; */ /* Old disabled */
+    /* border-color: var(--button-disabled-border, #cccccc) !important; */ /* Old disabled */
+    background-color: var(--button-green-disabled-bg) !important; /* << GREEN DISABLED */
+    color: var(--button-green-disabled-text) !important; /* << GREEN DISABLED */
+    border-color: var(--button-green-disabled-border) !important; /* << GREEN DISABLED */
     cursor: not-allowed;
-    opacity: 0.7;
+    opacity: 0.75; /* Adjusted opacity slightly */
 }
 
 /* Buttons inside the Advanced Settings Modal */
@@ -559,13 +568,22 @@ input:checked + .slider:before { transform: translateX(26px); }
     .suggestion-button { padding: 4px 8px; font-size: 0.75em; }
     /* Adjust settings modal width/position */
     .settings-menu {
-        padding: 12px;
-        top: 45px;
-        left: 5px;
-        right: 5px;
-        width: calc(100% - 10px);
-        max-height: calc(100vh - 55px);
-        max-width: calc(100% - 10px); /* Override max-width for mobile */
+        position: fixed;
+        top: 55px;
+        left: 15px;
+        background-color: var(--settings-menu-bg);
+        border: 1px solid var(--settings-menu-border);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 5px 15px var(--settings-menu-shadow);
+        z-index: 1000;
+        width: max-content; /* Allow width to adjust */
+        /* max-width: 550px; */ /* Old width */
+        max-width: 700px; /* << INCREASED WIDTH */
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 70px);
+        overflow-y: auto;
     }
     .settings-menu .settings-column { gap: 12px; }
     .settings-option label { font-size: 0.8em; }
