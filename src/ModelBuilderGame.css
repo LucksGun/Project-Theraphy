@@ -1,169 +1,126 @@
-/* src/ModelBuilderGame.css */ /* Filename as requested, content is for Guesser Game */
+/* src/ModelBuilderGame.css */
 
-/* --- Base Modal Styles (Reused/Adapted from ModelBuilderGame) --- */
-.model-builder-overlay { /* Keep generic name or rename if preferred */
+.model-builder-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background-color: rgba(0, 0, 0, 0.7);
     display: flex; align-items: center; justify-content: center;
     z-index: 1100; padding: 15px; box-sizing: border-box;
 }
 
-.model-guesser-modal { /* Specific name for this modal's content */
-    background-color: var(--container-bg); /* Assuming theme variables */
+.model-builder-modal {
+    background-color: var(--container-bg);
     color: var(--text-primary);
     padding: 20px 25px 25px 25px;
     border-radius: 8px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     border: 1px solid var(--border-color);
     width: 100%;
-    max-width: 550px;
+    max-width: 600px; /* Wider for columns */
     text-align: center;
 }
 
-.model-guesser-modal h4 {
-    margin-top: 0; margin-bottom: 15px; font-size: 1.2em;
+.model-builder-modal h4 {
+    margin-top: 0; margin-bottom: 10px; font-size: 1.2em;
 }
 
-/* --- Message Area --- */
-.model-guesser-modal .game-message {
-    min-height: 2.5em; /* Adjusted height for messages */
-    margin-bottom: 15px;
-    font-weight: 500;
-    font-size: 0.95em;
+.model-builder-modal .game-message {
+    min-height: 2em; margin-bottom: 15px; font-weight: 500; font-size: 0.95em;
     transition: color 0.3s ease;
-    display: flex; /* Center text vertically */
-    align-items: center;
-    justify-content: center;
-    padding: 5px;
 }
-.model-guesser-modal .game-message.error { color: var(--key-invalid-color); font-weight: 600;}
-.model-guesser-modal .game-message.success { color: var(--key-valid-color); font-weight: 600;}
-.model-guesser-modal .game-message.info { color: var(--text-secondary); }
+.model-builder-modal .game-message.error { color: var(--key-invalid-color); }
+.model-builder-modal .game-message.success { color: var(--key-valid-color); }
 
-/* --- Revealed Model Display --- */
-.revealed-model-display {
-    font-family: monospace; /* Make underscores align better */
-    font-size: 1.1em;
-    font-weight: 600;
-    margin-bottom: 25px;
-    padding: 10px;
-    background-color: var(--input-bg); /* Subtle background */
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    color: var(--text-primary);
-    min-height: 1.5em; /* Ensure height consistency */
+.model-parts-container {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap; /* Allow wrapping if needed */
-}
-
-.revealed-model-display span {
-    display: inline-block;
-    min-width: 4ch; /* Reserve space for parts */
-    text-align: center;
-    margin: 0 3px; /* Spacing around parts/hyphens */
-}
-.revealed-model-display .placeholder {
-    color: var(--text-secondary); /* Dim underscores */
-}
-.revealed-model-display .hyphen {
-     min-width: auto; /* Hyphen doesn't need much space */
-     margin: 0;
-}
-
-
-/* --- Guessing Area (Question & Yes/No Buttons) --- */
-.guessing-area {
+    justify-content: space-around; /* Space out columns */
+    margin-bottom: 25px;
+    gap: 10px; /* Reduced gap */
     padding: 15px 0;
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
-    margin-bottom: 25px;
-    min-height: 100px; /* Ensure space even during transitions */
+    flex-wrap: wrap; /* Allow columns to wrap on smaller screens */
+}
+
+.model-part-column {
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
+    gap: 8px;
+    min-width: 150px; /* Minimum width for columns */
+    flex: 1; /* Allow columns to grow */
 }
 
-.current-question {
-    font-size: 1.05em;
-    margin-bottom: 15px;
-    font-weight: 500;
-    min-height: 1.2em; /* Prevent layout shift */
+.model-part-column h5 {
+    margin: 0 0 8px 0;
+    font-size: 0.9em;
+    color: var(--settings-label-text);
+    text-transform: uppercase;
+    font-weight: 600;
 }
 
-.yes-no-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 20px; /* More space between Yes/No */
-}
-
-/* Yes/No Button Styles */
-.yes-no-buttons button {
-    padding: 10px 25px;
-    min-width: 80px; /* Ensure decent size */
-    font-size: 1em;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
-    width: auto; /* Override any inherited fixed width */
-}
-
-.yes-button {
-    background-color: var(--beta-button-bg); /* Greenish/Confirm */
-    color: var(--beta-button-text);
-    border: 1px solid var(--beta-button-bg);
-}
-.yes-button:hover:not(:disabled) {
-    background-color: var(--beta-button-hover-bg);
-    border-color: var(--beta-button-hover-bg);
-}
-
-.no-button {
-    background-color: var(--button-secondary-bg); /* Neutral/Cancel */
+.part-button {
+    padding: 6px 12px;
+    border: 1px solid var(--settings-select-border);
+    border-radius: 4px;
+    background-color: var(--settings-select-bg);
     color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    font-size: 0.9em;
+    width: 100%; /* Make buttons fill column width */
+    max-width: 160px; /* Max width */
+    text-align: center;
+    line-height: 1.4;
+    min-height: 34px; /* Ensure consistent height */
+    box-sizing: border-box;
 }
-.no-button:hover:not(:disabled) {
+
+.part-button:hover {
+    border-color: var(--input-focus-border-color);
     background-color: var(--button-secondary-hover-bg);
 }
 
-.yes-no-buttons button:disabled {
-     background-color: var(--button-disabled-bg);
-     color: var(--button-disabled-text);
-     border-color: var(--border-color);
-     cursor: not-allowed;
-     opacity: 0.7;
+.part-button.selected {
+    background-color: var(--user-bubble-bg);
+    color: var(--beta-button-text); /* White text */
+    border-color: var(--user-bubble-bg);
+    font-weight: 600;
+}
+.part-button.selected:hover {
+     background-color: var(--button-primary-hover-bg);
+     border-color: var(--button-primary-hover-bg);
 }
 
 
-/* --- Modal Actions (Close Button) --- */
-.model-guesser-actions {
+.model-builder-actions {
     display: flex;
     justify-content: center;
     gap: 15px;
     margin-top: 10px;
 }
 
-.model-guesser-actions .close-button { /* Reuse cancel style */
+.build-button {
     padding: 10px 20px;
-    font-size: 1em;
-    background-color: var(--button-secondary-bg);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    background-color: var(--beta-button-bg); /* Use primary button style */
+    color: var(--beta-button-text);
+    border: none;
     border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    font-weight: 500;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
 }
-.model-guesser-actions .close-button:hover {
-    background-color: var(--button-secondary-hover-bg);
+.build-button:hover:not(:disabled) {
+    background-color: var(--beta-button-hover-bg);
+}
+.build-button:disabled {
+    background-color: var(--button-disabled-bg);
+    color: var(--button-disabled-text);
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
-/* Optional Restart Button Style */
-.model-guesser-actions .restart-button {
-    padding: 10px 15px;
+.model-builder-actions .cancel-button { /* Reuse cancel style if needed */
+     padding: 10px 15px;
     font-size: 1em;
     background-color: var(--button-secondary-bg);
     color: var(--text-primary);
@@ -172,6 +129,6 @@
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
-.model-guesser-actions .restart-button:hover {
+.model-builder-actions .cancel-button:hover {
      background-color: var(--button-secondary-hover-bg);
 }
