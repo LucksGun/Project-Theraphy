@@ -357,44 +357,89 @@ function App() {
             )}
 
             {/* *** NEW Advanced Settings Modal *** */}
+            {/* *** NEW Advanced Settings Modal *** */}
             {isAdvancedSettingsOpen && (
-                 <div className="settings-menu advanced-settings-modal" role="dialog" aria-labelledby="advanced-settings-title">
+                 <div className="settings-menu advanced-settings-modal" role="dialog" aria-labelledby="advanced-settings-title"> {/* Reuse class or create new */}
                     <h3 id="advanced-settings-title">Advanced Settings</h3>
                      {/* Contains the original Column 1 content */}
-                     <div className="settings-content-single-column"> {/* Reusing single column layout */}
+                     <div className="settings-column" style={{gap: '20px'}}>
+                        {/* Access Key Input */}
                         <div className="settings-option">
                             <label htmlFor="access-key-input-adv">Access Key:</label>
-                            <input type="password" id="access-key-input-adv" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/>
-                            <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid?<span>✅ Valid Key ({keyStatus.username || 'User'})</span>:keyStatus.error?<span>❌ {keyStatus.error}</span>:<span>Enter key for restricted features.</span>}</div>
+                            <input
+                                type="password"
+                                id="access-key-input-adv"
+                                className="settings-input"
+                                placeholder="Enter access key"
+                                value={enteredKey} // Assumes 'enteredKey' state exists
+                                onChange={handleAccessKeyChange} // Assumes 'handleAccessKeyChange' handler exists
+                                autoComplete="off"
+                            />
+                            {/* Key Status Display */}
+                            <div className="settings-key-status">
+                                {keyStatus.loading ? (
+                                    <span>Validating...</span>
+                                ) : keyStatus.isValid ? (
+                                    <span>✅ Valid Key ({keyStatus.username || 'User'})</span>
+                                ) : keyStatus.error ? (
+                                    <span>❌ {keyStatus.error}</span>
+                                ) : (
+                                    <span>Enter key for restricted features.</span>
+                                )}
+                            </div>
                         </div>
 
+                        {/* Persona Setting */}
                         <div className="settings-option">
                             <label>Persona:</label>
-                            <p className="current-persona-display">{AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.emoji} {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label || selectedPersona}</p>
+                            {/* Display Current Persona */}
+                            <p className="current-persona-display">
+                                {AVAILABLE_PERSONAS.find(p => p.value === selectedPersona)?.emoji} {/* Assumes AVAILABLE_PERSONAS and selectedPersona exist */}
+                                {' '}
+                                {AVAILABLE_PERSONAS.find(p => p.value === selectedPersona)?.label || selectedPersona}
+                            </p>
+                            {/* Change Persona Button (Triggers Plinko) */}
                             <button
-                                onClick={openPersonaPlinko}
+                                onClick={openPersonaPlinko} // Assumes 'openPersonaPlinko' handler exists
                                 className="settings-action-button persona-change-button"
-                                disabled={!canChangePersona}
+                                disabled={!canChangePersona} // Assumes 'canChangePersona' variable exists
                                 title={!canChangePersona ? "Requires a valid Access Key..." : "Change Persona (Opens Game)"}
                             >
                                 Change Persona
                             </button>
+                            {/* Optional: Helper text if button is disabled */}
+                            {!canChangePersona && (
+                                <p className="settings-helper-text">Enter key to change.</p>
+                            )}
                         </div>
 
+                        {/* AI Model Setting */}
                         <div className="settings-option">
                             <label>AI Model:</label>
-                            <p className="current-persona-display">{ALL_AVAILABLE_MODELS_FRONTEND.find(m => m.value === selectedModel)?.label || selectedModel}</p>
+                            {/* Display Current Model */}
+                            <p className="current-persona-display">
+                                {ALL_AVAILABLE_MODELS_FRONTEND.find(m => m.value === selectedModel)?.label || selectedModel} {/* Assumes ALL_AVAILABLE_MODELS_FRONTEND and selectedModel exist */}
+                            </p>
+                             {/* Build Model Button (Triggers Builder Game) */}
                              <button
-                                onClick={openModelBuilder}
+                                onClick={openModelBuilder} // Assumes 'openModelBuilder' handler exists
                                 className="settings-action-button model-builder-trigger-button"
                                 title="Build custom model combination"
+                                // No disabled logic here currently, assumed always available
                             >
                                 🔧 Build AI Model...
                             </button>
                          </div>
                      </div>
+                    {/* Separator */}
                     <hr className="settings-separator" />
-                    <button onClick={toggleAdvancedSettings} className="close-settings-button">Close Advanced</button>
+                    {/* Close Button */}
+                    <button
+                        onClick={toggleAdvancedSettings} // Assumes 'toggleAdvancedSettings' handler exists
+                        className="close-settings-button"
+                    >
+                        Close Advanced
+                    </button>
                 </div>
             )}
 
