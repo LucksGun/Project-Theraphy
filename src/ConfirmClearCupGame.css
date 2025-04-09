@@ -1,4 +1,4 @@
-/* src/ConfirmClearCupGame.css - Styles for Cup Game used for Clear Chat Confirmation */
+/* src/ConfirmClearCupGame.css - Styles for Cup Game (Clear Chat Confirm) */
 
 /* Overlay (can reuse styles if you have a generic overlay class) */
 .persona-cup-game-overlay, /* Keep old name if reused */
@@ -28,10 +28,10 @@
     max-width: 90%;
 }
 
-.confirm-clear-cup-modal h4 { /* Adjusted from h3 */
+.confirm-clear-cup-modal h4 {
     margin-top: 0;
     margin-bottom: 15px;
-    font-size: 1.3em; /* Slightly larger title */
+    font-size: 1.3em;
     color: var(--text-primary);
 }
 
@@ -49,7 +49,6 @@
 /* Individual cup styling */
 .cup {
     width: 80px;
-    /* min-height needed to contain revealed text if cup itself doesn't lift */
     min-height: 120px; /* Adjust based on graphic + label size */
     cursor: pointer;
     display: flex;
@@ -60,8 +59,7 @@
     position: absolute;
     bottom: 0;
     /* Transition for horizontal sliding (shuffle) and vertical lifting (reveal) */
-    /* Ensure shuffle duration matches SHUFFLE_DURATION_MS */
-    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Match SHUFFLE_DURATION_MS */
     transform-origin: center bottom;
     will-change: transform;
 }
@@ -89,7 +87,10 @@
     font-size: 3.5em; /* Adjust emoji size */
     line-height: 1;
     user-select: none;
-    transition: opacity 0.2s ease-in; /* Fade out when revealed */
+    /* Transition opacity for reveal AND initial show/hide */
+    transition: opacity 0.2s ease-in-out;
+    position: relative; /* Needed to be above label */
+    z-index: 2;
 }
 
 /* Revealed Label */
@@ -105,19 +106,39 @@
     width: 100%; /* Take width for centering */
     text-align: center;
 }
-
-/* Using attribute selector might be more reliable if you add data-* attribute */
-.cup.is-confirm .cup-label-revealed {
+/* Styles for the text revealed under the cup */
+.cup-label-revealed.is-confirm { /* Class potentially added by JS if needed */
     color: var(--key-valid-color);
 }
-.cup:not(.is-confirm) .cup-label-revealed {
+.cup-label-revealed:not(.is-confirm) { /* Class potentially added by JS if needed */
      color: var(--key-invalid-color);
 }
 
 
 /* --- State Modifications --- */
 
-/* Only lift the REVEALED cup's visual part */
+/* Style the cup during the initial showing phase to highlight the correct one */
+
+.cup.showingConfirm .cup-visual {
+    /* Ensure normal position */
+    transform: translateY(0);
+}
+/* Highlight the confirm cup during the initial showing phase */
+.cup.showingConfirm.is-confirm .cup-visual {
+    /* Example: Slight lift and/or border */
+     transform: translateY(-5px);
+     /* border: 1px solid gold; */ /* Optional highlight */
+}
+/* Ensure the correct graphic (tick or cup) is visible */
+.cup.showingConfirm .cup-graphic {
+     opacity: 1;
+}
+/* Hide the revealed label during initial show */
+.cup.showingConfirm .cup-label-revealed {
+    opacity: 0;
+}
+
+/* Styles for the final reveal (only chosen cup lifts) */
 .cup.revealed .cup-visual {
     transform: translateY(-40px); /* Lift amount */
 }
@@ -129,21 +150,23 @@
     opacity: 1;
 }
 
-/* Highlight chosen cup */
+/* Highlight chosen cup (optional visual cue) */
 
 
 /* Disable clicks when not in selecting phase */
 .cup:not(.selecting) {
     cursor: default;
 }
-/* Only allow hover effect during selection phase */
+/* Hover effect only during selection phase */
 .cup.selecting:hover .cup-visual {
-    transform: translateY(-10px); /* Slight lift on hover */
+    /* Apply lift first */
+    transform: translateY(-10px);
 }
-/* Keep horizontal position during hover lift */
-.cup.selecting.cup-order-0:hover { transform: translateX(-110px); }
-.cup.selecting.cup-order-1:hover { transform: translateX(0px); }
-.cup.selecting.cup-order-2:hover { transform: translateX(110px); }
+/* Then apply horizontal position based on order */
+/* (Separate transform properties might work better if conflicts arise) */
+.cup.selecting.cup-order-0:hover { transform: translateX(-110px) translateY(-10px); }
+.cup.selecting.cup-order-1:hover { transform: translateX(0px) translateY(-10px); }
+.cup.selecting.cup-order-2:hover { transform: translateX(110px) translateY(-10px); }
 
 
 /* Game Message Area */
