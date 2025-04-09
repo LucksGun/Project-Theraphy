@@ -474,11 +474,16 @@ function App() {
                             </p>
                              <button
                                 onClick={openModelBuilder}
-                                className="settings-action-button model-builder-trigger-button"
-                                title="Build custom model combination"
+                                className="settings-action-button model-builder-trigger-button" // Keep this class for green styling
+                                disabled={!canAccessAdvanced} // <<< ADD THIS restriction
+                                title={!canAccessAdvanced ? "Requires a valid Access Key" : "Build custom model combination"} // <<< ADD conditional title
                             >
                                 🔧 Build AI Model...
                             </button>
+                            {/* <<< ADD conditional helper text >>> */}
+                            {!canAccessAdvanced && (
+                                <p className="settings-helper-text">Enter key to build models.</p>
+                            )}
                          </div>
                      </div>
                     <hr className="settings-separator" />
