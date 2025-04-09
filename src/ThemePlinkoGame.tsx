@@ -1,116 +1,181 @@
-// src/ThemePlinkoGame.tsx - Complete with CSS Pins
+// src/ThemePlinkoGame.tsx (Physics Version using Matter.js)
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import './ThemePlinkoGame.css'; // Import the CSS for styling
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Matter from 'matter-js';
+import './ThemePlinkoGame.css'; // Styles for the game modal and render area
 import { AppTheme } from './App'; // Import type from App
 
 interface ThemePlinkoGameProps {
     isOpen: boolean;
     onClose: () => void;
     currentTheme: AppTheme;
-    // Accepts the function to *actually* change the theme
     onThemeChange: (newTheme: AppTheme) => void;
 }
 
-// Define possible animation outcomes based on animation names in CSS
-type AnimationOutcome = 'light' | 'dark';
-const ANIMATION_NAMES: { [key: string]: AnimationOutcome } = {
-    'plinko-drop-light-1': 'light',
-    'plinko-drop-light-2': 'light',
-    'plinko-drop-dark-1': 'dark',
-    'plinko-drop-dark-2': 'dark',
-    'plinko-drop-dark-3': 'dark',
-    'plinko-drop-light-3': 'light',
-    // Add more pairs if you create more animations in CSS
-};
-const ANIMATION_KEYS = Object.keys(ANIMATION_NAMES);
+// --- Constants for physics and game elements ---
+const BOARD_WIDTH = 300;    // Width of the physics simulation area
+const BOARD_HEIGHT = 400;   // Height of the physics simulation area
+const PIN_RADIUS = 4;       // Radius of the static pins
+const PIN_COLOR = '#888888'; // Color of pins (adjust as needed)
+const DARK_PIN_COLOR = '#AAAAAA';
+const BALL_RADIUS = 7;       // Radius of the falling ball
+const BALL_COLOR = '#ff4500'; // OrangeRed ball
+const WALL_THICKNESS = 40;    // Thickness of invisible boundaries (generous)
+const ZONE_HEIGHT = 40;     // Height of the bottom detection zones
+const GRAVITY = 0.8;        // Simulation gravity (adjust for desired speed)
+const BALL_RESTITUTION = 0.3; // Bounciness (0=none, 1=perfectly elastic)
+const PIN_FRICTION = 0.05;    // Friction on pins
+const SETTLE_VELOCITY_THRESHOLD = 0.2; // How slow ball must be to be considered settled
+const SETTLE_CHECK_INTERVAL = 300; // Check every 300ms if ball has settled
+const CLOSE_DELAY_MS = 2500;   // Delay after showing result before closing
 
-// Define Pin Layout (Example - Adjust top/left percentages for your desired look)
-// *** NEW Pin Layout Definition ***
+// --- Pin Layout (Adjust coordinates as needed) ---
+// Using the more symmetrical layout
 const pinLayout = [
-    // Row 1 (1 pin @ ~15% down, centered)
-    { top: '15%', left: '50%' },
-    // Row 2 (2 pins @ ~28% down, offset)
-    { top: '28%', left: '38%' }, { top: '28%', left: '62%' },
-    // Row 3 (3 pins @ ~41% down, offset)
-    { top: '41%', left: '26%' }, { top: '41%', left: '50%' }, { top: '41%', left: '74%' },
-    // Row 4 (4 pins @ ~54% down, offset)
-    { top: '54%', left: '14%' }, { top: '54%', left: '38%' }, { top: '54%', left: '62%' }, { top: '54%', left: '86%' },
-     // Row 5 (Like Row 3 @ ~67% down)
-    { top: '67%', left: '26%' }, { top: '67%', left: '50%' }, { top: '67%', left: '74%' },
-    // Row 6 (Like Row 2 @ ~80% down)
-    { top: '80%', left: '38%' }, { top: '80%', left: '60%' },
+    { x: BOARD_WIDTH * 0.5, y: BOARD_HEIGHT * 0.20 }, { x: BOARD_WIDTH * 0.38, y: BOARD_HEIGHT * 0.32 }, { x: BOARD_WIDTH * 0.62, y: BOARD_HEIGHT * 0.32 }, { x: BOARD_WIDTH * 0.26, y: BOARD_HEIGHT * 0.44 }, { x: BOARD_WIDTH * 0.50, y: BOARD_HEIGHT * 0.44 }, { x: BOARD_WIDTH * 0.74, y: BOARD_HEIGHT * 0.44 }, { x: BOARD_WIDTH * 0.14, y: BOARD_HEIGHT * 0.56 }, { x: BOARD_WIDTH * 0.38, y: BOARD_HEIGHT * 0.56 }, { x: BOARD_WIDTH * 0.62, y: BOARD_HEIGHT * 0.56 }, { x: BOARD_WIDTH * 0.86, y: BOARD_HEIGHT * 0.56 }, { x: BOARD_WIDTH * 0.26, y: BOARD_HEIGHT * 0.68 }, { x: BOARD_WIDTH * 0.50, y: BOARD_HEIGHT * 0.68 }, { x: BOARD_WIDTH * 0.74, y: BOARD_HEIGHT * 0.68 }, { x: BOARD_WIDTH * 0.38, y: BOARD_HEIGHT * 0.80 }, { x: BOARD_WIDTH * 0.62, y: BOARD_HEIGHT * 0.80 },
 ];
-// *** END NEW Pin Layout Definition ***
 
-// The Component
+// --- The Component ---
 const ThemePlinkoGame: React.FC<ThemePlinkoGameProps> = ({
     isOpen, onClose, currentTheme, onThemeChange
 }) => {
-    const [isAnimating, setIsAnimating] = useState(false);
-    const [result, setResult] = useState<AnimationOutcome | null>(null);
-    const [message, setMessage] = useState<string | null>(null);
-    const [currentAnimationName, setCurrentAnimationName] = useState<string>('');
-    const boardRef = useRef<HTMLDivElement>(null);
+    const sceneRef = useRef<HTMLDivElement>(null); // Div where Matter.js will render canvas
+    const engineRef = useRef<Matter.Engine | null>(null);
+    const renderRef = useRef<Matter.Render | null>(null);
+    const runnerRef = useRef<Matter.Runner | null>(null);
+    const ballRef = useRef<Matter.Body | null>(null);
+    const settleCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Function to start/restart the game
-    const startGame = useCallback(() => {
-        console.log("Starting Plinko Game");
-        setResult(null);
-        setMessage("Dropping ball...");
-        setIsAnimating(false); // Reset animation state first
+    const [message, setMessage] = useState<string | null>("Get ready...");
+    const [outcome, setOutcome] = useState<'light' | 'dark' | null>(null);
 
-        // Choose a random animation path/outcome
-        const randomIndex = Math.floor(Math.random() * ANIMATION_KEYS.length);
-        const randomAnimation = ANIMATION_KEYS[randomIndex];
-        console.log("Chosen Animation:", randomAnimation);
-        setCurrentAnimationName(randomAnimation);
+    // --- Cleanup Function ---
+    const cleanupMatter = useCallback(() => {
+        console.log("Cleaning up Matter.js instance");
+        if (settleCheckIntervalRef.current) clearInterval(settleCheckIntervalRef.current);
+        settleCheckIntervalRef.current = null;
 
-        // Use a short timeout to allow React to apply the new animation name
-        // before setting isAnimating to true, ensuring restart works
-        setTimeout(() => {
-             if (isOpen) { // Check if still open before starting
-                 setIsAnimating(true);
-             }
-        }, 50);
+        if (runnerRef.current && engineRef.current) Matter.Runner.stop(runnerRef.current);
+        if (renderRef.current) Matter.Render.stop(renderRef.current);
+        if (engineRef.current) Matter.World.clear(engineRef.current.world, false);
+        if (engineRef.current) Matter.Engine.clear(engineRef.current);
+        if (renderRef.current) {
+            renderRef.current.canvas.remove();
+            renderRef.current.textures = {}; // Clear textures cache
+        }
+        // Reset refs
+        engineRef.current = null;
+        renderRef.current = null;
+        runnerRef.current = null;
+        ballRef.current = null;
+    }, []);
 
-    }, [isOpen]); // Added isOpen dependency
-
-    // Start game when modal opens
+    // --- Setup Matter.js ---
     useEffect(() => {
-        if (isOpen) {
-            startGame();
-        } else {
-            // Reset when closing
-            setIsAnimating(false);
-            setResult(null);
-            setMessage(null);
-            setCurrentAnimationName('');
+        // Only run setup if isOpen is true and engine isn't already created
+        if (isOpen && sceneRef.current && !engineRef.current) {
+            console.log("Setting up Matter.js...");
+            setMessage("Dropping ball...");
+            setOutcome(null);
+
+            // Check theme for colors
+            const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+            const bgColor = isDarkMode ? '#242424' : '#ffffff'; // Use theme colors
+            const pinColor = isDarkMode ? DARK_PIN_COLOR : PIN_COLOR;
+            const wallColor = isDarkMode ? '#404040' : '#cccccc'; // Subtle wall color
+
+            // --- Create Engine ---
+            const engine = Matter.Engine.create();
+            engine.gravity.y = GRAVITY;
+            engineRef.current = engine;
+
+            // --- Create Renderer ---
+            const render = Matter.Render.create({
+                element: sceneRef.current, // Render inside this div
+                engine: engine,
+                options: {
+                    width: BOARD_WIDTH,
+                    height: BOARD_HEIGHT,
+                    wireframes: false,
+                    background: bgColor, // Use theme background
+                    pixelRatio: window.devicePixelRatio || 1, // For sharpness
+                }
+            });
+            renderRef.current = render;
+
+            // --- Create Bodies ---
+            // Walls (slightly outside view)
+            const walls = [
+                Matter.Bodies.rectangle(BOARD_WIDTH / 2, -WALL_THICKNESS / 2, BOARD_WIDTH, WALL_THICKNESS, { isStatic: true, render: { fillStyle: wallColor } }), // Top ceiling
+                Matter.Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + WALL_THICKNESS / 2, BOARD_WIDTH, WALL_THICKNESS, { isStatic: true, label: 'floor', render: { fillStyle: wallColor } }), // Floor
+                Matter.Bodies.rectangle(-WALL_THICKNESS / 2, BOARD_HEIGHT / 2, WALL_THICKNESS, BOARD_HEIGHT, { isStatic: true, render: { fillStyle: wallColor } }), // Left
+                Matter.Bodies.rectangle(BOARD_WIDTH + WALL_THICKNESS / 2, BOARD_HEIGHT / 2, WALL_THICKNESS, BOARD_HEIGHT, { isStatic: true, render: { fillStyle: wallColor } }), // Right
+                 // Center divider between zones (make it very thin and static)
+                 Matter.Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT - (ZONE_HEIGHT / 2), 2, ZONE_HEIGHT, {
+                    isStatic: true,
+                    label: 'divider',
+                    isSensor: true, // Doesn't physically block, just detects collisions if needed
+                     render: { fillStyle: 'transparent', strokeStyle: wallColor, lineWidth: 1 } // Make it barely visible
+                 })
+            ];
+
+            // Pins
+            const pins = pinLayout.map(pin => Matter.Bodies.circle(pin.x, pin.y, PIN_RADIUS, {
+                isStatic: true, label: 'pin', friction: PIN_FRICTION, restitution: 0.5, // Slight bounce off pins
+                render: { fillStyle: pinColor }
+            }));
+
+            // Ball (random start x)
+            const startX = BOARD_WIDTH / 2 + (Math.random() * 20 - 10); // Random offset from center
+            const ball = Matter.Bodies.circle(startX, BALL_RADIUS + 5, BALL_RADIUS, {
+                restitution: BALL_RESTITUTION, friction: 0.01, label: 'ball',
+                 render: { fillStyle: BALL_COLOR }
+            });
+            ballRef.current = ball;
+
+            // Add all bodies to world
+            Matter.World.add(engine.world, [...walls, ...pins, ball]);
+
+            // --- Run simulation ---
+            const runner = Matter.Runner.create();
+            runnerRef.current = runner;
+            Matter.Runner.run(runner, engine);
+            Matter.Render.run(render);
+
+            // --- Outcome Detection Interval ---
+            if (settleCheckIntervalRef.current) clearInterval(settleCheckIntervalRef.current);
+            settleCheckIntervalRef.current = setInterval(() => {
+                const currentBall = ballRef.current;
+                if (!currentBall || !engineRef.current || outcome !== null) return; // Exit if no ball or outcome already decided
+
+                if ( currentBall.position.y > BOARD_HEIGHT - ZONE_HEIGHT && Matter.Body.getSpeed(currentBall) < SETTLE_VELOCITY_THRESHOLD ) {
+                    console.log("Ball appears settled at x:", currentBall.position.x);
+                    const finalOutcome = currentBall.position.x < BOARD_WIDTH / 2 ? 'light' : 'dark';
+                    setOutcome(finalOutcome); // Set final outcome state
+
+                    // Stop simulation and rendering
+                    if (runnerRef.current) Matter.Runner.stop(runnerRef.current);
+                    if (renderRef.current) Matter.Render.stop(renderRef.current);
+                    if (settleCheckIntervalRef.current) clearInterval(settleCheckIntervalRef.current);
+
+                    // Handle theme change
+                    if (currentTheme === finalOutcome) { setMessage(`Ball landed on ${finalOutcome}! Theme stays ${currentTheme}.`); }
+                    else { setMessage(`Ball landed on ${finalOutcome}! Switching theme to ${finalOutcome}.`); onThemeChange(finalOutcome); }
+
+                    // Schedule close
+                    setTimeout(onClose, CLOSE_DELAY_MS);
+                }
+            }, SETTLE_CHECK_INTERVAL);
         }
-    }, [isOpen, startGame]);
 
-    // Handle animation end
-    const handleAnimationEnd = (event: React.AnimationEvent<HTMLDivElement>) => {
-        // Check if the animation that ended is one of our plinko paths
-        const animationName = event.animationName;
-        if (ANIMATION_NAMES[animationName]) {
-            console.log("Animation ended:", animationName);
-            setIsAnimating(false); // Stop animation state
-            const outcome = ANIMATION_NAMES[animationName];
-            setResult(outcome);
-
-            // Determine if theme should change
-            if (currentTheme === outcome) {
-                setMessage(`Ball landed on ${outcome}! Theme stays ${currentTheme}.`);
-            } else {
-                setMessage(`Ball landed on ${outcome}! Switching theme to ${outcome}.`);
-                onThemeChange(outcome); // Call the function passed from App.tsx
-            }
-
-            // Close modal after a delay
-            setTimeout(onClose, 1200); // Show result for 2.5 seconds
-        }
-    };
+        // --- Cleanup function ---
+        return () => {
+             if (isOpen) { // Ensure cleanup runs if modal was open
+                 cleanupMatter();
+             }
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]); // Run only when isOpen changes
 
     // Render null if not open
     if (!isOpen) return null;
@@ -118,37 +183,22 @@ const ThemePlinkoGame: React.FC<ThemePlinkoGameProps> = ({
     return (
         <div className="plinko-game-overlay" onClick={onClose}>
             <div className="plinko-game-modal" onClick={(e) => e.stopPropagation()}>
-                <h4></h4>
+                <h4>Theme Plinko!</h4>
 
-                <div className="plinko-board" ref={boardRef}>
-                    {/* Render Pins */}
-                    {pinLayout.map((pin, index) => (
-                        <div
-                            key={`pin-${index}`}
-                            className="plinko-pin"
-                            style={{ top: pin.top, left: pin.left }}
-                        ></div>
-                    ))}
-
-                    {/* Ball */}
-                    <div className={`plinko-ball ${isAnimating ? 'dropping' : ''}`}
-                         // Apply animation name dynamically
-                         style={{ animationName: isAnimating ? currentAnimationName : 'none' }}
-                         // Event listener for when animation finishes
-                         onAnimationEnd={handleAnimationEnd}
-                    ></div>
-
-                    {/* Labels */}
+                {/* Container where Matter.js will render its canvas */}
+                <div ref={sceneRef} className="plinko-canvas-container">
+                    {/* Static Labels positioned behind/around canvas */}
                     <div className="plinko-label-light">LIGHT</div>
                     <div className="plinko-label-dark">DARK</div>
                 </div>
 
                 <p className="plinko-message" aria-live="polite">
-                    {/* Display message based on state */}
-                    {result ? message : isAnimating ? "Dropping ball..." : message || ' '}
+                    {message || ' '}
                 </p>
 
-
+                <button onClick={onClose} className="plinko-button cancel">
+                    {outcome ? "Close" : "Cancel Game"}
+                </button>
             </div>
         </div>
     );

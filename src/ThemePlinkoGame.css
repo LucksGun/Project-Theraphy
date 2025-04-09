@@ -1,4 +1,4 @@
-/* src/ThemePlinkoGame.css - Updated for CSS Pins */
+/* src/ThemePlinkoGame.css - Styles for Matter.js Canvas */
 
 .plinko-game-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -14,127 +14,58 @@
     padding: 20px 25px 25px 25px;
     border-radius: 8px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    text-align: center;
     border: 1px solid var(--border-color);
-    width: 90%;
-    max-width: 350px;
+    width: auto; /* Let content size it based on canvas */
+    text-align: center;
 }
 
 .plinko-game-modal h4 { margin-top: 0; margin-bottom: 15px; font-size: 1.2em; }
 
-.plinko-board {
-    width: 100%;
-    aspect-ratio: 2 / 1.8; /* Adjusted aspect ratio slightly for pins */
-    background-color: #f0f0f0; /* Light fallback */
-    /* REMOVED background-image */
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    position: relative;
-    margin: 0 auto 15px auto;
+/* Container for the Matter.js Canvas */
+.plinko-canvas-container {
+    /* Set exact dimensions matching constants in TSX */
+    width: 300px;
+    height: 400px;
+    margin: 0 auto 15px auto; /* Center */
+    position: relative; /* For positioning labels */
     border: 1px solid var(--border-color);
-    overflow: hidden;
-    border-radius: 5px; /* Optional slight rounding */
+    background-color: var(--button-secondary-bg); /* Fallback background */
+    overflow: hidden; /* Hide anything slightly outside bounds */
 }
 
-:root[data-theme='dark'] .plinko-board {
-    background-color: #333; /* Dark fallback */
-    border-color: #555;
-}
-
-/* *** NEW STYLE for Pins *** */
-.plinko-pin {
-    width: 6px;  /* Adjust size */
-    height: 6px; /* Adjust size */
-    background-color: var(--text-secondary); /* Pin color */
-    border-radius: 50%;
-    position: absolute;
-    transform: translate(-50%, -50%); /* Center pin on its coordinates */
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-}
-:root[data-theme='dark'] .plinko-pin {
-     background-color: #888;
+/* Canvas element created by Matter.js will go inside ^ */
+/* Style the canvas itself if needed (usually not necessary) */
+.plinko-canvas-container canvas {
+    display: block; /* Remove extra space below canvas */
+    background-color: transparent; /* Ensure canvas bg doesn't overwrite container */
 }
 
 
-.plinko-ball {
-    width: 15px; height: 15px; background-color: #ff4500; border-radius: 50%;
-    position: absolute; top: 5%; left: 50%; transform: translateX(-50%);
-    /* Animation applied via inline style */
-    animation-duration: 3s; animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    animation-fill-mode: forwards; animation-play-state: paused;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-    z-index: 1; /* Ensure ball is above pins */
-}
-.plinko-ball.dropping { animation-play-state: running; }
-
+/* Labels positioned relative to the canvas container */
 .plinko-label-light,
 .plinko-label-dark {
-    position: absolute; bottom: 5%; font-size: 0.8em; font-weight: bold; color: var(--text-secondary);
+    position: absolute;
+    bottom: 10px; /* Position near bottom exits */
+    font-size: 0.9em;
+    font-weight: bold;
+    color: var(--text-secondary);
+    pointer-events: none; /* Don't block clicks */
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
 }
-.plinko-label-light { left: 20%; transform: translateX(-50%); }
-.plinko-label-dark { right: 20%; transform: translateX(50%); }
+/* Position labels in their respective halves */
+.plinko-label-light { left: 25%; transform: translateX(-50%); }
+.plinko-label-dark { right: 25%; transform: translateX(50%); }
 
 
-.plinko-message { min-height: 1.5em; margin-top: 10px; margin-bottom: 15px; font-weight: 500; font-size: 0.9em; }
-.plinko-button { padding: 8px 15px; font-size: 0.9em; background-color: var(--button-secondary-bg); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; transition: background-color 0.2s ease; margin: 0 5px; }
+.plinko-message {
+    min-height: 1.5em; margin-top: 10px; margin-bottom: 15px;
+    font-weight: 500; font-size: 0.9em;
+}
+
+.plinko-button.cancel {
+    padding: 8px 15px; font-size: 0.9em; background-color: var(--button-secondary-bg);
+    color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 5px;
+    cursor: pointer; transition: background-color 0.2s ease; margin: 0 5px;
+}
 .plinko-button.cancel:hover { background-color: var(--button-secondary-hover-bg); }
 .plinko-button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-
-/* --- KEYFRAMES for Plinko Drop --- */
-/* IMPORTANT: You MUST adjust the translate values in these keyframes
-   to make the ball appear to bounce off the pin locations defined
-   in the pinLayout array in the TSX file! These are just placeholders. */
-
-/* Example path ending Light */
-@keyframes plinko-drop-light-1 {
-    0% { top: 5%; transform: translateX(-50%); }
-    20% { top: 25%; transform: translateX(-100%); } /* Move Left */
-    40% { top: 45%; transform: translateX(-60%); }  /* Move Right */
-    60% { top: 65%; transform: translateX(-90%); }  /* Move Left */
-    80% { top: 85%; transform: translateX(-50%); }  /* Move Right */
-    100% { top: 90%; left: 20%; transform: translateX(-50%); } /* End in Light zone */
-}
-@keyframes plinko-drop-light-3 {
-    0% { top: 5%; transform: translateX(-50%); }
-    20% { top: 25%; transform: translateX(-100%); } /* Move Left */
-    40% { top: 45%; transform: translateX(-60%); }  /* Move Right */
-    60% { top: 65%; transform: translateX(-90%); }  /* Move Left */
-    80% { top: 85%; transform: translateX(-50%); }  /* Move Right */
-    100% { top: 90%; left: 20%; transform: translateX(-50%); } /* End in Light zone */
-}
-@keyframes plinko-drop-light-2 {
-    0% { top: 5%; transform: translateX(-50%); }
-    20% { top: 25%; transform: translateX(-10%); }
-    40% { top: 45%; transform: translateX(-40%); }
-    60% { top: 65%; transform: translateX(0%); }
-    80% { top: 85%; transform: translateX(-30%); }
-    100% { top: 90%; left: 20%; transform: translateX(-50%); } /* End in Light zone */
-}
-
-/* Example path ending Dark */
-@keyframes plinko-drop-dark-1 {
-    0% { top: 5%; transform: translateX(-50%); }
-    20% { top: 25%; transform: translateX(0%); }   /* Move Right */
-    40% { top: 45%; transform: translateX(-40%); }  /* Move Left */
-    60% { top: 65%; transform: translateX(10%); }   /* Move Right */
-    80% { top: 85%; transform: translateX(-20%); }  /* Move Left */
-    100% { top: 90%; left: 80%; transform: translateX(-50%); } /* End in Dark zone */
-}
-@keyframes plinko-drop-dark-3 {
-    0% { top: 5%; transform: translateX(-50%); }
-    20% { top: 25%; transform: translateX(0%); }   /* Move Right */
-    40% { top: 45%; transform: translateX(-40%); }  /* Move Left */
-    60% { top: 65%; transform: translateX(10%); }   /* Move Right */
-    80% { top: 85%; transform: translateX(-20%); }  /* Move Left */
-    100% { top: 90%; left: 80%; transform: translateX(-50%); } /* End in Dark zone */
-}
-@keyframes plinko-drop-dark-2 {
-    0% { top: 5%; transform: translateX(-50%); }
-    20% { top: 25%; transform: translateX(-20%); }
-    40% { top: 45%; transform: translateX(10%); }
-    60% { top: 65%; transform: translateX(-30%); }
-    80% { top: 85%; transform: translateX(20%); }
-    100% { top: 90%; left: 80%; transform: translateX(-50%); } /* End in Dark zone */
-}
