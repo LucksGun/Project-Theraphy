@@ -1,4 +1,4 @@
-// src/ConfirmClearCupGame.tsx - Added Initial Reveal Logic
+// src/ConfirmClearCupGame.tsx - FINAL Version with Initial Reveal & 5-Move Shuffle
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './ConfirmClearCupGame.css'; // Ensure CSS file exists and is correctly named/imported
@@ -7,7 +7,7 @@ import './ConfirmClearCupGame.css'; // Ensure CSS file exists and is correctly n
 interface ConfirmClearCupGameProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: () => void;
+    onConfirm: () => void; // Callback for successful confirmation
 }
 
 // --- Internal State for each Cup ---
@@ -17,16 +17,17 @@ interface CupState {
     isChosen: boolean;
     isRevealed: boolean; // Only true for the chosen cup AFTER selection
     isConfirmCup: boolean;
-    // NEW: State to briefly show the confirm cup before shuffle
-    showConfirmInitially: boolean;
+    showConfirmInitially: boolean; // Flag for initial reveal phase
 }
 
 // --- Constants ---
 const INITIAL_REVEAL_MS = 1500; // How long to show the confirm cup location
-const PRE_SHUFFLE_DELAY_MS = 300; // Short pause after hiding confirm cup before shuffle
-const SHUFFLE_DURATION_MS = 2000;
+const PRE_SHUFFLE_DELAY_MS = 300; // Short pause after hiding confirm cup before shuffle starts
+const SHUFFLE_MOVE_DELAY_MS = 100; // Short delay between triggering moves in sequence
+const SHUFFLE_TRANSITION_MS = 400; // Duration of CSS transition for one move
+const NUM_SHUFFLE_MOVES = 5; // <<< Number of shuffle steps
 const RESULT_DELAY_MS = 1500; // Delay after showing result before closing
-const FAIL_DELAY_MS = 1500;
+const FAIL_DELAY_MS = 1500; // Delay after picking wrong cup
 
 // --- Helper: Fisher-Yates Shuffle ---
 const shuffleArray = <T,>(array: T[]): T[] => { let currentIndex = array.length, randomIndex; const newArray = [...array]; while (currentIndex !== 0) { randomIndex = Math.floor(Math.random() * currentIndex); currentIndex--; [newArray[currentIndex], newArray[randomIndex]] = [newArray[randomIndex], newArray[currentIndex]]; } return newArray; };
@@ -34,89 +35,115 @@ const shuffleArray = <T,>(array: T[]): T[] => { let currentIndex = array.length,
 // --- The Component ---
 const ConfirmClearCupGame: React.FC<ConfirmClearCupGameProps> = ({ isOpen, onClose, onConfirm }) => {
     const [cups, setCups] = useState<CupState[]>([]);
-    // Added 'showingConfirm' phase
+    // Add 'showingConfirm' phase
     const [phase, setPhase] = useState<'idle' | 'initializing' | 'showingConfirm' | 'pre-shuffle' | 'shuffling' | 'selecting' | 'revealing' | 'closing'>('idle');
     const [message, setMessage] = useState<string | null>(null);
     const [confirmCupId, setConfirmCupId] = useState<number | null>(null);
-    const [status, setStatus] = useState<'playing' | 'success' | 'failed'>('playing');
+    const [status, setStatus] = useState<'playing' | 'success' | 'failed'>('playing'); // Added status state
 
     const gameTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
     const isMountedRef = useRef<boolean>(false);
+    const initialCupsRef = useRef<CupState[]>([]); // Ref to store initial cup setup
 
     // --- Cleanup Timeouts ---
-    const clearGameTimeouts = useCallback(() => { gameTimeoutsRef.current.forEach(clearTimeout); gameTimeoutsRef.current = []; }, []);
+    const clearGameTimeouts = useCallback(() => {
+        console.log(`CupConfirm: Clearing ${gameTimeoutsRef.current.length} game timeouts.`);
+        gameTimeoutsRef.current.forEach(clearTimeout);
+        gameTimeoutsRef.current = [];
+    }, []);
 
     // --- Game Setup ---
     const setupGame = useCallback(() => {
         if (!isMountedRef.current) return;
         clearGameTimeouts();
-        setMessage("Watch where the 'Confirm' cup goes...");
+        setMessage("Watch where the 'Confirm' cup starts..."); // Initial message
         setPhase('initializing');
-        setStatus('playing');
+        setStatus('playing'); // Reset status
         console.log("CupConfirm: Setting up game.");
 
         const winningCup = Math.floor(Math.random() * 3) + 1;
         setConfirmCupId(winningCup);
         console.log("CupConfirm: Winning cup is", winningCup);
 
-        // Setup initial cup state - Mark which one to show initially
-        const initialCups: CupState[] = [
+        // Store initial setup in ref AND state - Mark which one to show initially
+        initialCupsRef.current = [
             { id: 1, order: 0, isChosen: false, isRevealed: false, isConfirmCup: winningCup === 1, showConfirmInitially: winningCup === 1 },
             { id: 2, order: 1, isChosen: false, isRevealed: false, isConfirmCup: winningCup === 2, showConfirmInitially: winningCup === 2 },
             { id: 3, order: 2, isChosen: false, isRevealed: false, isConfirmCup: winningCup === 3, showConfirmInitially: winningCup === 3 },
         ];
-        setCups(initialCups);
-        setPhase('showingConfirm'); // New phase to show the confirm cup
+        setCups(initialCupsRef.current);
+        setPhase('showingConfirm'); // Phase to show the confirm cup
 
-        // Timer to hide the confirm cup again
+        // Timer to hide the confirm cup again and start shuffle sequence
         const hideTimer = setTimeout(() => {
             if (!isMountedRef.current) return;
             console.log("CupConfirm: Hiding confirm cup location.");
-            setCups(prevCups => prevCups.map(c => ({ ...c, showConfirmInitially: false }))); // Hide indicator
-            setPhase('pre-shuffle'); // Short pause before shuffle
+            // Update state to hide the initial reveal marker
+            setCups(prevCups => prevCups.map(c => ({ ...c, showConfirmInitially: false })));
+            setPhase('pre-shuffle');
 
-            // Timer to start shuffling
+            // Timer to actually start shuffling
             const shuffleTimer = setTimeout(() => {
                 if (!isMountedRef.current) return;
                 setPhase('shuffling');
                 setMessage("Shuffling...");
-                console.log("CupConfirm: Starting shuffle.");
-                const orders = shuffleArray([0, 1, 2]);
-                setCups(prevCups => prevCups.map((cup, index) => ({
-                    ...cup, order: orders[index], isRevealed: false, isChosen: false // Ensure reset
-                })));
+                console.log("CupConfirm: Starting 5-move shuffle...");
 
-                // Timer to end shuffling
-                const endShuffleTimer = setTimeout(() => {
-                    if (!isMountedRef.current) return;
-                    setPhase('selecting'); setMessage("Pick the 'Confirm' cup!");
-                    console.log("CupConfirm: Shuffle complete. Waiting for selection.");
-                }, SHUFFLE_DURATION_MS);
-                gameTimeoutsRef.current.push(endShuffleTimer);
+                // --- 5 Move Shuffle Logic ---
+                let currentMove = 0;
+                const performShuffleMove = () => {
+                    // Check mount status - phase check is less critical here if cleanup works
+                    if (!isMountedRef.current) { console.log("CupConfirm Shuffle move skipped: component unmounted."); clearGameTimeouts(); return; }
 
-            }, PRE_SHUFFLE_DELAY_MS); // Start shuffle after short pause
+                    if (currentMove >= NUM_SHUFFLE_MOVES) {
+                        console.log("CupConfirm: Finished 5 shuffle moves.");
+                        setPhase('selecting'); setMessage("Pick the 'Confirm' cup!");
+                        return; // Stop after 5 moves
+                    }
+
+                    const orders = shuffleArray([0, 1, 2]); console.log(`CupConfirm Shuffle Move ${currentMove + 1}: New order -> ${orders.join(',')}`);
+                    setCups(prevCups => prevCups.map((cup) => {
+                        const originalCup = initialCupsRef.current.find(c => c.id === cup.id);
+                        const originalIndex = initialCupsRef.current.findIndex(c => c.id === cup.id);
+                        return { ...cup, order: orders[originalIndex], isConfirmCup: originalCup?.isConfirmCup ?? false, isRevealed: false, isChosen: false };
+                    }));
+                    currentMove++;
+                    const nextMoveTimer = setTimeout(performShuffleMove, SHUFFLE_TRANSITION_MS + SHUFFLE_MOVE_DELAY_MS);
+                    gameTimeoutsRef.current.push(nextMoveTimer);
+                };
+                // Start the first move
+                const firstMoveTimer = setTimeout(performShuffleMove, SHUFFLE_MOVE_DELAY_MS);
+                gameTimeoutsRef.current.push(firstMoveTimer);
+
+            }, PRE_SHUFFLE_DELAY_MS); // Wait brief moment before shuffle starts
             gameTimeoutsRef.current.push(shuffleTimer);
 
         }, INITIAL_REVEAL_MS); // How long to show the confirm cup
         gameTimeoutsRef.current.push(hideTimer);
 
-    }, [clearGameTimeouts]);
+    }, [clearGameTimeouts]); // Dependency
 
     // --- Effect for setup/cleanup ---
     useEffect(() => {
-         clearGameTimeouts();
+         clearGameTimeouts(); // Clear on open/close
          if (isOpen) {
              isMountedRef.current = true;
              console.log("CupConfirm: Opened.");
-             setupGame();
+             setupGame(); // Initial setup
              return () => { // Cleanup on close or unmount
-                console.log("CupConfirm: Cleaning up."); isMountedRef.current = false; clearGameTimeouts(); setPhase('idle'); setCups([]); setMessage(null); setConfirmCupId(null); setStatus('playing');
+                console.log("CupConfirm: Cleaning up.");
+                isMountedRef.current = false;
+                clearGameTimeouts();
+                // Reset state fully
+                setPhase('idle'); setCups([]); setMessage(null); setConfirmCupId(null); setStatus('playing');
              };
-         } else { isMountedRef.current = false; }
-    }, [isOpen, setupGame, clearGameTimeouts]); // Dependencies
+         } else {
+             isMountedRef.current = false; // Ensure flag is false if closed externally
+         }
+    }, [isOpen, setupGame, clearGameTimeouts]); // Depend on stable callbacks and isOpen
 
 
-    // --- Cup Click Handler --- (Logic remains largely the same)
+    // --- Cup Click Handler ---
     const handleCupClick = (cupId: number) => {
         if (phase !== 'selecting' || !isMountedRef.current) return;
         console.log(`Cup ${cupId} chosen.`);
@@ -159,7 +186,7 @@ const ConfirmClearCupGame: React.FC<ConfirmClearCupGameProps> = ({ isOpen, onClo
                             style={{ transform: `translateX(${(cup.order - 1) * 110}px)` }} // Adjust 110px if needed
                             onClick={() => handleCupClick(cup.id)}
                             role="button" tabIndex={phase === 'selecting' ? 0 : -1} aria-label={`Cup ${cup.id}`}
-                            aria-hidden={phase === 'shuffling'}
+                            aria-hidden={phase === 'shuffling' || phase === 'initializing'}
                          >
                             {/* Cup visual includes graphic and revealed label */}
                             <div className="cup-visual">
@@ -175,7 +202,7 @@ const ConfirmClearCupGame: React.FC<ConfirmClearCupGameProps> = ({ isOpen, onClo
                          </div>
                      ))}
                 </div>
-                 <button onClick={onClose} className="game-close-button" disabled={phase === 'shuffling' || phase === 'revealing' || phase === 'showingConfirm'}>
+                 <button onClick={onClose} className="game-close-button" disabled={phase === 'shuffling' || phase === 'revealing' || phase === 'showingConfirm' || phase === 'pre-shuffle'}>
                     Cancel Game
                  </button>
             </div>
