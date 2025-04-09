@@ -80,6 +80,12 @@ function App() {
     const [sttLang, setSttLang] = useState<SpeechLanguage>(() => { const stored = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null; if (stored && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(stored)) { return stored; } return 'en-US'; });
     const [selectedPersona, setSelectedPersona] = useState<Persona>(DEFAULT_UNRESTRICTED_PERSONA); // Default to unrestricted
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+    const openAdvancedSettingsFromMain = () => {
+        console.log("STEP 1: openAdvancedSettingsFromMain CALLED"); // <<< ADD THIS
+        setIsSettingsOpen(false);
+        console.log("STEP 2: Setting isAdvancedSettingsOpen to TRUE"); // <<< ADD THIS
+        setIsAdvancedSettingsOpen(true);
+    };
     // *** NEW STATE for Advanced Settings Modal ***
     const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState<boolean>(false);
     const [keyStatus, setKeyStatus] = useState<KeyValidationStatus>({ isValid: null, username: null, loading: false, error: null });
@@ -260,11 +266,6 @@ function App() {
         }
     }
     // *** NEW Handler to open Advanced Settings from Main Settings ***
-    const openAdvancedSettingsFromMain = () => {
-        if (!canAccessAdvanced) return; // Should be disabled, but double-check
-        setIsSettingsOpen(false); // Close main settings
-        setIsAdvancedSettingsOpen(true); // Open advanced settings
-    }
 
     const executeClearChat = () => { console.log("Executing clear chat logic after confirmation."); const timestamp = Date.now(); const clearMessage: Message = { id: timestamp, text: "Chat cleared.", sender: 'bot', timestamp: timestamp }; setMessages([clearMessage]); localStorage.removeItem(CHAT_STORAGE_KEY); closeAllModals(); };
     const handleAccessKeyChange=(e:ChangeEvent<HTMLInputElement>)=>{setEnteredKey(e.target.value);};
@@ -402,7 +403,7 @@ function App() {
                         <div className="settings-option">
                             <label>Advanced Configuration:</label>
                              <button
-                                onClick={openAdvancedSettingsFromMain}
+                                onClick={() => { console.log("CLICK: Advanced Settings Button"); openAdvancedSettingsFromMain(); }} // <<< ADD LOG TO onClick
                                 className="settings-action-button advanced-settings-trigger-button" // Styled green via CSS
                                 // No 'disabled' attribute here
                                 title="Configure Model, Persona & Key"
