@@ -24,11 +24,11 @@ interface Zone {
 }
 
 // --- Constants ---
-const DEGREES_PER_SEC = 190; // Slightly faster rotation
+const DEGREES_PER_SEC = 200; // Slightly faster rotation
 const INDICATOR_OFFSET_DEGREES = -90; // Pointing up at 0 degrees
 // Zone Widths - Adjust as desired
-const PERSONA_ZONE_WIDTH_DEGREES = 60; // Make persona zones reasonably large
-const CANCEL_ZONE_MIN_WIDTH_DEGREES = 20; // Minimum width for red zones
+const PERSONA_ZONE_WIDTH_DEGREES = 30; // Make persona zones reasonably large
+const CANCEL_ZONE_MIN_WIDTH_DEGREES = 35; // Minimum width for red zones
 // Delays
 const SUCCESS_DELAY_MS = 1500;
 const FAIL_DELAY_MS = 1500;
