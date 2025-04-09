@@ -6,9 +6,9 @@ import { GeminiModel, ModelInfo, KeyValidationStatus } from './App'; // Import t
 
 // --- Define Parts & Distractors ---
 // Adjust these based on your actual ALL_AVAILABLE_MODELS_FRONTEND IDs
-const modelVersions: string[] = ["2.0", "2.5", "1.5", "3.0"]; // Added distractors
-const modelNames: string[] = ["Flash", "Pro", "Ultra", "Core"]; // Added distractors
-const modelModifiers: (string | null)[] = [null, "Lite", "Experimental Thinking", "Image Generation", "Advanced"]; // null = no modifier
+const modelVersions: string[] = ["2.0", "2.5"]; // Added distractors
+const modelNames: string[] = ["Flash", "Pro"]; // Added distractors
+const modelModifiers: (string | null)[] = [null, "Lite", "Experimental Thinking", "Image Generation"]; // null = no modifier
 
 interface ModelBuilderGameProps {
     isOpen: boolean;
