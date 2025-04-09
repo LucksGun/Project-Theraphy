@@ -79,6 +79,9 @@
   --button-yellow-disabled-bg: #fff3cd;
   --button-yellow-disabled-text: #664d03;
   --button-yellow-disabled-border: #ffeeba;
+  --button-green-disabled-bg: #badbcc;
+  --button-green-disabled-text: #05513e;
+  --button-green-disabled-border: #a3cfbb;
   /* Green Button Colors (e.g., Model Builder) */
   --button-green-bg: #198754;
   --button-green-text: #ffffff;
@@ -137,6 +140,9 @@
   --mic-recording-bg: #dc3545;
   --mic-recording-hover-bg: #bb2d3b;
   /* Settings Variables */
+  --button-green-disabled-bg: #1c3c30;
+  --button-green-disabled-text: #63c77d;
+  --button-green-disabled-border: #2b6a4f;
   --settings-menu-bg: #2a2a2a;
   --settings-menu-border: #444;
   --settings-label-text: #b0b0b0;
@@ -242,6 +248,33 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     gap: 20px; /* Adjust gap between items */
     align-items: stretch; /* Make items take full width */
     margin-bottom: 15px;
+}
+
+/* --- Style for the Model Builder Button --- */
+.model-builder-trigger-button { /* Base green style */
+    background-color: var(--button-green-bg);
+    color: var(--button-green-text);
+    border: 1px solid var(--button-green-border);
+}
+.model-builder-trigger-button:hover:not(:disabled) { /* Green hover */
+    background-color: var(--button-green-hover-bg);
+    border-color: var(--button-green-hover-border);
+    color: var(--button-green-text);
+}
+
+/* --- ADD OR VERIFY THIS DISABLED STATE for the Model Builder button --- */
+.model-builder-trigger-button:disabled {
+    background-color: var(--button-green-disabled-bg) !important;
+    color: var(--button-green-disabled-text) !important;
+    border-color: var(--button-green-disabled-border) !important;
+    cursor: not-allowed;
+    opacity: 0.7; /* Adjust dimness/transparency */
+}
+/* Optional: Ensure hover doesn't override disabled look */
+.model-builder-trigger-button:disabled:hover {
+    background-color: var(--button-green-disabled-bg) !important; /* Keep disabled background */
+    border-color: var(--button-green-disabled-border) !important; /* Keep disabled border */
+    opacity: 0.7;
 }
 
 /* Keep .settings-column definition if needed elsewhere, but the grid layout is gone */
