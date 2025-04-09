@@ -190,15 +190,18 @@ const ConfirmClearCupGame: React.FC<ConfirmClearCupGameProps> = ({ isOpen, onClo
                          >
                             {/* Cup visual includes graphic and revealed label */}
                             <div className="cup-visual">
-                                 {/* Show confirm symbol initially if it's the confirm cup and in showingConfirm phase */}
-                                 <div className={`cup-graphic ${cup.showConfirmInitially ? 'initially-revealed' : ''}`}>
-                                     {cup.showConfirmInitially ? '✔️' : '🥤'}
-                                 </div>
-                                 {/* Revealed label positioned absolutely inside visual */}
-                                 <div className="cup-label cup-label-revealed">
-                                     {cup.isConfirmCup ? '✔️ Confirm' : '❌ Cancel'}
-                                 </div>
-                            </div>
+    <div className={`cup-graphic ${cup.showConfirmInitially ? 'initially-revealed' : ''}`}>
+        {/* Conditionally render checkmark OR your image */}
+        {cup.showConfirmInitially
+            ? '✔️' // Keep checkmark for initial reveal (or use another image)
+            : <img src="/images/my-cool-cup.png" alt="Cup" /> // <<< UPDATE THIS PATH to your image
+        }
+    </div>
+    {/* Revealed label positioned absolutely inside visual */}
+    <div className="cup-label cup-label-revealed">
+        {cup.isConfirmCup ? '✔️ Confirm' : '❌ Cancel'}
+    </div>
+</div>
                          </div>
                      ))}
                 </div>

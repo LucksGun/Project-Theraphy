@@ -59,7 +59,7 @@
     position: absolute;
     bottom: 0;
     /* Transition for horizontal sliding (shuffle) and vertical lifting (reveal) */
-    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Match SHUFFLE_DURATION_MS */
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Match SHUFFLE_TRANSITION_MS */
     transform-origin: center bottom;
     will-change: transform;
 }
@@ -82,7 +82,7 @@
      transition: transform 0.3s ease-out;
 }
 
-/* Cup graphic (emoji) */
+/* Cup graphic (emoji/image) */
 .cup-graphic {
     font-size: 3.5em; /* Adjust emoji size */
     line-height: 1;
@@ -91,6 +91,11 @@
     transition: opacity 0.2s ease-in-out;
     position: relative; /* Needed to be above label */
     z-index: 2;
+}
+
+/* Style for the checkmark shown initially */
+.cup-graphic.initially-revealed {
+    color: var(--key-valid-color); /* Make checkmark green */
 }
 
 /* Revealed Label */
@@ -107,10 +112,16 @@
     text-align: center;
 }
 /* Styles for the text revealed under the cup */
-.cup-label-revealed.is-confirm { /* Class potentially added by JS if needed */
+.cup-label-revealed.is-confirm { /* Class added dynamically or check parent */
     color: var(--key-valid-color);
 }
-.cup-label-revealed:not(.is-confirm) { /* Class potentially added by JS if needed */
+.cup.is-confirm .cup-label-revealed { /* Alternative selector */
+     color: var(--key-valid-color);
+}
+.cup-label-revealed:not(.is-confirm) {
+     color: var(--key-invalid-color);
+}
+.cup:not(.is-confirm) .cup-label-revealed { /* Alternative selector */
      color: var(--key-invalid-color);
 }
 
@@ -119,24 +130,20 @@
 
 /* Style the cup during the initial showing phase to highlight the correct one */
 
-.cup.showingConfirm .cup-visual {
-    /* Ensure normal position */
-    transform: translateY(0);
-}
 /* Highlight the confirm cup during the initial showing phase */
 .cup.showingConfirm.is-confirm .cup-visual {
-    /* Example: Slight lift and/or border */
+    /* Example: Slight lift */
      transform: translateY(-5px);
-     /* border: 1px solid gold; */ /* Optional highlight */
 }
-/* Ensure the correct graphic (tick or cup) is visible */
-.cup.showingConfirm .cup-graphic {
-     opacity: 1;
-}
-/* Hide the revealed label during initial show */
+/* Ensure the revealed label stays hidden during initial show */
 .cup.showingConfirm .cup-label-revealed {
     opacity: 0;
 }
+/* Ensure cup graphic is visible during initial show */
+.cup.showingConfirm .cup-graphic {
+     opacity: 1;
+}
+
 
 /* Styles for the final reveal (only chosen cup lifts) */
 .cup.revealed .cup-visual {
@@ -150,7 +157,6 @@
     opacity: 1;
 }
 
-/* Highlight chosen cup (optional visual cue) */
 
 
 /* Disable clicks when not in selecting phase */
@@ -162,8 +168,7 @@
     /* Apply lift first */
     transform: translateY(-10px);
 }
-/* Then apply horizontal position based on order */
-/* (Separate transform properties might work better if conflicts arise) */
+/* Keep horizontal position during hover lift */
 .cup.selecting.cup-order-0:hover { transform: translateX(-110px) translateY(-10px); }
 .cup.selecting.cup-order-1:hover { transform: translateX(0px) translateY(-10px); }
 .cup.selecting.cup-order-2:hover { transform: translateX(110px) translateY(-10px); }
