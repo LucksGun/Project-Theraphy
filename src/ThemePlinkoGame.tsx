@@ -32,7 +32,22 @@ const CLOSE_DELAY_MS = 2500;   // Delay after showing result before closing
 // --- Pin Layout (Adjust coordinates as needed) ---
 // Using the more symmetrical layout
 const pinLayout = [
-    { x: BOARD_WIDTH * 0.5, y: BOARD_HEIGHT * 0.20 }, { x: BOARD_WIDTH * 0.38, y: BOARD_HEIGHT * 0.32 }, { x: BOARD_WIDTH * 0.62, y: BOARD_HEIGHT * 0.32 }, { x: BOARD_WIDTH * 0.26, y: BOARD_HEIGHT * 0.44 }, { x: BOARD_WIDTH * 0.50, y: BOARD_HEIGHT * 0.44 }, { x: BOARD_WIDTH * 0.74, y: BOARD_HEIGHT * 0.44 }, { x: BOARD_WIDTH * 0.14, y: BOARD_HEIGHT * 0.56 }, { x: BOARD_WIDTH * 0.38, y: BOARD_HEIGHT * 0.56 }, { x: BOARD_WIDTH * 0.62, y: BOARD_HEIGHT * 0.56 }, { x: BOARD_WIDTH * 0.86, y: BOARD_HEIGHT * 0.56 }, { x: BOARD_WIDTH * 0.26, y: BOARD_HEIGHT * 0.68 }, { x: BOARD_WIDTH * 0.50, y: BOARD_HEIGHT * 0.68 }, { x: BOARD_WIDTH * 0.74, y: BOARD_HEIGHT * 0.68 }, { x: BOARD_WIDTH * 0.38, y: BOARD_HEIGHT * 0.80 }, { x: BOARD_WIDTH * 0.62, y: BOARD_HEIGHT * 0.80 },
+    // Row 1 (1 pin) - Y increases downwards
+    { x: BOARD_WIDTH * 0.50, y: BOARD_HEIGHT * 0.15 },
+    // Row 2 (2 pins)
+    { x: BOARD_WIDTH * 0.40, y: BOARD_HEIGHT * 0.25 }, { x: BOARD_WIDTH * 0.60, y: BOARD_HEIGHT * 0.25 },
+    // Row 3 (3 pins)
+    { x: BOARD_WIDTH * 0.30, y: BOARD_HEIGHT * 0.35 }, { x: BOARD_WIDTH * 0.50, y: BOARD_HEIGHT * 0.35 }, { x: BOARD_WIDTH * 0.70, y: BOARD_HEIGHT * 0.35 },
+    // Row 4 (4 pins)
+    { x: BOARD_WIDTH * 0.20, y: BOARD_HEIGHT * 0.45 }, { x: BOARD_WIDTH * 0.40, y: BOARD_HEIGHT * 0.45 }, { x: BOARD_WIDTH * 0.60, y: BOARD_HEIGHT * 0.45 }, { x: BOARD_WIDTH * 0.80, y: BOARD_HEIGHT * 0.45 },
+    // Row 5 (5 pins - Widest)
+    { x: BOARD_WIDTH * 0.10, y: BOARD_HEIGHT * 0.55 }, { x: BOARD_WIDTH * 0.30, y: BOARD_HEIGHT * 0.55 }, { x: BOARD_WIDTH * 0.50, y: BOARD_HEIGHT * 0.55 }, { x: BOARD_WIDTH * 0.70, y: BOARD_HEIGHT * 0.55 }, { x: BOARD_WIDTH * 0.90, y: BOARD_HEIGHT * 0.55 },
+     // Row 6 (Like Row 4)
+    { x: BOARD_WIDTH * 0.20, y: BOARD_HEIGHT * 0.65 }, { x: BOARD_WIDTH * 0.40, y: BOARD_HEIGHT * 0.65 }, { x: BOARD_WIDTH * 0.60, y: BOARD_HEIGHT * 0.65 }, { x: BOARD_WIDTH * 0.80, y: BOARD_HEIGHT * 0.65 },
+    // Row 7 (Like Row 3)
+    { x: BOARD_WIDTH * 0.30, y: BOARD_HEIGHT * 0.75 }, { x: BOARD_WIDTH * 0.50, y: BOARD_HEIGHT * 0.75 }, { x: BOARD_WIDTH * 0.70, y: BOARD_HEIGHT * 0.75 },
+    // Row 8 (Like Row 2)
+    { x: BOARD_WIDTH * 0.40, y: BOARD_HEIGHT * 0.85 }, { x: BOARD_WIDTH * 0.60, y: BOARD_HEIGHT * 0.85 },
 ];
 
 // --- The Component ---
