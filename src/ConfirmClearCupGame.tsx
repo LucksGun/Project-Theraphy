@@ -21,7 +21,7 @@ interface CupState {
 }
 
 // --- Constants ---
-const INITIAL_REVEAL_MS = 1500; // How long to show the confirm cup location
+const INITIAL_REVEAL_MS = 3000; // How long to show the confirm cup location
 const PRE_SHUFFLE_DELAY_MS = 300; // Short pause after hiding confirm cup before shuffle starts
 const SHUFFLE_MOVE_DELAY_MS = 100; // Short delay between triggering moves in sequence
 const SHUFFLE_TRANSITION_MS = 400; // Duration of CSS transition for one move
