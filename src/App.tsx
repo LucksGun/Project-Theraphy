@@ -315,52 +315,118 @@ function App() {
 
 
     // --- JSX ---
+    // --- JSX ---
     return (
         <div className="App">
             {/* Beta Notice Modal */}
-            {showBetaNotice && ( <div className="beta-notice-overlay"><div className="beta-notice-modal"><h2>⚠️ Beta Notice</h2><p>Welcome! This is a beta test version. Features may change or contain bugs.</p><p>Your feedback is valuable!</p><button onClick={handleAcceptBeta} className="beta-accept-button">✔️ Accept & Continue</button></div></div> )}
+            {showBetaNotice && (
+                <div className="beta-notice-overlay">
+                    <div className="beta-notice-modal">
+                        <h2>⚠️ Beta Notice</h2>
+                        <p>Welcome! This is a beta test version. Features may change or contain bugs.</p>
+                        <p>Your feedback is valuable!</p>
+                        <button onClick={handleAcceptBeta} className="beta-accept-button">✔️ Accept & Continue</button>
+                    </div>
+                </div>
+            )}
 
             {/* Introduction Modal */}
-            {showIntroduction && !showBetaNotice && ( <div className="intro-notice-overlay"><div className="intro-notice-modal" style={{ position: 'relative' }}><h2>วิธีใช้งาน Project Theraphy</h2>{introductionSections.map(section => ( <div className="intro-section" key={section.key}><div className="intro-section-content"><h4>{section.title}</h4><p style={{ whiteSpace: 'pre-wrap' }}>{section.text}</p></div><div className="intro-section-toggle"><label className="switch" title={`ยืนยันว่าอ่านหัวข้อ ${section.title}`}><input type="checkbox" checked={introSectionsAcknowledged[section.key]} onChange={() => handleSectionToggle(section.key)} /><span className="slider round"></span></label></div></div> ))}<div className="intro-button-container"><button style={continueButtonStyle} onClick={allIntroSectionsAcknowledged ? handleAcceptIntroduction : handleMoveButton} className={`intro-accept-button ${!allIntroSectionsAcknowledged ? 'button-runaway' : ''}`} title={!allIntroSectionsAcknowledged ? "โปรดยืนยันทุกหัวข้อก่อน!" : "เริ่มแชท"}>{allIntroSectionsAcknowledged ? "เริ่มแชท" : "ยืนยันให้ครบก่อน"}</button></div></div> </div> )}
+            {showIntroduction && !showBetaNotice && (
+                <div className="intro-notice-overlay">
+                    <div className="intro-notice-modal" style={{ position: 'relative' }}>
+                        <h2>วิธีใช้งาน Project Theraphy</h2>
+                        {introductionSections.map(section => (
+                            <div className="intro-section" key={section.key}>
+                                <div className="intro-section-content">
+                                    <h4>{section.title}</h4>
+                                    <p style={{ whiteSpace: 'pre-wrap' }}>{section.text}</p>
+                                </div>
+                                <div className="intro-section-toggle">
+                                    <label className="switch" title={`ยืนยันว่าอ่านหัวข้อ ${section.title}`}>
+                                        <input type="checkbox" checked={introSectionsAcknowledged[section.key]} onChange={() => handleSectionToggle(section.key)} />
+                                        <span className="slider round"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        ))}
+                        <div className="intro-button-container">
+                            <button
+                                style={continueButtonStyle}
+                                onClick={allIntroSectionsAcknowledged ? handleAcceptIntroduction : handleMoveButton}
+                                className={`intro-accept-button ${!allIntroSectionsAcknowledged ? 'button-runaway' : ''}`}
+                                title={!allIntroSectionsAcknowledged ? "โปรดยืนยันทุกหัวข้อก่อน!" : "เริ่มแชท"}
+                            >
+                                {allIntroSectionsAcknowledged ? "เริ่มแชท" : "ยืนยันให้ครบก่อน"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-             {/* Settings Menu Modal (MODIFIED STRUCTURE - SINGLE COLUMN) */}
-             {isSettingsOpen && (
+            {/* Settings Menu Modal (Main Settings) */}
+            {isSettingsOpen && (
                 <div className="settings-menu" role="dialog" aria-labelledby="settings-title">
                     <h3 id="settings-title">Settings</h3>
-                    <div className="settings-content-single-column"> {/* Changed class for clarity */}
-                        <div className="settings-option"> <label htmlFor="stt-lang-select">Speech Input Lang:</label> <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"><option value="en-US">English (US)</option><option value="th-TH">ไทย (Thai)</option><option value="es-ES">Español (Spain)</option><option value="fr-FR">Français (France)</option></select> </div>
-                        <div className="settings-option"><label>Appearance:</label><div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}><button onClick={toggleTheme} id="theme-toggle" className="settings-action-button theme-toggle-button">{currentTheme === 'light' ? '🌙 Switch to Dark Mode' : '☀️ Switch to Light Mode'}</button></div></div>
-                        <div className="settings-option"> <label>Chat Actions:</label> <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                            <button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button>
-                            <button onClick={openClearCupGame} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat History</button>
-                         </div> </div>
+                    {/* Use single column layout now */}
+                    <div className="settings-column" style={{gap: '20px'}}>
+
+                        {/* Speech Input Lang */}
+                        <div className="settings-option">
+                            <label htmlFor="stt-lang-select">Speech Input Lang:</label>
+                            <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select">
+                                <option value="en-US">English (US)</option>
+                                <option value="th-TH">ไทย (Thai)</option>
+                                <option value="es-ES">Español (Spain)</option>
+                                <option value="fr-FR">Français (France)</option>
+                            </select>
+                        </div>
+                        {/* Appearance */}
+                        <div className="settings-option">
+                            <label>Appearance:</label>
+                            <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                                <button onClick={toggleTheme} id="theme-toggle" className="settings-action-button theme-toggle-button">
+                                    {currentTheme === 'light' ? '🌙 Switch to Dark Mode' : '☀️ Switch to Light Mode'}
+                                </button>
+                            </div>
+                        </div>
+                        {/* Chat Actions */}
+                        <div className="settings-option">
+                            <label>Chat Actions:</label>
+                            <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                                <button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button>
+                                <button onClick={openClearCupGame} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat History</button>
+                             </div>
+                        </div>
 
                         {/* Advanced Settings Button */}
                         <div className="settings-option">
-             <label>Advanced Configuration:</label>
-              <button
-                 onClick={openAdvancedSettingsFromMain}
-                 className="settings-action-button advanced-settings-trigger-button"
-                 // NO 'disabled' attribute here based on key status
-                 title="Configure Model, Persona & Key" // Static title
-             >
-                 🔑 Advanced Settings...
-             </button>
+                            <label>Advanced Configuration:</label>
+                             <button
+                                onClick={openAdvancedSettingsFromMain}
+                                className="settings-action-button advanced-settings-trigger-button" // Styled green via CSS
+                                // No 'disabled' attribute here
+                                title="Configure Model, Persona & Key"
+                            >
+                                🔑 Advanced Settings...
+                            </button>
+                             {/* No conditional helper text here */}
                         </div>
 
-                        <div className="settings-option"> <label>Admin Area:</label> <button onClick={toggleStaffLoginModal} className="settings-action-button staff-area-button">🔑 Staff Login</button> </div>
+                        {/* Admin Area */}
+                        <div className="settings-option">
+                            <label>Admin Area:</label>
+                            <button onClick={toggleStaffLoginModal} className="settings-action-button staff-area-button">🔑 Staff Login</button>
+                        </div>
                     </div>
                     <hr className="settings-separator" />
                     <button onClick={toggleSettings} className="close-settings-button">Close Settings</button>
                 </div>
             )}
 
-            {/* *** NEW Advanced Settings Modal *** */}
-            {/* *** NEW Advanced Settings Modal *** */}
+            {/* Advanced Settings Modal */}
             {isAdvancedSettingsOpen && (
-                 <div className="settings-menu advanced-settings-modal" role="dialog" aria-labelledby="advanced-settings-title"> {/* Reuse class or create new */}
+                 <div className="settings-menu advanced-settings-modal" role="dialog" aria-labelledby="advanced-settings-title">
                     <h3 id="advanced-settings-title">Advanced Settings</h3>
-                     {/* Contains the original Column 1 content */}
                      <div className="settings-column" style={{gap: '20px'}}>
                         {/* Access Key Input */}
                         <div className="settings-option">
@@ -370,95 +436,143 @@ function App() {
                                 id="access-key-input-adv"
                                 className="settings-input"
                                 placeholder="Enter access key"
-                                value={enteredKey} // Assumes 'enteredKey' state exists
-                                onChange={handleAccessKeyChange} // Assumes 'handleAccessKeyChange' handler exists
+                                value={enteredKey}
+                                onChange={handleAccessKeyChange}
                                 autoComplete="off"
                             />
-                            {/* Key Status Display */}
                             <div className="settings-key-status">
-                                {keyStatus.loading ? (
-                                    <span>Validating...</span>
-                                ) : keyStatus.isValid ? (
-                                    <span>✅ Valid Key ({keyStatus.username || 'User'})</span>
-                                ) : keyStatus.error ? (
-                                    <span>❌ {keyStatus.error}</span>
-                                ) : (
-                                    <span>Enter key for restricted features.</span>
-                                )}
+                                {keyStatus.loading ? (<span>Validating...</span>)
+                                : keyStatus.isValid ? (<span>✅ Valid Key ({keyStatus.username || 'User'})</span>)
+                                : keyStatus.error ? (<span>❌ {keyStatus.error}</span>)
+                                : (<span>Enter key for restricted features.</span>)}
                             </div>
                         </div>
-
                         {/* Persona Setting */}
                         <div className="settings-option">
                             <label>Persona:</label>
-                            {/* Display Current Persona */}
                             <p className="current-persona-display">
-                                {AVAILABLE_PERSONAS.find(p => p.value === selectedPersona)?.emoji} {/* Assumes AVAILABLE_PERSONAS and selectedPersona exist */}
+                                {AVAILABLE_PERSONAS.find(p => p.value === selectedPersona)?.emoji}
                                 {' '}
                                 {AVAILABLE_PERSONAS.find(p => p.value === selectedPersona)?.label || selectedPersona}
                             </p>
-                            {/* Change Persona Button (Triggers Plinko) */}
                             <button
-                                onClick={openPersonaPlinko} // Assumes 'openPersonaPlinko' handler exists
+                                onClick={openPersonaPlinko}
                                 className="settings-action-button persona-change-button"
-                                disabled={!canChangePersona} // Assumes 'canChangePersona' variable exists
+                                disabled={!canChangePersona}
                                 title={!canChangePersona ? "Requires a valid Access Key..." : "Change Persona (Opens Game)"}
                             >
                                 Change Persona
                             </button>
-                            {/* Optional: Helper text if button is disabled */}
-                            {!canChangePersona && (
-                                <p className="settings-helper-text">Enter key to change.</p>
-                            )}
+                            {!canChangePersona && (<p className="settings-helper-text">Enter key to change.</p>)}
                         </div>
-
                         {/* AI Model Setting */}
                         <div className="settings-option">
                             <label>AI Model:</label>
-                            {/* Display Current Model */}
                             <p className="current-persona-display">
-                                {ALL_AVAILABLE_MODELS_FRONTEND.find(m => m.value === selectedModel)?.label || selectedModel} {/* Assumes ALL_AVAILABLE_MODELS_FRONTEND and selectedModel exist */}
+                                {ALL_AVAILABLE_MODELS_FRONTEND.find(m => m.value === selectedModel)?.label || selectedModel}
                             </p>
-                             {/* Build Model Button (Triggers Builder Game) */}
                              <button
-                                onClick={openModelBuilder} // Assumes 'openModelBuilder' handler exists
+                                onClick={openModelBuilder}
                                 className="settings-action-button model-builder-trigger-button"
                                 title="Build custom model combination"
-                                // No disabled logic here currently, assumed always available
                             >
                                 🔧 Build AI Model...
                             </button>
                          </div>
                      </div>
-                    {/* Separator */}
                     <hr className="settings-separator" />
-                    {/* Close Button */}
-                    <button
-                        onClick={toggleAdvancedSettings} // Assumes 'toggleAdvancedSettings' handler exists
-                        className="close-settings-button"
-                    >
-                        Close Advanced
-                    </button>
+                    <button onClick={toggleAdvancedSettings} className="close-settings-button">Close Advanced</button>
                 </div>
             )}
 
             {/* Staff Login Modal */}
-            {isStaffLoginModalVisible && ( <div className="staff-panel-overlay"><div className="staff-panel-modal" style={{ maxWidth: '400px' }}> <h3 id="staff-login-title">Staff Login</h3> <button onClick={toggleStaffLoginModal} className="close-staff-panel-button" title="Close Login">×</button> <form onSubmit={(e)=>{e.preventDefault(); handleStaffLogin();}} className="staff-login-section"><div className="settings-option"><label htmlFor="staff-key-modal-input">Staff Key:</label> <input type="password" id="staff-key-modal-input" className="settings-input" value={enteredStaffKey} onChange={handleStaffKeyChange} placeholder="Enter staff access key" disabled={isStaffLoginLoading} autoFocus required/></div><button type="submit" className="staff-login-button" disabled={isStaffLoginLoading || !enteredStaffKey.trim()}>{isStaffLoginLoading ? 'Verifying...' : 'Login & Enter Admin'}</button>{staffLoginError && <p className="staff-error">{staffLoginError}</p>}<p className="staff-security-warning">Enter key to access admin page.</p></form> </div> </div> )}
+            {isStaffLoginModalVisible && (
+                <div className="staff-panel-overlay">
+                    <div className="staff-panel-modal" style={{ maxWidth: '400px' }}>
+                        <h3 id="staff-login-title">Staff Login</h3>
+                        <button onClick={toggleStaffLoginModal} className="close-staff-panel-button" title="Close Login">×</button>
+                        <form onSubmit={(e)=>{e.preventDefault(); handleStaffLogin();}} className="staff-login-section">
+                            <div className="settings-option">
+                                <label htmlFor="staff-key-modal-input">Staff Key:</label>
+                                <input type="password" id="staff-key-modal-input" className="settings-input" value={enteredStaffKey} onChange={handleStaffKeyChange} placeholder="Enter staff access key" disabled={isStaffLoginLoading} autoFocus required/>
+                            </div>
+                            <button type="submit" className="staff-login-button" disabled={isStaffLoginLoading || !enteredStaffKey.trim()}>{isStaffLoginLoading ? 'Verifying...' : 'Login & Enter Admin'}</button>
+                            {staffLoginError && <p className="staff-error">{staffLoginError}</p>}
+                            <p className="staff-security-warning">Enter key to access admin page.</p>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Feedback Modal */}
-            {isFeedbackModalVisible && ( <div className="feedback-modal-overlay"><div className="feedback-modal"> <h3 id="feedback-title">Submit Feedback</h3> <button onClick={toggleFeedbackModal} className="close-feedback-button" title="Close Feedback">×</button> {feedbackSuccess && <p className="feedback-message success">{feedbackSuccess}</p>} {feedbackError && <p className="feedback-message error">{feedbackError}</p>} {!feedbackSuccess && ( <form onSubmit={handleFeedbackSubmit} className="feedback-form"> <div className="feedback-field"><label htmlFor="feedback-email">Email (Optional):</label> <input type="email" id="feedback-email" className="settings-input" value={feedbackEmail} onChange={(e) => setFeedbackEmail(e.target.value)} placeholder="your.email@example.com" maxLength={250} disabled={isSubmittingFeedback}/></div> <div className="feedback-field"><label>Rating:<span style={{color:'red'}}>*</span></label><div className="star-rating">{[1, 2, 3, 4, 5].map(star => ( <button key={star} type="button" aria-pressed={star === feedbackRating} className={`star-button ${star <= feedbackRating ? 'selected' : ''}`} onClick={() => setFeedbackRating(star)} disabled={isSubmittingFeedback} aria-label={`Rate ${star}/5`}>★</button> ))}</div></div> <div className="feedback-field"><label htmlFor="feedback-comment">Comment:<span style={{color:'red'}}>*</span></label> <textarea id="feedback-comment" className="settings-input" rows={5} value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)} placeholder="Tell us about your experience, suggestions, or any bugs..." maxLength={2000} required disabled={isSubmittingFeedback}/></div> <div className="feedback-actions"><button type="button" onClick={toggleFeedbackModal} className="cancel-feedback-button" disabled={isSubmittingFeedback}>Cancel</button><button type="submit" className="submit-feedback-button" disabled={isSubmittingFeedback || feedbackRating === 0 || !feedbackComment.trim()}>{isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}</button></div> </form> )} </div></div> )}
+            {isFeedbackModalVisible && (
+                <div className="feedback-modal-overlay">
+                    <div className="feedback-modal">
+                        <h3 id="feedback-title">Submit Feedback</h3>
+                        <button onClick={toggleFeedbackModal} className="close-feedback-button" title="Close Feedback">×</button>
+                        {feedbackSuccess && <p className="feedback-message success">{feedbackSuccess}</p>}
+                        {feedbackError && <p className="feedback-message error">{feedbackError}</p>}
+                        {!feedbackSuccess && (
+                           <form onSubmit={handleFeedbackSubmit} className="feedback-form">
+                                <div className="feedback-field">
+                                    <label htmlFor="feedback-email">Email (Optional):</label>
+                                    <input type="email" id="feedback-email" className="settings-input" value={feedbackEmail} onChange={(e) => setFeedbackEmail(e.target.value)} placeholder="your.email@example.com" maxLength={250} disabled={isSubmittingFeedback}/>
+                                </div>
+                                <div className="feedback-field">
+                                    <label>Rating:<span style={{color:'red'}}>*</span></label>
+                                    <div className="star-rating">
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <button key={star} type="button" aria-pressed={star === feedbackRating} className={`star-button ${star <= feedbackRating ? 'selected' : ''}`} onClick={() => setFeedbackRating(star)} disabled={isSubmittingFeedback} aria-label={`Rate ${star}/5`}>★</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="feedback-field">
+                                    <label htmlFor="feedback-comment">Comment:<span style={{color:'red'}}>*</span></label>
+                                    <textarea id="feedback-comment" className="settings-input" rows={5} value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)} placeholder="Tell us about your experience, suggestions, or any bugs..." maxLength={2000} required disabled={isSubmittingFeedback}/>
+                                </div>
+                                <div className="feedback-actions">
+                                    <button type="button" onClick={toggleFeedbackModal} className="cancel-feedback-button" disabled={isSubmittingFeedback}>Cancel</button>
+                                    <button type="submit" className="submit-feedback-button" disabled={isSubmittingFeedback || feedbackRating === 0 || !feedbackComment.trim()}>{isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}</button>
+                                </div>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* --- Render Correct Game Modals --- */}
             {isPersonaPlinkoVisible && ( <PersonaPlinkoGame isOpen={isPersonaPlinkoVisible} onClose={() => setIsPersonaPlinkoVisible(false)} onPersonaSelected={handlePersonaSelectedFromPlinko} keyStatus={keyStatus} allPersonas={AVAILABLE_PERSONAS} /> )}
             {isClearCupGameVisible && ( <ConfirmClearCupGame isOpen={isClearCupGameVisible} onClose={() => setIsClearCupGameVisible(false)} onConfirm={executeClearChat} /> )}
             {isModelBuilderVisible && ( <ModelBuilderGame isOpen={isModelBuilderVisible} onClose={() => setIsModelBuilderVisible(false)} onModelSelected={handleModelSelectedFromBuilder} keyStatus={keyStatus} allModelsInfo={ALL_AVAILABLE_MODELS_FRONTEND} restrictedModels={RESTRICTED_MODELS_VALUES} /> )}
 
-
             {/* Main Routing and Layout */}
             {!showBetaNotice && !showIntroduction && (
                 <Routes>
-                    <Route path="/" element={ <> <header className="App-header"> <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}> <button onClick={toggleSettings} className="settings-button" title="Settings">⚙️</button><button onClick={toggleFeedbackModal} className="settings-button" title="Submit Feedback">💬</button> </div> <h1>Project Theraphy</h1> <div className="header-spacer-right"></div> </header> <ChatbotPage messages={messages} setMessages={setMessages} selectedModel={selectedModel} sttLang={sttLang} selectedPersona={selectedPersona} accessKey={enteredKey} /> </> } />
-                    <Route path="/admin" element={ <ProtectedRoute> <AdminPage /> </ProtectedRoute> } />
+                    <Route path="/" element={
+                        <>
+                            <header className="App-header">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <button onClick={toggleSettings} className="settings-button" title="Settings">⚙️</button>
+                                    <button onClick={toggleFeedbackModal} className="settings-button" title="Submit Feedback">💬</button>
+                                </div>
+                                <h1>Project Theraphy</h1>
+                                <div className="header-spacer-right"></div>
+                            </header>
+                            <ChatbotPage
+                                messages={messages}
+                                setMessages={setMessages}
+                                selectedModel={selectedModel}
+                                sttLang={sttLang}
+                                selectedPersona={selectedPersona}
+                                accessKey={enteredKey}
+                            />
+                        </>
+                    } />
+                    <Route path="/admin" element={
+                        <ProtectedRoute>
+                            <AdminPage />
+                        </ProtectedRoute>
+                    } />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
              )}
