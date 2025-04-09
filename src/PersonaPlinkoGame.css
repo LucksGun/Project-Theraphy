@@ -15,17 +15,20 @@
     border-radius: 8px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     border: 1px solid var(--border-color);
-    width: auto;
+    /* Let width grow naturally based on content */
+    /* width: auto; */
+    /* OR set a max-width if needed */
+     max-width: 90vw; /* Prevent it being wider than viewport */
     text-align: center;
 }
 
 .persona-plinko-modal h4 { margin-top: 0; margin-bottom: 15px; font-size: 1.2em; }
 
-/* Container for the Matter.js Canvas */
+/* Container for the Matter.js Canvas (MODIFIED) */
 .plinko-canvas-container {
     /* Set exact dimensions matching constants in TSX */
-    width: 300px;
-    height: 400px;
+    width: 500px; /* Updated width */
+    height: 650px; /* Updated height */
     margin: 0 auto 15px auto; /* Center */
     position: relative; /* For positioning labels */
     border: 1px solid var(--border-color);
@@ -42,8 +45,8 @@
 /* Labels positioned relative to the canvas container */
 .plinko-label {
     position: absolute;
-    bottom: 10px; /* Position near bottom exits */
-    font-size: 1.2em; /* Emoji size */
+    bottom: 15px; /* Adjusted slightly for taller zone */
+    font-size: 1.4em; /* Slightly larger emoji maybe */
     font-weight: bold;
     color: var(--text-secondary);
     pointer-events: none;

@@ -9,29 +9,50 @@ interface PersonaPlinkoGameProps {
     isOpen: boolean;
     onClose: () => void;
     onPersonaSelected: (persona: Persona) => void; // Callback for success
-    keyStatus: KeyValidationStatus;              // Needed for filtering personas
-    allPersonas: PersonaInfo[];                 // Full list of personas with details
+    keyStatus: KeyValidationStatus;               // Needed for filtering personas
+    allPersonas: PersonaInfo[];                   // Full list of personas with details
 }
 
-// --- Constants ---
-const BOARD_WIDTH = 300;
-const BOARD_HEIGHT = 400;
-const PIN_RADIUS = 4;
+// --- Constants (MODIFIED) ---
+const BOARD_WIDTH = 500; // Increased width
+const BOARD_HEIGHT = 650; // Increased height
+const PIN_RADIUS = 5;    // Slightly larger pins
 const PIN_COLOR = '#888888';
 const DARK_PIN_COLOR = '#AAAAAA';
-const BALL_RADIUS = 7;
-const BALL_COLOR = '#ff4500'; // Keeping ball color distinct
-const WALL_THICKNESS = 40;
-const ZONE_HEIGHT = 40;     // Height of the bottom detection zones
-const GRAVITY = 0.8;
-const BALL_RESTITUTION = 0.3;
+const BALL_RADIUS = 9;     // Slightly larger ball
+const BALL_COLOR = '#ff4500';
+const WALL_THICKNESS = 50; // Slightly thicker walls to match scale
+const ZONE_HEIGHT = 50;    // Increased zone height slightly
+const GRAVITY = 0.7;       // Slightly lower gravity for slower fall
+const BALL_RESTITUTION = 0.35; // Slightly more bounce
 const PIN_FRICTION = 0.05;
 const SETTLE_VELOCITY_THRESHOLD = 0.2;
 const SETTLE_CHECK_INTERVAL = 300;
-const CLOSE_DELAY_MS = 2000; // Show result for 2 seconds
+const CLOSE_DELAY_MS = 3000; // Increased delay to see result
 
-// --- Pin Layout (Use the denser one) ---
-const pinLayout = [ { x: BOARD_WIDTH * 0.50, y: BOARD_HEIGHT * 0.15 }, { x: BOARD_WIDTH * 0.40, y: BOARD_HEIGHT * 0.25 }, { x: BOARD_WIDTH * 0.60, y: BOARD_HEIGHT * 0.25 }, { x: BOARD_WIDTH * 0.30, y: BOARD_HEIGHT * 0.35 }, { x: BOARD_WIDTH * 0.50, y: BOARD_HEIGHT * 0.35 }, { x: BOARD_WIDTH * 0.70, y: BOARD_HEIGHT * 0.35 }, { x: BOARD_WIDTH * 0.20, y: BOARD_HEIGHT * 0.45 }, { x: BOARD_WIDTH * 0.40, y: BOARD_HEIGHT * 0.45 }, { x: BOARD_WIDTH * 0.60, y: BOARD_HEIGHT * 0.45 }, { x: BOARD_WIDTH * 0.80, y: BOARD_HEIGHT * 0.45 }, { x: BOARD_WIDTH * 0.10, y: BOARD_HEIGHT * 0.55 }, { x: BOARD_WIDTH * 0.30, y: BOARD_HEIGHT * 0.55 }, { x: BOARD_WIDTH * 0.50, y: BOARD_HEIGHT * 0.55 }, { x: BOARD_WIDTH * 0.70, y: BOARD_HEIGHT * 0.55 }, { x: BOARD_WIDTH * 0.90, y: BOARD_HEIGHT * 0.55 }, { x: BOARD_WIDTH * 0.20, y: BOARD_HEIGHT * 0.65 }, { x: BOARD_WIDTH * 0.40, y: BOARD_HEIGHT * 0.65 }, { x: BOARD_WIDTH * 0.60, y: BOARD_HEIGHT * 0.65 }, { x: BOARD_WIDTH * 0.80, y: BOARD_HEIGHT * 0.65 }, { x: BOARD_WIDTH * 0.30, y: BOARD_HEIGHT * 0.75 }, { x: BOARD_WIDTH * 0.50, y: BOARD_HEIGHT * 0.75 }, { x: BOARD_WIDTH * 0.70, y: BOARD_HEIGHT * 0.75 }, { x: BOARD_WIDTH * 0.40, y: BOARD_HEIGHT * 0.85 }, { x: BOARD_WIDTH * 0.60, y: BOARD_HEIGHT * 0.85 }, ];
+// --- Pin Layout (NEW - More pins for larger board) ---
+// We need a more extensive layout for the bigger board.
+// Generating this programmatically could be complex, so here's a denser static example.
+// You might want to refine this pattern further.
+const pinLayout: { x: number; y: number; }[] = [];
+const rows = 12; // More rows of pins
+const firstRowY = BOARD_HEIGHT * 0.12;
+const lastRowY = BOARD_HEIGHT * 0.88; // Pins go lower down
+
+for (let i = 0; i < rows; i++) {
+    const y = firstRowY + (i / (rows - 1)) * (lastRowY - firstRowY);
+    const isOffsetRow = i % 2 !== 0; // Offset every other row
+    const pinsInRow = isOffsetRow ? 8 : 9; // Vary pins per row slightly
+    const startX = isOffsetRow ? BOARD_WIDTH * 0.08 : BOARD_WIDTH * 0.05;
+    const endX = isOffsetRow ? BOARD_WIDTH * 0.92 : BOARD_WIDTH * 0.95;
+
+    for (let j = 0; j < pinsInRow; j++) {
+        const x = startX + (j / (pinsInRow - 1)) * (endX - startX);
+        // Add slight random horizontal jitter to make it less predictable
+        const jitter = (Math.random() - 0.5) * (BOARD_WIDTH / pinsInRow * 0.15);
+        pinLayout.push({ x: x + jitter, y });
+    }
+}
 
 
 // --- The Component ---
@@ -44,18 +65,15 @@ const PersonaPlinkoGame: React.FC<PersonaPlinkoGameProps> = ({
     const runnerRef = useRef<Matter.Runner | null>(null);
     const ballRef = useRef<Matter.Body | null>(null);
     const settleCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    // Store zone boundaries along with persona info
     const zonesRef = useRef<{ startX: number; endX: number; personaInfo: PersonaInfo }[]>([]);
 
     const [message, setMessage] = useState<string | null>("Get ready...");
-    const [outcome, setOutcome] = useState<Persona | null>(null); // Store the selected Persona value
+    const [outcome, setOutcome] = useState<Persona | null>(null);
 
-    // Determine available personas based on key status
     const availablePersonas = useMemo(() => {
         return allPersonas.filter(p => !p.restricted || keyStatus.isValid === true);
     }, [allPersonas, keyStatus.isValid]);
 
-    // --- Cleanup Function ---
     const cleanupMatter = useCallback(() => {
         console.log("PersonaPlinko: Cleaning up Matter.js");
         if (settleCheckIntervalRef.current) clearInterval(settleCheckIntervalRef.current);
@@ -68,7 +86,6 @@ const PersonaPlinkoGame: React.FC<PersonaPlinkoGameProps> = ({
         engineRef.current = null; renderRef.current = null; runnerRef.current = null; ballRef.current = null; zonesRef.current = [];
     }, []);
 
-    // --- Setup Matter.js ---
     useEffect(() => {
         if (isOpen && sceneRef.current && !engineRef.current) {
             console.log("PersonaPlinko: Setting up Matter.js...");
@@ -76,30 +93,40 @@ const PersonaPlinkoGame: React.FC<PersonaPlinkoGameProps> = ({
             setOutcome(null);
 
              if (availablePersonas.length === 0) {
-                console.warn("PersonaPlinko: No available personas to play with!");
-                setMessage("No personas available with current key!");
-                setTimeout(onClose, CLOSE_DELAY_MS);
-                return;
-            }
+                 console.warn("PersonaPlinko: No available personas to play with!");
+                 setMessage("No personas available with current key!");
+                 setTimeout(onClose, CLOSE_DELAY_MS); // Use updated delay
+                 return;
+             }
 
             const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
             const bgColor = isDarkMode ? '#242424' : '#ffffff';
             const pinColor = isDarkMode ? DARK_PIN_COLOR : PIN_COLOR;
             const wallColor = isDarkMode ? '#404040' : '#cccccc';
 
-            const engine = Matter.Engine.create({ gravity: { y: GRAVITY } });
-            const render = Matter.Render.create({ element: sceneRef.current, engine: engine, options: { width: BOARD_WIDTH, height: BOARD_HEIGHT, wireframes: false, background: bgColor, pixelRatio: window.devicePixelRatio || 1 } });
+            const engine = Matter.Engine.create({ gravity: { y: GRAVITY } }); // Use updated gravity
+            const render = Matter.Render.create({
+                element: sceneRef.current,
+                engine: engine,
+                options: {
+                    width: BOARD_WIDTH, // Use updated width
+                    height: BOARD_HEIGHT, // Use updated height
+                    wireframes: false,
+                    background: bgColor,
+                    pixelRatio: window.devicePixelRatio || 1
+                }
+            });
             engineRef.current = engine;
             renderRef.current = render;
 
             // --- Create Static Bodies ---
             const staticBodies: Matter.Body[] = [
-                // Walls
+                // Walls (using updated dimensions/thickness)
                 Matter.Bodies.rectangle(BOARD_WIDTH / 2, -WALL_THICKNESS / 2, BOARD_WIDTH, WALL_THICKNESS, { isStatic: true, render: { fillStyle: wallColor } }),
-                Matter.Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + WALL_THICKNESS / 2, BOARD_WIDTH, WALL_THICKNESS, { isStatic: true, label: 'floor', render: { fillStyle: wallColor } }),
-                Matter.Bodies.rectangle(-WALL_THICKNESS / 2, BOARD_HEIGHT / 2, WALL_THICKNESS, BOARD_HEIGHT, { isStatic: true, render: { fillStyle: wallColor } }),
-                Matter.Bodies.rectangle(BOARD_WIDTH + WALL_THICKNESS / 2, BOARD_HEIGHT / 2, WALL_THICKNESS, BOARD_HEIGHT, { isStatic: true, render: { fillStyle: wallColor } }),
-                // Pins
+                Matter.Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + WALL_THICKNESS / 2, BOARD_WIDTH + WALL_THICKNESS, WALL_THICKNESS, { isStatic: true, label: 'floor', render: { fillStyle: wallColor } }), // Made floor slightly wider
+                Matter.Bodies.rectangle(-WALL_THICKNESS / 2, BOARD_HEIGHT / 2, WALL_THICKNESS, BOARD_HEIGHT + WALL_THICKNESS, { isStatic: true, render: { fillStyle: wallColor } }), // Make walls taller
+                Matter.Bodies.rectangle(BOARD_WIDTH + WALL_THICKNESS / 2, BOARD_HEIGHT / 2, WALL_THICKNESS, BOARD_HEIGHT + WALL_THICKNESS, { isStatic: true, render: { fillStyle: wallColor } }), // Make walls taller
+                // Pins (using updated layout and radius)
                 ...pinLayout.map(pin => Matter.Bodies.circle(pin.x, pin.y, PIN_RADIUS, { isStatic: true, label: 'pin', friction: PIN_FRICTION, restitution: 0.5, render: { fillStyle: pinColor } }))
             ];
 
@@ -113,9 +140,9 @@ const PersonaPlinkoGame: React.FC<PersonaPlinkoGameProps> = ({
                 const startX = i * zoneWidth;
                 const endX = (i + 1) * zoneWidth;
 
-                // Add thin visual dividers (optional)
+                 // Add thin visual dividers (optional) - adjusted position based on ZONE_HEIGHT
                  if (i > 0) {
-                    staticBodies.push(Matter.Bodies.rectangle(startX, BOARD_HEIGHT - (ZONE_HEIGHT / 2), 2, ZONE_HEIGHT, { isStatic: true, isSensor: true, render: { fillStyle: wallColor } }));
+                     staticBodies.push(Matter.Bodies.rectangle(startX, BOARD_HEIGHT - (ZONE_HEIGHT / 2), 2, ZONE_HEIGHT, { isStatic: true, isSensor: true, render: { fillStyle: wallColor } }));
                  }
 
                  // Store zone boundaries and persona info
@@ -124,82 +151,73 @@ const PersonaPlinkoGame: React.FC<PersonaPlinkoGameProps> = ({
             }
             // --- End Create Zones ---
 
-            // Ball
-            const startX = BOARD_WIDTH / 2 + (Math.random() * 20 - 10);
-            const ball = Matter.Bodies.circle(startX, BALL_RADIUS + 5, BALL_RADIUS, { restitution: BALL_RESTITUTION, friction: 0.01, label: 'ball', render: { fillStyle: BALL_COLOR } });
+            // Ball (using updated radius and restitution)
+            const startX = BOARD_WIDTH / 2 + (Math.random() * (BOARD_WIDTH * 0.1) - (BOARD_WIDTH * 0.05)); // Slightly wider random start range
+            const ball = Matter.Bodies.circle(startX, BALL_RADIUS + 10, BALL_RADIUS, { restitution: BALL_RESTITUTION, friction: 0.01, label: 'ball', render: { fillStyle: BALL_COLOR } });
             ballRef.current = ball;
 
-            Matter.World.add(engine.world, [...staticBodies, ball]); // Add all bodies
+            Matter.World.add(engine.world, [...staticBodies, ball]);
 
-            // Run simulation
             const runner = Matter.Runner.create(); runnerRef.current = runner; Matter.Runner.run(runner, engine); Matter.Render.run(render);
 
              // --- Outcome Detection Interval ---
              if (settleCheckIntervalRef.current) clearInterval(settleCheckIntervalRef.current);
             settleCheckIntervalRef.current = setInterval(() => {
                 const currentBall = ballRef.current;
-                // Check if still open, ball exists, and outcome not yet decided
                 if (!isOpen || !currentBall || !engineRef.current || outcome !== null) return;
 
+                // Check if ball is near the bottom (using updated ZONE_HEIGHT) and velocity is low
                 if ( currentBall.position.y > BOARD_HEIGHT - ZONE_HEIGHT && Matter.Body.getSpeed(currentBall) < SETTLE_VELOCITY_THRESHOLD ) {
                     const finalX = currentBall.position.x;
                     console.log(`PersonaPlinko: Ball settled at x: ${finalX.toFixed(1)}`);
 
-                    // Find which zone it landed in
                     const landedZone = zonesRef.current.find(zone => finalX >= zone.startX && finalX < zone.endX);
 
                     if (landedZone) {
-                         setOutcome(landedZone.personaInfo.value); // Set final outcome state
+                         setOutcome(landedZone.personaInfo.value);
                          setMessage(`Landed on ${landedZone.personaInfo.label}!`);
                          console.log("PersonaPlinko Success! Selected:", landedZone.personaInfo.value);
-                         onPersonaSelected(landedZone.personaInfo.value); // Call callback immediately
+                         onPersonaSelected(landedZone.personaInfo.value);
                     } else {
-                        // Should ideally not happen if zones cover the bottom
-                        console.warn("PersonaPlinko: Ball settled outside defined zones?");
-                        setMessage("Ball landed out of bounds! Try again.");
-                        setOutcome(null); // Indicate failure? Or just close?
+                         console.warn("PersonaPlinko: Ball settled outside defined zones?");
+                         setMessage("Ball landed out of bounds! Try again.");
+                         setOutcome(null);
                     }
 
-                    // Stop simulation and rendering after outcome
-                    cleanupMatter(); // Stop and clean up
+                    cleanupMatter();
 
-                    // Close modal after delay
-                    setTimeout(onClose, CLOSE_DELAY_MS);
+                    setTimeout(onClose, CLOSE_DELAY_MS); // Use updated delay
                 }
             }, SETTLE_CHECK_INTERVAL);
         }
 
-        // Cleanup function
         return () => {
-             if (isOpen) { // Prevent cleanup if already closed
+             if (isOpen) {
                  cleanupMatter();
              }
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen]); // Run only when isOpen changes
+    }, [isOpen]); // Keep dependency array the same
 
-    // Render null if not open
     if (!isOpen) return null;
 
     return (
-        <div className="persona-plinko-overlay" onClick={onClose}> {/* Renamed class */}
-            <div className="persona-plinko-modal" onClick={(e) => e.stopPropagation()}> {/* Renamed class */}
+        <div className="persona-plinko-overlay" onClick={onClose}>
+            <div className="persona-plinko-modal" onClick={(e) => e.stopPropagation()}>
                 <h4>Select Persona!</h4>
 
                 {/* Container where Matter.js will render its canvas */}
-                <div ref={sceneRef} className="plinko-canvas-container">
-                    {/* Static Labels positioned behind/around canvas */}
-                    {/* Dynamically create labels based on zonesRef */}
-                    {zonesRef.current.map(zone => (
-                        <div
-                           key={zone.personaInfo.value}
-                           className="plinko-label"
-                           // Calculate center X for label positioning
-                           style={{ left: `${((zone.startX + zone.endX) / 2 / BOARD_WIDTH) * 100}%` }}
-                        >
-                            {zone.personaInfo.emoji} {/* Show emoji as label */}
-                        </div>
-                    ))}
+                <div ref={sceneRef} className="plinko-canvas-container"> {/* CSS needs update */}
+                     {/* Labels are positioned based on zonesRef, calculation updates automatically with new BOARD_WIDTH */}
+                     {zonesRef.current.map(zone => (
+                         <div
+                            key={zone.personaInfo.value}
+                            className="plinko-label"
+                            style={{ left: `${((zone.startX + zone.endX) / 2 / BOARD_WIDTH) * 100}%` }}
+                         >
+                             {zone.personaInfo.emoji}
+                         </div>
+                     ))}
                 </div>
 
                 <p className="plinko-message" aria-live="polite">
@@ -214,4 +232,4 @@ const PersonaPlinkoGame: React.FC<PersonaPlinkoGameProps> = ({
     );
 };
 
-export default PersonaPlinkoGame; // Renamed export
+export default PersonaPlinkoGame;
