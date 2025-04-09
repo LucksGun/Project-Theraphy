@@ -1,34 +1,41 @@
-/* src/PersonaCupGame.css - Styles for the Persona Shuffling Cup Game */
+/* src/ConfirmClearCupGame.css - Styles for Cup Game used for Clear Chat Confirmation */
 
-.persona-cup-game-overlay {
+/* Overlay (can reuse styles if you have a generic overlay class) */
+.persona-cup-game-overlay, /* Keep old name if reused */
+.confirm-clear-cup-overlay { /* Or use specific name */
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     background-color: rgba(0, 0, 0, 0.75); /* Darker overlay */
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1100; /* Ensure it's above other modals */
-    backdrop-filter: blur(3px); /* Optional blur effect */
+    z-index: 1100; /* Above other modals but maybe below Plinko/Builder */
+    padding: 15px;
+    box-sizing: border-box;
+    backdrop-filter: blur(3px);
 }
 
-.persona-cup-game-modal {
-    background-color: var(--container-bg); /* Use theme variable */
-    padding: 25px 40px;
-    border-radius: 12px;
+/* Modal specific to this game */
+.confirm-clear-cup-modal {
+    background-color: var(--container-bg); /* Use theme */
+    color: var(--text-primary); /* Use theme */
+    padding: 20px 30px;
+    border-radius: 10px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.4);
     text-align: center;
-    color: var(--text-primary); /* Use theme variable */
-    border: 1px solid var(--border-color); /* Use theme variable */
-    min-width: 380px; /* Ensure minimum width */
+    border: 1px solid var(--border-color);
+    min-width: 380px; /* Adjust as needed */
+    max-width: 90%;
 }
 
-.persona-cup-game-modal h3 {
+.confirm-clear-cup-modal h4 { /* Adjusted from h3 */
     margin-top: 0;
     margin-bottom: 15px;
-    font-size: 1.4em;
+    font-size: 1.3em; /* Slightly larger title */
     color: var(--text-primary);
 }
 
+/* Container for the cups */
 .cups-container {
     display: flex;
     position: relative; /* Needed for absolute positioning of cups */
@@ -39,6 +46,7 @@
     padding: 0 20px; /* Padding on sides */
 }
 
+/* Individual cup styling */
 .cup {
     width: 80px; /* Cup width */
     height: 100px; /* Cup height */
@@ -53,7 +61,7 @@
     position: absolute; /* Absolute positioning for shuffling */
     bottom: 0;
     /* Smooth transition for movement (transform) */
-    /* Adjust 0.4s to match SHUFFLE_TRANSITION_MS if changed in JS */
+    /* Match duration SHUFFLE_TRANSITION_MS in TSX if changed */
     transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55),
                 opacity 0.4s ease-in-out;
     transform-origin: center bottom;
@@ -62,7 +70,6 @@
 
 /* --- Cup Positioning based on 'order' state --- */
 /* Adjust the 110px value if cup width (80px) or desired gap changes */
-/* This assumes the container is centered and transform moves relative to center */
 .cup.cup-order-0 { transform: translateX(-110px); } /* Position Left */
 .cup.cup-order-1 { transform: translateX(0px); }   /* Position Center */
 .cup.cup-order-2 { transform: translateX(110px); } /* Position Right */
@@ -80,7 +87,7 @@
 .cup-label {
     font-size: 0.8em;
     margin-top: 8px;
-    font-weight: 500;
+    font-weight: 600; /* Make result clearer */
     color: var(--text-secondary);
     transition: opacity 0.3s ease-in-out 0.1s; /* Fade in slightly after reveal */
     opacity: 0; /* Hidden by default */
@@ -91,20 +98,26 @@
 
 /* --- State Modifications --- */
 
-/* Show initial label during 'showing' phase */
-.cup.showing .cup-label-initial {
-    opacity: 1;
-}
+/* Hide initial label (no longer needed for this game) */
 
 
+/* Style changes when revealed */
 .cup.revealed .cup-graphic {
     /* Example: Lift the cup graphic slightly */
      transform: translateY(-15px);
 }
 .cup.revealed .cup-label-revealed {
     opacity: 1; /* Show the revealed label */
-    color: var(--text-primary); /* Make revealed label clearer */
+    color: var(--text-primary);
+    /* Add color based on confirm/cancel? */
 }
+.cup.revealed .cup-label-revealed:containing("Confirm") { /* Basic selector, might need JS class */
+    color: var(--key-valid-color);
+}
+.cup.revealed .cup-label-revealed:containing("Cancel") { /* Basic selector, might need JS class */
+     color: var(--key-invalid-color);
+}
+
 
 /* Highlight the chosen cup */
 .cup.chosen {
@@ -112,10 +125,11 @@
     box-shadow: 0 0 10px var(--user-bubble-bg);
 }
 
-/* Disable clicks/hover when not in selecting phase */
+/* Disable clicks when not in selecting phase */
 .cup:not(.selecting) {
     cursor: default;
 }
+/* Only allow hover effect during selection phase */
 
 .cup.selecting.cup-order-0:hover { transform: scale(1.05) translateY(-5px) translateX(-110px); }
 .cup.selecting.cup-order-1:hover { transform: scale(1.05) translateY(-5px) translateX(0px); }
@@ -130,11 +144,14 @@
     margin-bottom: 10px;
     color: var(--text-primary);
     font-size: 0.95em;
-    transition: color 0.3s ease; /* Smooth color changes if needed */
+    transition: color 0.3s ease;
 }
-/* Style for error/restart message? */
-.persona-cup-game-modal .restartingOnError .game-message {
-    color: var(--key-invalid-color); /* Use theme error color */
+/* Add styles for success/fail messages if needed */
+.confirm-clear-cup-modal .game-message.success { /* If using status state */
+     color: var(--key-valid-color);
+}
+.confirm-clear-cup-modal .game-message.failed { /* If using status state */
+     color: var(--key-invalid-color);
 }
 
 
@@ -142,6 +159,7 @@
 .game-close-button {
     margin-top: 15px;
     padding: 8px 15px;
+    font-size: 1em;
     background-color: var(--button-secondary-bg);
     color: var(--text-primary);
     border: 1px solid var(--border-color);

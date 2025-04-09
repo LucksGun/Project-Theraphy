@@ -1,4 +1,4 @@
-// src/App.tsx - FINAL COMPLETE Version v3 (All Features & ALL Fixes)
+// src/App.tsx - FINAL COMPLETE Version v7 (All Features & ALL Fixes)
 
 import React, { useState, useEffect, ChangeEvent, useRef} from 'react';
 import ReactGA from 'react-ga4';
@@ -6,8 +6,8 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-
 import './App.css';
 import ChatbotPage from './ChatbotPage';
 import AdminPage from './AdminPage';
-import PersonaCupGame from './PersonaCupGame';
-import ClearConfirmGame from './ClearConfirmGame';
+import ConfirmClearCupGame from './ConfirmClearCupGame';   // Cup game used for Clear Chat
+import SelectPersonaTimingGame from './SelectPersonaTimingGame'; // Timing game used for Select Persona
 import ThemePlinkoGame from './ThemePlinkoGame';
 import ModelBuilderGame from './ModelBuilderGame';
 
@@ -88,8 +88,8 @@ function App() {
     const [feedbackError, setFeedbackError] = useState<string | null>(null);
     const [feedbackSuccess, setFeedbackSuccess] = useState<string | null>(null);
     const [currentTheme, setCurrentTheme] = useState<AppTheme>(getInitialTheme);
-    const [isCupGameVisible, setIsCupGameVisible] = useState<boolean>(false);
-    const [isClearConfirmGameVisible, setIsClearConfirmGameVisible] = useState(false);
+    const [isPersonaTimingGameVisible, setIsPersonaTimingGameVisible] = useState<boolean>(false);
+    const [isClearCupGameVisible, setIsClearCupGameVisible] = useState(false);
     const [isPlinkoVisible, setIsPlinkoVisible] = useState(false);
     const [isModelBuilderVisible, setIsModelBuilderVisible] = useState(false);
 
@@ -98,7 +98,7 @@ function App() {
     // --- Calculate derived state ---
     const allIntroSectionsAcknowledged = Object.values(introSectionsAcknowledged).every(status => status === true);
     const availablePersonasForGame = AVAILABLE_PERSONAS.filter(p => !p.restricted || keyStatus.isValid === true);
-    const canPlayCupGame = availablePersonasForGame.length >= 3;
+    const canChangePersona = keyStatus.isValid === true && availablePersonasForGame.length >= 1;
 
     // --- Effects ---
     useEffect(() => { const keyTrimmed = enteredKey.trim(); if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current); const currentModel = selectedModel; const currentPersona = selectedPersona; if (!keyTrimmed) { setKeyStatus({ isValid: null, username: null, loading: false, error: null }); if (RESTRICTED_MODELS_VALUES.includes(currentModel)) setSelectedModel('gemini-2.0-flash'); if (RESTRICTED_PERSONAS_VALUES.includes(currentPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); return; } setKeyStatus(p => ({ ...p, loading: true, isValid: null, error: null, username: null })); debounceTimeoutRef.current = setTimeout(async () => { try { const r = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'validateKey', accessKey: keyTrimmed }) }); const d = await r.json().catch(() => ({ error: `Invalid JSON` })); if (!r.ok) throw new Error(d?.error || `Validation failed: ${r.status}`); if (d.isValid) { setKeyStatus({ isValid: true, username: d.username || 'User', loading: false, error: null }); const sM = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null; if (sM && ALL_MODEL_VALUES.includes(sM)) setSelectedModel(sM); else setSelectedModel(currentModel); const sP = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null; if (sP && ALL_PERSONAS.includes(sP)) setSelectedPersona(sP); else setSelectedPersona(currentPersona); } else { setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key.' }); if (RESTRICTED_MODELS_VALUES.includes(currentModel)) setSelectedModel('gemini-2.0-flash'); if (RESTRICTED_PERSONAS_VALUES.includes(currentPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } } catch (e) { const msg = e instanceof Error ? e.message : "Validation network error."; setKeyStatus({ isValid: false, username: null, loading: false, error: msg }); if (RESTRICTED_MODELS_VALUES.includes(currentModel)) setSelectedModel('gemini-2.0-flash'); if (RESTRICTED_PERSONAS_VALUES.includes(currentPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA); } }, VALIDATION_DEBOUNCE_MS); return () => { if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current); }; }, [enteredKey, selectedModel, selectedPersona]);
@@ -119,16 +119,17 @@ function App() {
     const handleAcceptIntroduction = () => { if (!allIntroSectionsAcknowledged) return; localStorage.setItem(INTRODUCTION_SEEN_KEY, 'true'); setShowIntroduction(false); };
     const handleMoveButton = () => { const vw = window.innerWidth; const vh = window.innerHeight; const buttonWidth = 180; const buttonHeight = 45; const randomTop = Math.random() * (vh - buttonHeight); const randomLeft = Math.random() * (vw - buttonWidth); setContinueButtonStyle({ position: 'fixed', top: `${randomTop}px`, left: `${randomLeft}px`, zIndex: 1070 }); };
     const handleSttLangChange=(e:ChangeEvent<HTMLSelectElement>)=>{setSttLang(e.target.value as SpeechLanguage);};
-    const toggleSettings=()=>{ setIsSettingsOpen(p=>!p); setIsStaffLoginModalVisible(false); setIsFeedbackModalVisible(false); setIsClearConfirmGameVisible(false); setIsPlinkoVisible(false); setIsModelBuilderVisible(false); };
+    const toggleSettings=()=>{ setIsSettingsOpen(p=>!p); setIsStaffLoginModalVisible(false); setIsFeedbackModalVisible(false); setIsClearCupGameVisible(false); setIsPlinkoVisible(false); setIsModelBuilderVisible(false); setIsPersonaTimingGameVisible(false); };
     const executeClearChat = () => { console.log("Executing clear chat logic after confirmation."); const timestamp = Date.now(); const clearMessage: Message = { id: timestamp, text: "Chat cleared.", sender: 'bot', timestamp: timestamp }; setMessages([clearMessage]); localStorage.removeItem(CHAT_STORAGE_KEY); setIsSettingsOpen(false); };
     const handleAccessKeyChange=(e:ChangeEvent<HTMLInputElement>)=>{setEnteredKey(e.target.value);};
     const handleExportChat=()=>{ const msgs = messages.filter(m => m.sender !== 'loading'); if (msgs.length === 0 || (msgs.length === 1 && msgs[0].sender === 'bot' && msgs[0].text === "Welcome!")) return alert("Chat is empty or only contains the welcome message."); let c = `Chat Export\nTimestamp: ${new Date().toLocaleString()}\nModel: ${selectedModel}\nPersona: ${selectedPersona}\nUser: ${keyStatus.isValid ? keyStatus.username : 'N/A (No valid key)'}\nTheme: ${currentTheme}\n----\n\n`; msgs.forEach(m => { const t = new Date(m.timestamp).toLocaleString(); c += `[${t}] ${m.sender === 'user' ? 'User' : 'Bot'}:\n${m.text}\n${m.imageUrl ? `(Image Attachment: ${m.imageUrl.substring(0,50)}...)\n` : ''}\n`; }); try { const b = new Blob([c], { type: 'text/plain;charset=utf-8' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); const f = `theraphy-chat-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`; a.href = u; a.download = f; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(u); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") ReactGA.event({ category: "Chat", action: "Export", label: `Msg Count: ${msgs.length}` }); setIsSettingsOpen(false); } catch (e) { console.error("Export failed:", e); alert("Failed to export chat."); } };
-    const toggleStaffLoginModal = () => { setIsStaffLoginModalVisible(prev => !prev); if (isStaffLoginModalVisible) { setEnteredStaffKey(''); setStaffLoginError(null); } setIsSettingsOpen(false); setIsFeedbackModalVisible(false); setIsClearConfirmGameVisible(false); setIsPlinkoVisible(false); setIsModelBuilderVisible(false);};
+    const toggleStaffLoginModal = () => { setIsStaffLoginModalVisible(prev => !prev); if (isStaffLoginModalVisible) { setEnteredStaffKey(''); setStaffLoginError(null); } setIsSettingsOpen(false); setIsFeedbackModalVisible(false); setIsClearCupGameVisible(false); setIsPlinkoVisible(false); setIsModelBuilderVisible(false); setIsPersonaTimingGameVisible(false);};
     const handleStaffKeyChange = (e: ChangeEvent<HTMLInputElement>) => { setEnteredStaffKey(e.target.value); setStaffLoginError(null);};
     const handleStaffLogin = async () => { if (!enteredStaffKey.trim()) { setStaffLoginError("Staff key is required."); return; } setIsStaffLoginLoading(true); setStaffLoginError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'staffLogin', staffKey: enteredStaffKey }) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON response from server.' })); if (!res.ok || !data.isValid) { throw new Error(data?.error || `Login Failed (Status: ${res.status})`); } sessionStorage.setItem('staffKey', enteredStaffKey); setIsStaffLoginModalVisible(false); setEnteredStaffKey(''); navigate('/admin'); } catch (e) { setStaffLoginError(e instanceof Error ? e.message : "Login failed due to an unknown error."); sessionStorage.removeItem('staffKey'); } finally { setIsStaffLoginLoading(false); } };
-    const toggleFeedbackModal = () => { const closing = isFeedbackModalVisible; setIsFeedbackModalVisible(prev => !prev); if (closing) { setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); setFeedbackError(null); setFeedbackSuccess(null); setIsSubmittingFeedback(false); } if (!closing) { setIsSettingsOpen(false); setIsStaffLoginModalVisible(false); setIsClearConfirmGameVisible(false); setIsPlinkoVisible(false); setIsModelBuilderVisible(false); } };
+    const toggleFeedbackModal = () => { const closing = isFeedbackModalVisible; setIsFeedbackModalVisible(prev => !prev); if (closing) { setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); setFeedbackError(null); setFeedbackSuccess(null); setIsSubmittingFeedback(false); } if (!closing) { setIsSettingsOpen(false); setIsStaffLoginModalVisible(false); setIsClearCupGameVisible(false); setIsPlinkoVisible(false); setIsModelBuilderVisible(false); setIsPersonaTimingGameVisible(false); } };
     const handleFeedbackSubmit = async (e: React.FormEvent) => { e.preventDefault(); if (feedbackRating === 0) { setFeedbackError("Please select a star rating."); return; } if (!feedbackComment.trim()) { setFeedbackError("Please provide a comment."); return; } if (feedbackComment.length > 2000) { setFeedbackError("Comment is too long (max 2000 characters)."); return; } setIsSubmittingFeedback(true); setFeedbackError(null); setFeedbackSuccess(null); const payload: ApiRequestBody = { action: 'submitFeedback', email: feedbackEmail.trim() || null, rating: feedbackRating, comment: feedbackComment.trim() }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON response' })); if (!res.ok || !data.success) { throw new Error(data?.error || `Submit failed: ${res.statusText}`); } setFeedbackSuccess("Thank you! Your feedback has been submitted."); setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { ReactGA.event({ category: "Feedback", action: "Submit", label: `Rating: ${feedbackRating}` }); } } catch (err) { setFeedbackError(err instanceof Error ? err.message : "Failed to submit feedback."); } finally { setIsSubmittingFeedback(false); } };
-    const handlePersonaSelectedFromGame = (persona: Persona) => { setSelectedPersona(persona); setIsCupGameVisible(false); };
+    // Removed toggleTheme - only Plinko changes theme now
+    const handlePersonaSelectedFromGame = (persona: Persona) => { setSelectedPersona(persona); setIsPersonaTimingGameVisible(false); };
     const handlePlinkoThemeChange = (newTheme: AppTheme) => { console.log(`Plinko decided theme: ${newTheme}. Current: ${currentTheme}`); if (newTheme !== currentTheme) { setCurrentTheme(newTheme); } setIsPlinkoVisible(false); };
     const handleModelSelectedFromBuilder = (model: GeminiModel) => { setSelectedModel(model); setIsModelBuilderVisible(false); };
 
@@ -137,73 +138,72 @@ function App() {
     return (
         <div className="App">
             {/* Beta Notice Modal */}
-{showBetaNotice && (
-    <div className="beta-notice-overlay">
-        <div className="beta-notice-modal">
-            <h2>⚠️ Beta Notice</h2>
-            <p>Welcome! This is a beta test version. Features may change or contain bugs.</p>
-            <p>Your feedback is valuable!</p>
-            {/* *** ADD onClick HANDLER HERE *** */}
-            <button onClick={handleAcceptBeta} className="beta-accept-button">
-                ✔️ Accept & Continue
-            </button>
-        </div>
-    </div>
-)}
+            {showBetaNotice && (
+                <div className="beta-notice-overlay">
+                    <div className="beta-notice-modal">
+                        <h2>⚠️ Beta Notice</h2>
+                        <p>Welcome! This is a beta test version. Features may change or contain bugs.</p>
+                        <p>Your feedback is valuable!</p>
+                        {/* Corrected: Added onClick */}
+                        <button onClick={handleAcceptBeta} className="beta-accept-button">✔️ Accept & Continue</button>
+                    </div>
+                </div>
+            )}
 
             {/* Introduction Modal */}
-            {showIntroduction && !showBetaNotice && ( <div className="intro-notice-overlay"><div className="intro-notice-modal" style={{ position: 'relative' }}><h2>วิธีใช้งาน...</h2>{introductionSections.map(section => ( <div className="intro-section" key={section.key}><div className="intro-section-content"><h4>{section.title}</h4><p style={{ whiteSpace: 'pre-wrap' }}>{section.text}</p></div><div className="intro-section-toggle"><label className="switch" title={`ยืนยันว่าอ่านหัวข้อ ${section.title}`}><input type="checkbox" checked={introSectionsAcknowledged[section.key]} onChange={() => handleSectionToggle(section.key)} /><span className="slider round"></span></label></div></div> ))}<div className="intro-button-container"><button style={continueButtonStyle} onClick={allIntroSectionsAcknowledged ? handleAcceptIntroduction : handleMoveButton} className={`intro-accept-button ${!allIntroSectionsAcknowledged ? 'button-runaway' : ''}`} title={!allIntroSectionsAcknowledged ? "โปรดยืนยันทุกหัวข้อก่อน!" : "เริ่มแชท"}>{allIntroSectionsAcknowledged ? "เริ่มแชท" : "ยืนยันให้ครบก่อน"}</button></div></div> </div> )}
+            {showIntroduction && !showBetaNotice && (
+                 <div className="intro-notice-overlay">
+                     <div className="intro-notice-modal" style={{ position: 'relative' }}>
+                         <h2>วิธีใช้งาน Project Theraphy</h2>
+                         <p style={{ textAlign: 'center', marginBottom: '20px' }}>โปรดอ่านและกดยืนยันในแต่ละหัวข้อเพื่อเริ่มใช้งาน:</p>
+                         {introductionSections.map(section => (
+                             <div className="intro-section" key={section.key}>
+                                 <div className="intro-section-content"><h4>{section.title}</h4><p style={{ whiteSpace: 'pre-wrap' }}>{section.text}</p></div>
+                                 <div className="intro-section-toggle">
+                                     {/* Corrected: Added onChange */}
+                                     <label className="switch" title={`ยืนยันว่าอ่านหัวข้อ ${section.title}`}><input type="checkbox" checked={introSectionsAcknowledged[section.key]} onChange={() => handleSectionToggle(section.key)} /><span className="slider round"></span></label>
+                                 </div>
+                             </div>
+                         ))}
+                         <div className="intro-button-container">
+                              {/* Corrected: Added conditional onClick */}
+                             <button style={continueButtonStyle} onClick={allIntroSectionsAcknowledged ? handleAcceptIntroduction : handleMoveButton} className={`intro-accept-button ${!allIntroSectionsAcknowledged ? 'button-runaway' : ''}`} title={!allIntroSectionsAcknowledged ? "โปรดยืนยันทุกหัวข้อก่อน!" : "เริ่มแชท"}>{allIntroSectionsAcknowledged ? "เริ่มแชท" : "ยืนยันให้ครบก่อน"}</button>
+                         </div>
+                     </div>
+                 </div>
+            )}
 
             {/* Settings Menu Modal */}
-            {isSettingsOpen && ( <div className="settings-menu" role="dialog" aria-labelledby="settings-title"><h3 id="settings-title">Settings</h3><div className="settings-grid">
-                {/* Column 1 */}
-                <div className="settings-column">
-                    <div className="settings-option"> <label htmlFor="access-key-input">Access Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/> <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid?<span>✅ Valid Key ({keyStatus.username || 'User'})</span>:keyStatus.error?<span>❌ {keyStatus.error}</span>:<span>Enter key for restricted features.</span>}</div> </div>
-                    <div className="settings-option"><label>Persona:</label><p className="current-persona-display">{AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.emoji} {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label || selectedPersona}</p><button onClick={() => setIsCupGameVisible(true)} className="settings-action-button persona-change-button" disabled={keyStatus.isValid !== true || !canPlayCupGame} title={ keyStatus.isValid !== true ? "Requires a valid Access Key..." : !canPlayCupGame ? "Not enough personas..." : "Change Persona (Opens Game)"}>Change Persona</button>{keyStatus.isValid !== true && ( <p className="settings-helper-text">Enter a valid Access Key to change personas.</p>)}{keyStatus.isValid === true && !canPlayCupGame && ( <p className="settings-helper-text">Game requires at least 3 personas defined.</p>)}</div>
-                    {/* AI Model Section (Now uses Builder Game) */}
-                    <div className="settings-option">
-    <label>AI Model:</label>
-    {/* Display Current Model */}
-    <p className="current-persona-display"> {/* Reusing style, maybe rename class later */}
-        {ALL_AVAILABLE_MODELS_FRONTEND.find(m => m.value === selectedModel)?.label || selectedModel}
-    </p>
-    {/* Button to trigger Model Builder Game */}
-    <button
-        onClick={() => setIsModelBuilderVisible(true)}
-        className="settings-action-button model-builder-trigger-button" // Specific class for green styling
-        title="Select model components"
-    >
-        🔧 Build AI Model...
-    </button>
-</div>
+            {isSettingsOpen && (
+                <div className="settings-menu" role="dialog" aria-labelledby="settings-title">
+                    <h3 id="settings-title">Settings</h3>
+                    <div className="settings-grid">
+                        {/* Column 1 */}
+                        <div className="settings-column">
+                            <div className="settings-option"> <label htmlFor="access-key-input">Access Key:</label> <input type="password" id="access-key-input" className="settings-input" placeholder="Enter access key" value={enteredKey} onChange={handleAccessKeyChange} autoComplete="off"/> <div className="settings-key-status">{keyStatus.loading?<span>Validating...</span>:keyStatus.isValid?<span>✅ Valid Key ({keyStatus.username || 'User'})</span>:keyStatus.error?<span>❌ {keyStatus.error}</span>:<span>Enter key for restricted features.</span>}</div> </div>
+                            <div className="settings-option"><label>Persona:</label><p className="current-persona-display">{AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.emoji} {AVAILABLE_PERSONAS.find(p=>p.value === selectedPersona)?.label || selectedPersona}</p><button onClick={() => setIsPersonaTimingGameVisible(true)} className="settings-action-button persona-change-button" disabled={!canChangePersona} title={ !canChangePersona ? "Requires a valid Access Key to change persona" : "Change Persona (Opens Game)"}>Change Persona</button>{!canChangePersona && (<p className="settings-helper-text">Enter a valid Access Key to change persona.</p>)}</div>
+                            <div className="settings-option"><label>AI Model:</label><p className="current-persona-display">{ALL_AVAILABLE_MODELS_FRONTEND.find(m => m.value === selectedModel)?.label || selectedModel}</p><button onClick={() => setIsModelBuilderVisible(true)} className="settings-action-button model-builder-trigger-button" title="Select model components">🔧 Build AI Model...</button></div>
+                        </div>
+                        {/* Column 2 */}
+                        <div className="settings-column">
+                            <div className="settings-option"> <label htmlFor="stt-lang-select">Speech Input Lang:</label> <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"><option value="en-US">English (US)</option><option value="th-TH">ไทย (Thai)</option><option value="es-ES">Español (Spain)</option><option value="fr-FR">Français (France)</option></select> </div>
+                            {/* Updated Appearance Section */}
+                            <div className="settings-option"><label>Appearance:</label><div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}><button onClick={() => setIsPlinkoVisible(true)} className="settings-action-button theme-plinko-button" title="Try to randomly change theme">{currentTheme === 'light' ? '🌙' : '☀️'} Change Theme</button></div></div>
+                            <div className="settings-option"> <label>Chat Actions:</label> <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}><button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button><button onClick={() => setIsClearCupGameVisible(true)} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat History</button></div> </div>
+                            <div className="settings-option"> <label>Admin Area:</label> <button onClick={toggleStaffLoginModal} className="settings-action-button staff-area-button">🔑 Staff Login</button> </div>
+                        </div>
+                    </div>
+                    <hr className="settings-separator" />
+                    <button onClick={toggleSettings} className="close-settings-button">Close Settings</button>
                 </div>
-                {/* Column 2 */}
-                <div className="settings-column">
-                    <div className="settings-option"> <label htmlFor="stt-lang-select">Speech Input Lang:</label> <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select"><option value="en-US">English (US)</option><option value="th-TH">ไทย (Thai)</option><option value="es-ES">Español (Spain)</option><option value="fr-FR">Français (France)</option></select> </div>
-                    <div className="settings-option">
-    <label>Appearance:</label>
-    {/* Single button that shows target theme emoji and launches game */}
-    <button
-        onClick={() => setIsPlinkoVisible(true)}
-        className="settings-action-button theme-plinko-button" // Use specific class or reuse secondary
-        title="Try to randomly change theme"
-    >
-        {/* Show emoji for the OPPOSITE theme */}
-        {currentTheme === 'light' ? '🌙' : '☀️'} Change Theme
-    </button>
-    {/* Helper text removed */}
-</div>
-                    <div className="settings-option"> <label>Chat Actions:</label> <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}><button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button><button onClick={() => setIsClearConfirmGameVisible(true)} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat History</button></div> </div>
-                    <div className="settings-option"> <label>Admin Area:</label> <button onClick={toggleStaffLoginModal} className="settings-action-button staff-area-button">🔑 Staff Login</button> </div>
-                </div>
-            </div><hr className="settings-separator" /><button onClick={toggleSettings} className="close-settings-button">Close Settings</button></div> )}
+            )}
 
             {/* Staff Login Modal */}
-            {isStaffLoginModalVisible && ( <div className="staff-panel-overlay"><div className="staff-panel-modal" style={{ maxWidth: '400px' }}>{/* ... staff modal content ... */} <form onSubmit={(e)=>{e.preventDefault(); handleStaffLogin();}} className="staff-login-section"><div className="settings-option"><label htmlFor="staff-key-modal-input">Staff Key:</label> <input type="password" id="staff-key-modal-input" className="settings-input" value={enteredStaffKey} onChange={handleStaffKeyChange} placeholder="Enter staff access key" disabled={isStaffLoginLoading} autoFocus required/></div><button type="submit" className="staff-login-button" disabled={isStaffLoginLoading || !enteredStaffKey.trim()}>{isStaffLoginLoading ? 'Verifying...' : 'Login & Enter Admin'}</button>{staffLoginError && <p className="staff-error">{staffLoginError}</p>}<p className="staff-security-warning">Enter key to access admin page.</p></form> </div> </div> )}
+            {isStaffLoginModalVisible && ( <div className="staff-panel-overlay"><div className="staff-panel-modal" style={{ maxWidth: '400px' }}> <h3 id="staff-login-title">Staff Login</h3> <button onClick={toggleStaffLoginModal} className="close-staff-panel-button" title="Close Login">×</button> <form onSubmit={(e)=>{e.preventDefault(); handleStaffLogin();}} className="staff-login-section"><div className="settings-option"><label htmlFor="staff-key-modal-input">Staff Key:</label> <input type="password" id="staff-key-modal-input" className="settings-input" value={enteredStaffKey} onChange={handleStaffKeyChange} placeholder="Enter staff access key" disabled={isStaffLoginLoading} autoFocus required/></div><button type="submit" className="staff-login-button" disabled={isStaffLoginLoading || !enteredStaffKey.trim()}>{isStaffLoginLoading ? 'Verifying...' : 'Login & Enter Admin'}</button>{staffLoginError && <p className="staff-error">{staffLoginError}</p>}<p className="staff-security-warning">Enter key to access admin page.</p></form> </div> </div> )}
 
             {/* Feedback Modal */}
-            {isFeedbackModalVisible && ( <div className="feedback-modal-overlay"><div className="feedback-modal">{/* ... feedback modal title/close ... */} {feedbackSuccess && <p className="feedback-message success">{feedbackSuccess}</p>} {feedbackError && <p className="feedback-message error">{feedbackError}</p>} {!feedbackSuccess && (
-                 <form onSubmit={handleFeedbackSubmit} className="feedback-form"> {/* *** FIXED: Added onSubmit *** */}
+            {isFeedbackModalVisible && ( <div className="feedback-modal-overlay"><div className="feedback-modal"> <h3 id="feedback-title">Submit Feedback</h3> <button onClick={toggleFeedbackModal} className="close-feedback-button" title="Close Feedback">×</button> {feedbackSuccess && <p className="feedback-message success">{feedbackSuccess}</p>} {feedbackError && <p className="feedback-message error">{feedbackError}</p>} {!feedbackSuccess && (
+                 <form onSubmit={handleFeedbackSubmit} className="feedback-form"> {/* Corrected onSubmit */}
                      <div className="feedback-field"><label htmlFor="feedback-email">Email (Optional):</label> <input type="email" id="feedback-email" className="settings-input" value={feedbackEmail} onChange={(e) => setFeedbackEmail(e.target.value)} placeholder="your.email@example.com" maxLength={250} disabled={isSubmittingFeedback}/></div>
                      <div className="feedback-field"><label>Rating:<span style={{color:'red'}}>*</span></label><div className="star-rating">{[1, 2, 3, 4, 5].map(star => ( <button key={star} type="button" aria-pressed={star === feedbackRating} className={`star-button ${star <= feedbackRating ? 'selected' : ''}`} onClick={() => setFeedbackRating(star)} disabled={isSubmittingFeedback} aria-label={`Rate ${star}/5`}>★</button> ))}</div></div>
                      <div className="feedback-field"><label htmlFor="feedback-comment">Comment:<span style={{color:'red'}}>*</span></label> <textarea id="feedback-comment" className="settings-input" rows={5} value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)} placeholder="Tell us about your experience, suggestions, or any bugs..." maxLength={2000} required disabled={isSubmittingFeedback}/></div>
@@ -211,23 +211,36 @@ function App() {
                 </form>
             )} </div></div> )}
 
-             {/* Persona Cup Game Modal */}
-            {isCupGameVisible && ( <PersonaCupGame isOpen={isCupGameVisible} onClose={() => setIsCupGameVisible(false)} onPersonaSelected={handlePersonaSelectedFromGame} keyStatus={keyStatus} currentSelectedModel={selectedModel} allPersonas={AVAILABLE_PERSONAS} restrictedModels={RESTRICTED_MODELS_VALUES} /> )}
+             {/* Render Correct Game Modals */}
+             {isPersonaTimingGameVisible && (
+                 <SelectPersonaTimingGame // <<< MUST BE SelectPersonaTimingGame
+                    isOpen={isPersonaTimingGameVisible}
+                    onClose={() => setIsPersonaTimingGameVisible(false)}
+                    onPersonaSelected={handlePersonaSelectedFromGame} // <<< MUST pass onPersonaSelected
+                    keyStatus={keyStatus}
+                    currentSelectedModel={selectedModel}
+                    allPersonas={AVAILABLE_PERSONAS}
+                    restrictedModels={RESTRICTED_MODELS_VALUES}
+                />
+            )}
 
-            {/* Clear Confirm Game Modal */}
-            {isClearConfirmGameVisible && ( <ClearConfirmGame isOpen={isClearConfirmGameVisible} onClose={() => setIsClearConfirmGameVisible(false)} onConfirm={executeClearChat} /> )}
+            {/* Clear Confirm Game (Shuffling Cups) */}
+            {isClearCupGameVisible && (
+                <ConfirmClearCupGame // <<< MUST BE ConfirmClearCupGame
+                    isOpen={isClearCupGameVisible}
+                    onClose={() => setIsClearCupGameVisible(false)}
+                    onConfirm={executeClearChat} // <<< MUST pass onConfirm
+                    // No other props needed here
+                />
+            )}
+             {isPlinkoVisible && ( <ThemePlinkoGame isOpen={isPlinkoVisible} onClose={() => setIsPlinkoVisible(false)} currentTheme={currentTheme} onThemeChange={handlePlinkoThemeChange} /> )}
+             {isModelBuilderVisible && ( <ModelBuilderGame isOpen={isModelBuilderVisible} onClose={() => setIsModelBuilderVisible(false)} onModelSelected={handleModelSelectedFromBuilder} keyStatus={keyStatus} allModelsInfo={ALL_AVAILABLE_MODELS_FRONTEND} restrictedModels={RESTRICTED_MODELS_VALUES} /> )}
 
-            {/* Theme Plinko Game Modal */}
-            {isPlinkoVisible && ( <ThemePlinkoGame isOpen={isPlinkoVisible} onClose={() => setIsPlinkoVisible(false)} currentTheme={currentTheme} onThemeChange={handlePlinkoThemeChange} /> )}
-
-            {/* Model Builder Game Modal */}
-            {isModelBuilderVisible && ( <ModelBuilderGame isOpen={isModelBuilderVisible} onClose={() => setIsModelBuilderVisible(false)} onModelSelected={handleModelSelectedFromBuilder} keyStatus={keyStatus} allModelsInfo={ALL_AVAILABLE_MODELS_FRONTEND} restrictedModels={RESTRICTED_MODELS_VALUES} /> )}
-
-            {/* Main Routing and Layout - Render only if modals are not showing */}
+            {/* Main Routing and Layout */}
             {!showBetaNotice && !showIntroduction && (
                 <Routes>
                      <Route path="/" element={ <> <header className="App-header"> <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}> <button onClick={toggleSettings} className="settings-button" title="Settings">⚙️</button>
-                     {/* *** FIXED: Added onClick to feedback button *** */}
+                     {/* Corrected onClick */}
                      <button onClick={toggleFeedbackModal} className="settings-button" title="Submit Feedback">💬</button>
                      </div> <h1>Project Theraphy</h1> <div className="header-spacer-right"></div> </header> <ChatbotPage messages={messages} setMessages={setMessages} selectedModel={selectedModel} sttLang={sttLang} selectedPersona={selectedPersona} accessKey={enteredKey} /> </> } />
                     <Route path="/admin" element={ <ProtectedRoute> <AdminPage /> </ProtectedRoute> } />

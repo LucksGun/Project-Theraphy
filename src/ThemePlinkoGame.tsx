@@ -198,7 +198,7 @@ const ThemePlinkoGame: React.FC<ThemePlinkoGameProps> = ({
     return (
         <div className="plinko-game-overlay" onClick={onClose}>
             <div className="plinko-game-modal" onClick={(e) => e.stopPropagation()}>
-                <h4>Theme Plinko!</h4>
+                <h4></h4>
 
                 {/* Container where Matter.js will render its canvas */}
                 <div ref={sceneRef} className="plinko-canvas-container">
@@ -210,10 +210,6 @@ const ThemePlinkoGame: React.FC<ThemePlinkoGameProps> = ({
                 <p className="plinko-message" aria-live="polite">
                     {message || ' '}
                 </p>
-
-                <button onClick={onClose} className="plinko-button cancel">
-                    {outcome ? "Close" : "Cancel Game"}
-                </button>
             </div>
         </div>
     );
