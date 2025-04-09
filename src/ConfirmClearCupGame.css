@@ -48,24 +48,22 @@
 
 /* Individual cup styling */
 .cup {
-    width: 80px; /* Cup width */
-    height: 100px; /* Cup height */
+    width: 80px;
+    /* min-height needed to contain revealed text if cup itself doesn't lift */
+    min-height: 120px; /* Adjust based on graphic + label size */
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end; /* Icon at bottom */
-    padding-bottom: 10px;
-    border: 2px solid transparent; /* For chosen highlight */
-    border-radius: 5px;
-    position: absolute; /* Absolute positioning for shuffling */
+    justify-content: flex-end;
+    border: 2px solid transparent;
+    position: absolute;
     bottom: 0;
-    /* Smooth transition for movement (transform) */
-    /* Match duration SHUFFLE_TRANSITION_MS in TSX if changed */
-    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55),
-                opacity 0.4s ease-in-out;
+    /* Transition for horizontal sliding (shuffle) and vertical lifting (reveal) */
+    /* Ensure shuffle duration matches SHUFFLE_DURATION_MS */
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
     transform-origin: center bottom;
-    will-change: transform; /* Optimize animation */
+    will-change: transform;
 }
 
 /* --- Cup Positioning based on 'order' state --- */
@@ -75,65 +73,77 @@
 .cup.cup-order-2 { transform: translateX(110px); } /* Position Right */
 
 
-/* Cup graphic (emoji or img) */
+/* Container for graphic and label to allow lifting effect */
+.cup-visual {
+    position: relative; /* Context for label */
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+     /* Transition for the lift - Match REVEAL_DURATION_MS if possible */
+     transition: transform 0.3s ease-out;
+}
+
+/* Cup graphic (emoji) */
 .cup-graphic {
     font-size: 3.5em; /* Adjust emoji size */
     line-height: 1;
-    transition: transform 0.3s ease-out; /* For reveal lift animation */
-    user-select: none; /* Prevent text selection on emoji */
-}
-
-/* Labels (Initial and Revealed) */
-.cup-label {
-    font-size: 0.8em;
-    margin-top: 8px;
-    font-weight: 600; /* Make result clearer */
-    color: var(--text-secondary);
-    transition: opacity 0.3s ease-in-out 0.1s; /* Fade in slightly after reveal */
-    opacity: 0; /* Hidden by default */
-    height: 1.2em; /* Reserve space */
-    pointer-events: none; /* Labels aren't clickable */
     user-select: none;
+    transition: opacity 0.2s ease-in; /* Fade out when revealed */
 }
 
-/* --- State Modifications --- */
-
-/* Hide initial label (no longer needed for this game) */
-
-
-/* Style changes when revealed */
-.cup.revealed .cup-graphic {
-    /* Example: Lift the cup graphic slightly */
-     transform: translateY(-15px);
+/* Revealed Label */
+.cup-label { /* Base style for positioning */
+    position: absolute;
+    bottom: 5px; /* Position near bottom of lifted cup */
+    font-size: 0.9em;
+    font-weight: 600;
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.2s ease-in 0.1s; /* Fade in slightly after lift */
+    pointer-events: none;
+    user-select: none;
+    width: 100%; /* Take width for centering */
+    text-align: center;
 }
-.cup.revealed .cup-label-revealed {
-    opacity: 1; /* Show the revealed label */
-    color: var(--text-primary);
-    /* Add color based on confirm/cancel? */
-}
-.cup.revealed .cup-label-revealed:containing("Confirm") { /* Basic selector, might need JS class */
+
+/* Using attribute selector might be more reliable if you add data-* attribute */
+.cup.is-confirm .cup-label-revealed {
     color: var(--key-valid-color);
 }
-.cup.revealed .cup-label-revealed:containing("Cancel") { /* Basic selector, might need JS class */
+.cup:not(.is-confirm) .cup-label-revealed {
      color: var(--key-invalid-color);
 }
 
 
-/* Highlight the chosen cup */
-.cup.chosen {
-    border: 2px solid var(--user-bubble-bg); /* Use theme color */
-    box-shadow: 0 0 10px var(--user-bubble-bg);
+/* --- State Modifications --- */
+
+/* Only lift the REVEALED cup's visual part */
+.cup.revealed .cup-visual {
+    transform: translateY(-40px); /* Lift amount */
 }
+/* Hide graphic, show label ONLY on revealed cup */
+.cup.revealed .cup-graphic {
+    opacity: 0;
+}
+.cup.revealed .cup-label-revealed {
+    opacity: 1;
+}
+
+/* Highlight chosen cup */
+
 
 /* Disable clicks when not in selecting phase */
 .cup:not(.selecting) {
     cursor: default;
 }
 /* Only allow hover effect during selection phase */
-
-.cup.selecting.cup-order-0:hover { transform: scale(1.05) translateY(-5px) translateX(-110px); }
-.cup.selecting.cup-order-1:hover { transform: scale(1.05) translateY(-5px) translateX(0px); }
-.cup.selecting.cup-order-2:hover { transform: scale(1.05) translateY(-5px) translateX(110px); }
+.cup.selecting:hover .cup-visual {
+    transform: translateY(-10px); /* Slight lift on hover */
+}
+/* Keep horizontal position during hover lift */
+.cup.selecting.cup-order-0:hover { transform: translateX(-110px); }
+.cup.selecting.cup-order-1:hover { transform: translateX(0px); }
+.cup.selecting.cup-order-2:hover { transform: translateX(110px); }
 
 
 /* Game Message Area */
@@ -146,11 +156,10 @@
     font-size: 0.95em;
     transition: color 0.3s ease;
 }
-/* Add styles for success/fail messages if needed */
-.confirm-clear-cup-modal .game-message.success { /* If using status state */
+.confirm-clear-cup-modal .game-message.success { /* Style success message */
      color: var(--key-valid-color);
 }
-.confirm-clear-cup-modal .game-message.failed { /* If using status state */
+.confirm-clear-cup-modal .game-message.failed { /* Style failure message */
      color: var(--key-invalid-color);
 }
 
