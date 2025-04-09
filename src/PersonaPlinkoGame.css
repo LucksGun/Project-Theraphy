@@ -1,25 +1,25 @@
-/* src/ThemePlinkoGame.css - Styles for Matter.js Canvas */
+/* src/PersonaPlinkoGame.css - Styles for Physics Plinko (Persona) */
 
-.plinko-game-overlay {
+.persona-plinko-overlay { /* Renamed from theme-plinko-overlay */
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background-color: rgba(0, 0, 0, 0.75);
     display: flex; align-items: center; justify-content: center;
     z-index: 1100; padding: 15px; box-sizing: border-box;
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(3px);
 }
 
-.plinko-game-modal {
+.persona-plinko-modal { /* Renamed from theme-plinko-modal */
     background-color: var(--container-bg);
     color: var(--text-primary);
     padding: 20px 25px 25px 25px;
     border-radius: 8px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     border: 1px solid var(--border-color);
-    width: auto; /* Let content size it based on canvas */
+    width: auto;
     text-align: center;
 }
 
-.plinko-game-modal h4 { margin-top: 0; margin-bottom: 15px; font-size: 1.2em; }
+.persona-plinko-modal h4 { margin-top: 0; margin-bottom: 15px; font-size: 1.2em; }
 
 /* Container for the Matter.js Canvas */
 .plinko-canvas-container {
@@ -29,38 +29,38 @@
     margin: 0 auto 15px auto; /* Center */
     position: relative; /* For positioning labels */
     border: 1px solid var(--border-color);
-    background-color: var(--button-secondary-bg); /* Fallback background */
+    background-color: var(--button-secondary-bg); /* Background for canvas area */
     overflow: hidden; /* Hide anything slightly outside bounds */
 }
 
-/* Canvas element created by Matter.js will go inside ^ */
-/* Style the canvas itself if needed (usually not necessary) */
 .plinko-canvas-container canvas {
-    display: block; /* Remove extra space below canvas */
-    background-color: transparent; /* Ensure canvas bg doesn't overwrite container */
+    display: block;
+    background-color: transparent;
 }
 
 
 /* Labels positioned relative to the canvas container */
-.plinko-label-light,
-.plinko-label-dark {
+.plinko-label {
     position: absolute;
     bottom: 10px; /* Position near bottom exits */
-    font-size: 0.9em;
+    font-size: 1.2em; /* Emoji size */
     font-weight: bold;
     color: var(--text-secondary);
-    pointer-events: none; /* Don't block clicks */
+    pointer-events: none;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    transform: translateX(-50%); /* Center horizontally on the 'left' value */
+    /* 'left' percentage set dynamically via inline style */
 }
-/* Position labels in their respective halves */
-.plinko-label-light { left: 25%; transform: translateX(-50%); }
-.plinko-label-dark { right: 25%; transform: translateX(50%); }
 
 
 .plinko-message {
     min-height: 1.5em; margin-top: 10px; margin-bottom: 15px;
     font-weight: 500; font-size: 0.9em;
 }
+/* Add success/fail color if desired using status state */
+.persona-plinko-modal .plinko-message.success { color: var(--key-valid-color); }
+.persona-plinko-modal .plinko-message.failed { color: var(--key-invalid-color); }
+
 
 .plinko-button.cancel {
     padding: 8px 15px; font-size: 0.9em; background-color: var(--button-secondary-bg);
