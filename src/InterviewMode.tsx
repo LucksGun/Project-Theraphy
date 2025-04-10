@@ -1,22 +1,37 @@
-// src/InterviewMode.tsx - NEW FILE (Basic Skeleton)
+// src/InterviewMode.tsx - Complete Code with Assumed Fix for TS Error
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Message, GeminiModel, SpeechLanguage } from './App'; // Import necessary types
-import './InterviewMode.css'; // Create this CSS file for styling
+import { useState, useEffect, useRef, useCallback } from 'react';
+// Assuming types and constants can be imported from App or another shared location
+import { Message, GeminiModel, SpeechLanguage, ApiRequestBody, WORKER_URL } from './App';
+import './InterviewMode.css'; // Make sure this CSS file exists
 
-// Assume getBotResponse is available or import/redefine needed parts
-// Re-using getBotResponse might work if we just pass the 'interviewer' persona
-// You might need a slightly modified version if the response structure needs changes
-declare function getBotResponse(userInput: string, imageData: null, history: any[], model: GeminiModel, persona: string, accessKey: string): Promise<{ text: string; imageUrl: string | null }>;
-
-// --- STT/TTS Setup (Similar to ChatbotPage, might need adjustments) ---
-declare var SpeechRecognition: any;
+// --- STT/TTS Setup & Browser API Declarations ---
+// Use declare to inform TypeScript about potential global variables if specific types aren't installed
+declare var SpeechRecognition: any; // Or install @types/dom-speech-recognition
 declare var webkitSpeechRecognition: any;
-declare var SpeechSynthesisUtterance: any;
+declare var SpeechSynthesisUtterance: {
+    prototype: SpeechSynthesisUtterance;
+    new(text?: string): SpeechSynthesisUtterance;
+};
+declare var SpeechRecognitionEvent: {
+    prototype: SpeechRecognitionEvent;
+    new(type: string, eventInitDict: SpeechRecognitionEventInit): SpeechRecognitionEvent;
+};
+// Ensure SpeechSynthesisErrorEvent is declared if using stricter types
+declare var SpeechSynthesisErrorEvent: {
+    prototype: SpeechSynthesisErrorEvent;
+    new(type: string, eventInitDict: SpeechSynthesisErrorEventInit): SpeechSynthesisErrorEvent;
+};
+
+
 const SpeechRecognitionImpl = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 const recognitionAvailable = !!SpeechRecognitionImpl;
 const isSpeechSynthesisSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
+if (!recognitionAvailable) console.warn("InterviewMode: Speech Recognition not supported by this browser.");
+if (!isSpeechSynthesisSupported) console.warn("InterviewMode: Speech Synthesis not supported by this browser.");
+
+// --- Component Props Interface ---
 interface InterviewModeProps {
     isOpen: boolean;
     onClose: () => void;
@@ -25,43 +40,130 @@ interface InterviewModeProps {
     sttLang: SpeechLanguage;
 }
 
-type InterviewStage = 'idle' | 'requesting_perms' | 'starting' | 'listening' | 'processing_user' | 'ai_thinking' | 'ai_speaking' | 'finished';
+// --- Types for Interview ---
+// Define types *before* the component uses them
+type InterviewStage =
+  | 'idle'
+  | 'requesting_perms'
+  | 'starting'
+  | 'listening'         // When STT is active and waiting for user
+  | 'processing_user'   // After user speaks, before calling API
+  | 'ai_thinking'       // Waiting for API response
+  | 'ai_speaking'       // When TTS is playing AI response
+  | 'finished'          // Interview concluded (pass/fail)
+  | 'error'             // An unrecoverable error occurred
+  | 'user_turn'         // Added state: AI finished, waiting for user to speak (STT not necessarily active yet)
+  ; // <<< Make sure 'user_turn' is definitely listed here
 type InterviewResult = 'pass' | 'fail' | null;
+type HistoryItem = { role: 'user' | 'model'; parts: { text: string }[] };
 
-const INTERVIEWER_PERSONA_ID = 'interviewer'; // Use the key defined in KV
+const INTERVIEWER_PERSONA_ID = 'interviewer'; // Matches the key expected in KV/backend
 
+// --- Reusable fetch logic (Can be moved to a shared API utility file) ---
+async function getBotResponseInterview(
+    userInput: string,
+    history: HistoryItem[],
+    model: GeminiModel,
+    persona: string,
+    accessKey: string
+): Promise<{ text: string; imageUrl: string | null }> { // Using simplified return type
+    const requestBody: ApiRequestBody = {
+        action: 'chat',
+        prompt: userInput,
+        model: model,
+        persona: persona as any, // Cast necessary if 'interviewer' isn't in the base Persona type
+        accessKey: accessKey || undefined,
+        history: history,
+    };
+    console.log(`Interview API Req (Model: ${model}, Persona: ${persona}, History: ${history.length})`);
+    try {
+        const response = await fetch(WORKER_URL, { // WORKER_URL needs to be defined/imported
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+        // Improved error handling for JSON parsing and non-ok responses
+        if (!response.ok) {
+            let errorBody = { error: `API Error: ${response.status}` };
+            try {
+                 errorBody = await response.json();
+            } catch (e) {
+                 console.warn("Could not parse error response body");
+            }
+            throw new Error(errorBody?.error || `API Error: ${response.status}`);
+        }
+        const responseData = await response.json(); // Assume parsing succeeds if response.ok
+        if (responseData.error) throw new Error(responseData.error);
+        return {
+            text: responseData.reply || '',
+            imageUrl: responseData.imageUrl || null,
+        };
+    } catch (error) {
+        console.error('getBotResponseInterview Error:', error);
+        const errorMessage = error instanceof Error ? (error.message.startsWith('Error: ') ? error.message : `Error: ${error.message}`) : 'Error: Unknown fetch error.';
+        // Return structure consistent with success but with error text
+        return { text: errorMessage, imageUrl: null };
+    }
+}
+
+
+// --- InterviewMode Component ---
 function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: InterviewModeProps) {
+    // Ensure state uses the correct type defined above
     const [stage, setStage] = useState<InterviewStage>('idle');
     const [messages, setMessages] = useState<Message[]>([]);
     const [result, setResult] = useState<InterviewResult>(null);
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [isSttActive, setIsSttActive] = useState(false); // Track if STT is actively listening
+    const [isSttActive, setIsSttActive] = useState(false);
+    const [, setIsAiSpeaking] = useState(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
-    const recognitionRef = useRef<any>(null); // Adjust type based on SpeechRecognition
-    const messageHistoryRef = useRef<Message[]>([]); // Keep history separate for API calls
+    const recognitionRef = useRef<any>(null); // SpeechRecognition instance
+    const messageHistoryRef = useRef<HistoryItem[]>([]);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // --- Scrolling ---
+    const scrollToBottom = useCallback(() => {
+        setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+        }, 100);
+    }, []);
+
+    useEffect(() => {
+        if (messages.length > 0) {
+            scrollToBottom();
+        }
+    }, [messages, scrollToBottom]);
 
     // --- Permission and Stream Handling ---
     const startInterviewSetup = useCallback(async () => {
         console.log("InterviewMode: Requesting permissions...");
         setError(null);
+        setResult(null);
+        setMessages([]);
+        messageHistoryRef.current = [];
         setStage('requesting_perms');
         try {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error("Camera/Microphone access (getUserMedia) is not supported.");
+                throw new Error("Camera/Microphone access (getUserMedia) is not supported by this browser.");
             }
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); // Need audio for mic
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             console.log("InterviewMode: Permissions granted, stream obtained.");
             setCameraStream(stream);
-            setStage('starting'); // Move to next stage
+            setStage('starting');
         } catch (err) {
             console.error("InterviewMode: Permission Error:", err);
-            setError(`Error accessing camera/microphone: ${(err as Error).message}. Please grant permissions.`);
-            setStage('idle'); // Go back to idle on error
-            // Consider closing automatically after error: onClose();
+            let errMsg = `Error accessing camera/microphone: ${(err as Error).message}.`;
+            if ((err as Error).name === 'NotAllowedError' || (err as Error).name === 'PermissionDeniedError') {
+                errMsg += " Please grant permissions in browser settings.";
+            } else if ((err as Error).name === 'NotFoundError' || (err as Error).name === 'DevicesNotFoundError') {
+                errMsg += " No camera/microphone found.";
+            }
+            setError(errMsg);
+            setStage('error');
         }
-    }, []);
+    }, []); // No dependencies needed here
 
     const stopStreams = useCallback(() => {
         if (cameraStream) {
@@ -70,239 +172,317 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             setCameraStream(null);
         }
         if (recognitionRef.current && isSttActive) {
-             try { recognitionRef.current.abort(); } catch(e){} // Stop STT if active
+             try { recognitionRef.current.abort(); } catch(e){ console.warn("Error aborting STT:", e)}
              setIsSttActive(false);
         }
          if (isSpeechSynthesisSupported && window.speechSynthesis.speaking) {
-             window.speechSynthesis.cancel(); // Stop TTS if active
+             window.speechSynthesis.cancel();
+             setIsAiSpeaking(false);
          }
     }, [cameraStream, isSttActive]);
 
-    // Effect to request permissions when opened
+    // Effect for Setup and Cleanup based on isOpen
     useEffect(() => {
-        if (isOpen && stage === 'idle') {
-            messageHistoryRef.current = []; // Reset history
-            setMessages([]);
-            setResult(null);
+        if (isOpen) {
+            console.log("InterviewMode: Opened. Resetting and starting setup.");
+            setStage('idle');
             startInterviewSetup();
-        } else if (!isOpen) {
-            stopStreams(); // Cleanup streams on close
-            setStage('idle'); // Reset stage when closed
+        } else {
+            // Ensure cleanup happens when isOpen becomes false
+            stopStreams();
+            setStage('idle');
         }
-        // Cleanup function for component unmount
+        // Cleanup on unmount
         return () => {
-             if (stage !== 'idle') stopStreams();
+             if (isOpen) { // Only run stopStreams on unmount if it was open
+                console.log("InterviewMode: Unmounting/Cleanup.");
+                stopStreams();
+             }
          };
-    }, [isOpen, stage, startInterviewSetup, stopStreams]);
+    }, [isOpen, startInterviewSetup, stopStreams]); // Dependencies ensure correct setup/cleanup
 
      // Effect to attach stream to video element
      useEffect(() => {
          if (cameraStream && videoRef.current) {
+             console.log("InterviewMode: Attaching stream to video element.");
              videoRef.current.srcObject = cameraStream;
+             // Attempt to play, catching potential errors
+             videoRef.current.play().catch(playError => {
+                 console.error("InterviewMode: Video element play error:", playError);
+                 // You might want to show a message to the user here
+                 //setError("Could not automatically play video feed.");
+             });
+         } else if (videoRef.current) {
+             // Clear the srcObject if stream becomes null
+             videoRef.current.srcObject = null;
          }
      }, [cameraStream]);
 
     // --- STT Setup ---
     useEffect(() => {
+        // Only setup if available and component is open
         if (!recognitionAvailable || !isOpen) return;
 
+        // Initialize STT instance only once
         if (!recognitionRef.current) {
-            recognitionRef.current = new SpeechRecognitionImpl();
-            recognitionRef.current.continuous = true; // Listen more continuously
-            recognitionRef.current.interimResults = false; // We want final results
+            try {
+                 recognitionRef.current = new SpeechRecognitionImpl();
+                 recognitionRef.current.continuous = true; // Keep listening
+                 recognitionRef.current.interimResults = false; // Final results only
 
-            recognitionRef.current.onresult = (event: any) => {
-                let finalTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    }
-                }
-                console.log("STT Final Transcript:", finalTranscript);
-                if (finalTranscript.trim()) {
-                     setIsSttActive(false); // Stop listening after final result
-                     setStage('processing_user'); // Move to process the input
-                     handleUserSpeech(finalTranscript.trim());
-                } else {
-                    // Maybe restart listening if empty? Or wait for stage change.
-                    console.log("STT Empty final transcript");
-                     setIsSttActive(false); // Stop listening on empty
-                     // Decide what stage to go to - maybe back to listening?
-                     if(stage === 'listening') {
-                        // If we were listening and got nothing, maybe prompt again or wait?
-                        // For now, just stop listening. The user might need to be prompted again by AI.
+                 recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
+                     let finalTranscript = '';
+                     for (let i = event.resultIndex; i < event.results.length; ++i) {
+                         if (event.results[i].isFinal) {
+                             finalTranscript += event.results[i][0].transcript;
+                         }
                      }
-                }
-            };
+                     const trimmedTranscript = finalTranscript.trim();
+                     console.log("STT Final Transcript:", trimmedTranscript);
 
-            recognitionRef.current.onerror = (event: any) => {
-                console.error('Interview STT Error:', event.error, event.message);
-                setError(`Speech recognition error: ${event.error} - ${event.message}`);
-                setIsSttActive(false);
-                // Don't automatically change stage, let AI handle re-prompting if needed
-            };
-             recognitionRef.current.onend = () => {
-                 console.log("STT ended.");
-                 setIsSttActive(false);
-                  // If STT ends unexpectedly while in listening stage, restart it? Needs careful handling.
-                 // if (stage === 'listening') {
-                 //    startListening();
-                 // }
-             };
+                     if (trimmedTranscript && stage === 'listening') {
+                          setIsSttActive(false); // Stop listening indicator
+                          try { recognitionRef.current.stop(); } catch(e){ console.warn("Error stopping STT on result:", e) } // Stop listening explicitly
+                          setStage('processing_user');
+                          handleUserSpeech(trimmedTranscript);
+                     } else if (trimmedTranscript && stage !== 'listening'){
+                         console.log("STT received transcript but not in listening stage, ignoring:", trimmedTranscript);
+                     } else {
+                         console.log("STT received empty final transcript.");
+                     }
+                 };
+
+                 recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
+                     console.error('Interview STT Error:', event.error, event.message);
+                     setError(`Speech recognition error: ${event.error}`);
+                     setIsSttActive(false);
+                     // Consider stage transition? Maybe back to 'user_turn'?
+                     if (stage === 'listening') setStage('user_turn');
+                 };
+
+                 recognitionRef.current.onend = () => {
+                     console.log("STT naturally ended.");
+                     // Only set active to false if it wasn't already stopped by onresult
+                     if (isSttActive) {
+                         setIsSttActive(false);
+                     }
+                     // If it ends while we *should* be listening, maybe go back to user_turn?
+                     // Inside utterance.onerror:
+
+                     if (stage === 'listening') {
+                        console.log("STT ended unexpectedly during listening stage.");
+                        setStage('user_turn');
+                     }
+                 };
+                console.log("InterviewMode: STT initialized.");
+            } catch (err) {
+                console.error("Failed to initialize STT:", err);
+                setError("Failed to initialize Speech Recognition.");
+                setStage('error');
+            }
         }
 
-        // Set language (needs to be done before starting)
+        // Set language (safe to do even if already set)
          if (recognitionRef.current) {
-             recognitionRef.current.lang = sttLang;
+             try {
+                recognitionRef.current.lang = sttLang;
+             } catch (e) {
+                console.error("Failed to set STT language:", e);
+             }
          }
 
-    }, [isOpen, sttLang, stage]); // Re-run if lang changes or stage requires STT setup
+         // Cleanup STT instance on component unmount or when isOpen becomes false
+         return () => {
+            if (recognitionRef.current) {
+                try { recognitionRef.current.abort(); } catch(e){}
+                // Nullify handlers to prevent memory leaks
+                recognitionRef.current.onresult = null;
+                recognitionRef.current.onerror = null;
+                recognitionRef.current.onend = null;
+                // Optional: recognitionRef.current = null; // If you want to force re-creation
+            }
+            setIsSttActive(false); // Ensure state is reset
+         }
 
+    }, [isOpen, sttLang, stage]); // stage added to deps to potentially react to STT errors needing stage change
 
+    // Function to start STT listening
     const startListening = useCallback(() => {
-        if (!recognitionRef.current || isSttActive || !['listening', 'user_turn'].includes(stage)) {
-            console.warn("Cannot start STT", {isSttActive, stage});
+        // Prevent starting if not ready, already active, or not user's turn
+        if (!recognitionRef.current || isSttActive || stage !== 'user_turn') {
+            console.warn("Cannot start STT in current state:", { hasRef: !!recognitionRef.current, isSttActive, stage });
+            // If AI is speaking, cancel it
+            if (isSpeechSynthesisSupported && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                setIsAiSpeaking(false); // Correct state if TTS is interrupted by trying to listen
+            }
+            // If stage allows, transition back to user_turn
+             if (stage === 'ai_speaking') {
+                 setStage('user_turn');
+             }
             return;
         }
-         if (isSpeechSynthesisSupported && window.speechSynthesis.speaking) {
-             window.speechSynthesis.cancel(); // Ensure AI stops talking
-         }
-        console.log("InterviewMode: Starting STT...");
+
+        console.log("InterviewMode: Starting STT listening...");
         setError(null);
+        setStage('listening'); // Update stage to 'listening'
         try {
+            // Set language just before starting, in case it changed
+            recognitionRef.current.lang = sttLang;
             recognitionRef.current.start();
             setIsSttActive(true);
-            setStage('listening'); // Explicitly set to listening
         } catch (e) {
             console.error("Error starting STT:", e);
             setError(`Could not start microphone: ${(e as Error).message}`);
             setIsSttActive(false);
-            setStage('idle'); // Or some error state?
+            setStage('error'); // Transition to error state if STT fails to start
         }
-    }, [isSttActive, stage]);
+    }, [isSttActive, stage, sttLang]); // Include sttLang dependency
 
-    // --- Interview Logic ---
+    // --- Interview Flow Logic ---
+
+    // Function to start the interview
     const startInterview = useCallback(async () => {
         console.log("InterviewMode: Starting interview flow...");
         setStage('ai_thinking');
-        const startMessage: Message = { id: Date.now(), text: "Starting interview...", sender: 'loading', timestamp: Date.now() };
+        const startMessage: Message = { id: Date.now(), text: "Connecting to interviewer...", sender: 'loading', timestamp: Date.now() };
         setMessages([startMessage]);
-        messageHistoryRef.current = []; // Clear history for API
+        messageHistoryRef.current = [];
 
         try {
              // Send empty prompt to get the interviewer's opening statement
-             const response = await getBotResponse("", null, [], selectedModel, INTERVIEWER_PERSONA_ID, accessKey);
-             // Replace loading message
-             setMessages([{ id: Date.now(), text: response.text, sender: 'bot', timestamp: Date.now() }]);
-             playAiResponse(response.text); // Speak the opening
+             const response = await getBotResponseInterview("", [], selectedModel, INTERVIEWER_PERSONA_ID, accessKey);
+
+             if (response.text.startsWith("Error:")) {
+                 throw new Error(response.text.substring(7)); // Remove "Error: " prefix
+             }
+
+             const firstBotMessage: Message = { id: Date.now(), text: response.text, sender: 'bot', timestamp: Date.now() };
+             messageHistoryRef.current.push({ role: 'model', parts: [{ text: response.text }] });
+             setMessages([firstBotMessage]);
+             playAiResponse(response.text);
         } catch (e) {
              const errorMsg = `Failed to start interview: ${(e as Error).message}`;
+             console.error(errorMsg);
              setError(errorMsg);
              setMessages([{ id: Date.now(), text: errorMsg, sender: 'bot', timestamp: Date.now()}]);
-             setStage('finished'); // End if start fails
+             setStage('error');
         }
+    }, [selectedModel, accessKey]); // Removed playAiResponse from deps as it's defined below
 
-    }, [selectedModel, accessKey]); // Dependencies for starting
-
-    // Effect to auto-start interview flow after permissions granted
+    // Effect to auto-start interview flow
     useEffect(() => {
-        if (stage === 'starting') {
+        if (isOpen && stage === 'starting') { // Only start when open and in starting stage
             startInterview();
         }
-    }, [stage, startInterview]);
+    }, [isOpen, stage, startInterview]);
 
 
+    // Function to play AI response using TTS
     const playAiResponse = useCallback((text: string) => {
          if (!isSpeechSynthesisSupported || !text) {
-             console.warn("TTS not supported or text empty.");
-             setStage('user_turn'); // Assume AI turn finished, move to user
-             // Potentially call startListening() here if appropriate for the flow
+             console.warn("TTS not supported or text empty. Moving to user turn.");
+             setStage('user_turn');
+             setTimeout(startListening, 500);
              return;
          }
          console.log("InterviewMode: Playing AI response...");
          setStage('ai_speaking');
+         setIsAiSpeaking(true);
 
-         // Basic text cleanup for TTS
-         const cleanText = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(\*|_)(.*?)\1/g, '$2');
+         const cleanText = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(\*|_)(.*?)\1/g, '$2').replace(/#/g, '');
          const utterance = new SpeechSynthesisUtterance(cleanText);
 
          utterance.onend = () => {
              console.log("InterviewMode: TTS finished.");
-             setStage('user_turn'); // AI finished speaking, now user's turn
-             // Automatically start listening for the user's response
-             startListening();
+             setIsAiSpeaking(false);
+             setStage('user_turn');
+             setTimeout(startListening, 300);
          };
-         utterance.onerror = (event: any) => {
+         utterance.onerror = (event: SpeechSynthesisErrorEvent) => { // Use correct event type
              console.error('Interview TTS Error:', event.error);
              setError(`Speech synthesis error: ${event.error}`);
-             setStage('user_turn'); // Allow user to respond even if TTS failed
-             startListening(); // Try starting listening anyway
+             setIsAiSpeaking(false);
+             // This line caused the TypeScript error, it should be valid if types are correct
+             setStage('user_turn'); // Allow user turn even if TTS failed
+             setTimeout(startListening, 300);
          };
 
-         window.speechSynthesis.cancel(); // Cancel any previous speech
-         window.speechSynthesis.speak(utterance);
+         // Ensure any ongoing speech is stopped before starting new
+         if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+            console.log("InterviewMode: Cancelling previous TTS.");
+            window.speechSynthesis.cancel();
+         }
+         // Small delay before speaking, sometimes helps avoid issues after cancel
+         setTimeout(() => {
+             window.speechSynthesis.speak(utterance);
+         }, 50);
 
-     }, [startListening]); // Include startListening if called from here
+     }, [startListening]); // startListening is a dependency
 
+     // Function to handle user speech and get AI response
      const handleUserSpeech = useCallback(async (userText: string) => {
          console.log("InterviewMode: Processing user speech:", userText);
          const userMessage: Message = { id: Date.now(), text: userText, sender: 'user', timestamp: Date.now() };
          setMessages(prev => [...prev, userMessage]);
-         messageHistoryRef.current.push(userMessage); // Add to history for API
+         messageHistoryRef.current.push({ role: 'user', parts: [{ text: userText }] });
 
          setStage('ai_thinking');
          const loadingMessage: Message = { id: Date.now() + 1, text: "...", sender: 'loading', timestamp: Date.now() + 1 };
          setMessages(prev => [...prev, loadingMessage]);
 
-         // Prepare history for API
-         const historyForApi = messageHistoryRef.current
-             .slice(-10) // Limit history size
-             .map(m => ({
-                 role: m.sender === 'user' ? 'user' : 'model',
-                 parts: [{ text: m.text }]
-             }));
+         const historyForApi = messageHistoryRef.current.slice(-10); // Limit history
 
          try {
-             const response = await getBotResponse(userText, null, historyForApi, selectedModel, INTERVIEWER_PERSONA_ID, accessKey);
+             const response = await getBotResponseInterview(userText, historyForApi, selectedModel, INTERVIEWER_PERSONA_ID, accessKey);
              const botMessage: Message = { id: Date.now() + 2, text: response.text, sender: 'bot', timestamp: Date.now() + 2 };
 
-             // Add bot message to history *before* removing loading, in case of pass/fail check
-              messageHistoryRef.current.push(botMessage);
+              if(!response.text.startsWith("Error:")) {
+                messageHistoryRef.current.push({ role: 'model', parts: [{ text: response.text }] });
+              } else {
+                 console.error("API returned error:", response.text);
+                 setError(response.text); // Show API error to user
+              }
 
-             // Check for Pass/Fail indication in the response text (basic example)
+             // Check for Pass/Fail indication (case-insensitive)
              let endResult: InterviewResult = null;
-             if (response.text.toLowerCase().includes("conclusion: pass")) {
+             const lowerText = response.text.toLowerCase();
+             // Make checks more specific if possible based on prompt engineering
+             if (lowerText.includes("conclusion: pass") || lowerText.includes("final result: pass") || lowerText.includes("outcome: pass")) {
                  endResult = 'pass';
-             } else if (response.text.toLowerCase().includes("conclusion: fail")) {
+             } else if (lowerText.includes("conclusion: fail") || lowerText.includes("final result: fail") || lowerText.includes("outcome: fail")) {
                  endResult = 'fail';
              }
 
-             // Update messages: remove loading, add bot response
              setMessages(prev => [...prev.filter(m => m.sender !== 'loading'), botMessage]);
-
 
              if (endResult) {
                  console.log("InterviewMode: Interview finished. Result:", endResult);
                  setResult(endResult);
                  setStage('finished');
-                 // Optionally play the final message
-                 // playAiResponse(response.text); // Or maybe just display it?
+                 stopStreams();
+             } else if (response.text.startsWith("Error:")) {
+                  setStage('error'); // Go to error state on API error
+                  stopStreams();
              } else {
-                 playAiResponse(response.text); // Continue interview: Speak AI response
+                 playAiResponse(response.text); // Continue interview
              }
 
-         } catch (e) {
-             const errorMsg = `Error getting response: ${(e as Error).message}`;
+         } catch (e) { // Catch errors from getBotResponseInterview itself
+             const errorMsg = `Error processing response: ${(e as Error).message}`;
+             console.error(errorMsg);
              setError(errorMsg);
              const errorMessage: Message = { id: Date.now() + 2, text: errorMsg, sender: 'bot', timestamp: Date.now() + 2 };
              setMessages(prev => [...prev.filter(m => m.sender !== 'loading'), errorMessage]);
-             setStage('finished'); // End interview on error
+             setStage('error');
+             stopStreams();
          }
 
-     }, [selectedModel, accessKey, playAiResponse]); // Dependencies
+     }, [selectedModel, accessKey, playAiResponse, stopStreams]); // Dependencies
 
 
-    if (!isOpen) return null;
+    // Render nothing if parent intends to hide and component is idle
+    if (!isOpen && stage === 'idle') return null;
 
     // --- Render ---
     return (
@@ -310,15 +490,19 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             <div className="interview-mode-modal">
                 <h3>University Entrance Interview Simulation</h3>
 
-                {error && <p className="interview-error">Error: {error}</p>}
+                {error && <p className="interview-error">{error}</p>}
 
                 <div className="interview-layout">
                     {/* Camera View */}
                     <div className="interview-camera-view">
-                        {cameraStream ? (
+                        {stage !== 'idle' && stage !== 'requesting_perms' && cameraStream ? (
                             <video ref={videoRef} autoPlay playsInline muted={true} />
                         ) : (
-                            <div className="placeholder">{stage === 'requesting_perms' ? 'Requesting permissions...' : 'Camera Loading...'}</div>
+                            <div className="placeholder">
+                                {stage === 'requesting_perms' ? 'Requesting permissions...'
+                                : stage === 'error' ? 'Camera/Mic Unavailable'
+                                : 'Camera Off'}
+                            </div>
                         )}
                          <p className="interview-notice">Your camera is active for observation.</p>
                     </div>
@@ -331,20 +515,27 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                                     {msg.sender === 'loading' ? (
                                          <div className="loading-indicator"><span></span><span></span><span></span></div>
                                      ) : (
-                                         <p>{msg.text}</p>
+                                         msg.text.split('\n').map((line, index) => (
+                                             <p key={index} style={{margin: '0 0 0.2em 0'}}>{line || '\u00A0'}</p>
+                                         ))
                                      )}
                                 </div>
                             ))}
-                            {/* Optional: Add scroll-to-bottom ref */}
+                             <div ref={messagesEndRef} style={{ height: '1px' }} />
                         </div>
                          {/* Status Indicator */}
                          <div className="interview-status">
                             {stage === 'listening' && "Listening..."}
-                            {stage === 'ai_thinking' && "Thinking..."}
+                            {stage === 'ai_thinking' && "Interviewer Thinking..."}
                             {stage === 'ai_speaking' && "Interviewer Speaking..."}
                             {stage === 'finished' && `Interview Finished: ${result ? result.toUpperCase() : 'Concluded'}`}
+                            {stage === 'error' && "An error occurred. Please close and retry."}
                             {stage === 'user_turn' && "Your Turn (Speak now)"}
-                            {isSttActive && <span className="recording-dot"></span>}
+                            {stage === 'starting' && "Starting Interview..."}
+                            {stage === 'requesting_perms' && "Requesting Permissions..."}
+                            {stage === 'processing_user' && "Processing your response..."}
+                            {stage === 'idle' && "Initializing..."}
+                            {isSttActive && stage === 'listening' && <span className="recording-dot"></span>}
                          </div>
                     </div>
                 </div>
@@ -357,53 +548,16 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                     </div>
                 )}
 
-                <button onClick={onClose} className="interview-close-button" disabled={stage === 'ai_thinking' || stage === 'ai_speaking'}>
-                    {stage === 'finished' ? 'Close' : 'Leave Interview'}
+                <button
+                    onClick={onClose} // onClose should handle cleanup via useEffect
+                    className="interview-close-button"
+                    disabled={stage === 'ai_thinking' || stage === 'ai_speaking'} // Prevent leaving mid-AI turn
+                    title={stage === 'ai_thinking' || stage === 'ai_speaking' ? "Wait for AI turn to finish" : (stage === 'finished' ? 'Close' : 'Leave Interview')}
+                 >
+                    {/* Change button text based on final state */}
+                    {stage === 'finished' || stage === 'error' || stage === 'idle' ? 'Close' : 'Leave Interview'}
                 </button>
             </div>
-            {/* Basic Styling (Create InterviewMode.css) */}
-            <style jsx global>{`
-                .interview-mode-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1200; display: flex; align-items: center; justify-content: center; padding: 10px; }
-                .interview-mode-modal { background: var(--container-bg, #fff); color: var(--text-primary, #000); border-radius: 8px; padding: 20px; width: 100%; max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; border: 1px solid var(--border-color, #ccc); }
-                .interview-mode-modal h3 { text-align: center; margin-top: 0; margin-bottom: 15px; font-size: 1.2em; }
-                .interview-error { color: var(--key-invalid-color, red); text-align: center; margin-bottom: 10px; font-weight: 500; }
-                .interview-layout { display: flex; gap: 15px; flex-grow: 1; overflow: hidden; margin-bottom: 15px; }
-                .interview-camera-view { flex: 1; display: flex; flex-direction: column; align-items: center; background: #eee; border-radius: 6px; overflow: hidden; min-width: 200px; }
-                .interview-camera-view video { width: 100%; height: auto; max-height: 300px; object-fit: cover; background: #000; }
-                .interview-camera-view .placeholder { flex-grow: 1; display: flex; align-items: center; justify-content: center; color: #888; font-style: italic; min-height: 150px; text-align: center; }
-                .interview-notice { font-size: 0.8em; color: var(--text-secondary); margin: 5px; text-align: center; }
-                .interview-chat-view { flex: 2; display: flex; flex-direction: column; border: 1px solid var(--border-color, #ccc); border-radius: 6px; overflow: hidden; }
-                .interview-messages { flex-grow: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-                .interview-message { padding: 6px 10px; border-radius: 12px; max-width: 90%; word-wrap: break-word; line-height: 1.4; font-size: 0.95em;}
-                .interview-message p { margin: 0; }
-                .interview-bot { background: var(--bot-bubble-bg, #f0f0f0); align-self: flex-start; }
-                .interview-user { background: var(--user-bubble-bg, #0d6efd); color: #fff; align-self: flex-end; }
-                .interview-loading { align-self: center; margin: 10px 0; }
-                .interview-status { padding: 8px 10px; background: var(--button-secondary-bg, #eee); text-align: center; font-style: italic; color: var(--text-secondary); font-size: 0.9em; border-top: 1px solid var(--border-color, #ccc); display: flex; align-items: center; justify-content: center; gap: 8px; }
-                .recording-dot { width: 10px; height: 10px; background-color: red; border-radius: 50%; animation: blink 1s infinite; }
-                @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-                .interview-result { text-align: center; font-size: 1.3em; font-weight: bold; margin: 10px 0; padding: 10px; border-radius: 6px; }
-                .interview-result.pass { color: var(--key-valid-color, green); background-color: #d1e7dd; }
-                .interview-result.fail { color: var(--key-invalid-color, red); background-color: #f8d7da; }
-                :root[data-theme='dark'] .interview-result.pass { background-color: #1c3c30; }
-                :root[data-theme='dark'] .interview-result.fail { background-color: #4d2d30; }
-                .interview-close-button { padding: 10px 20px; border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; background: var(--button-secondary-bg); margin-top: 10px; align-self: center; }
-                .interview-close-button:hover:not(:disabled) { background: var(--button-secondary-hover-bg); }
-                .interview-close-button:disabled { opacity: 0.6; cursor: default; }
-
-                /* Basic Loading Indicator */
-                .loading-indicator span { height: 6px; width: 6px; margin: 0 1px; background-color: var(--text-secondary); border-radius: 50%; display: inline-block; animation: bounce 1.4s infinite ease-in-out both; }
-                .loading-indicator span:nth-child(1) { animation-delay: -0.32s; }
-                .loading-indicator span:nth-child(2) { animation-delay: -0.16s; }
-                @keyframes bounce { 0%, 80%, 100% { transform: scale(0); opacity: 0.5; } 40% { transform: scale(1.0); opacity: 1; } }
-
-
-                @media (max-width: 768px) {
-                    .interview-mode-modal { max-width: 95vw; max-height: 95vh; padding: 15px; }
-                    .interview-layout { flex-direction: column; }
-                    .interview-camera-view video { max-height: 200px; }
-                }
-            `}</style>
         </div>
     );
 }

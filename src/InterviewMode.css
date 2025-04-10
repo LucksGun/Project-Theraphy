@@ -1,0 +1,272 @@
+/* src/InterviewMode.css - Styles for the Interview Simulation Mode */
+
+.interview-mode-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8); /* Darker overlay */
+    z-index: 1200; /* Ensure it's above other elements like settings */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.interview-mode-modal {
+    background: var(--container-bg, #fff); /* Use CSS variables from App.css */
+    color: var(--text-primary, #000);
+    border-radius: 8px;
+    padding: 20px;
+    width: 100%;
+    max-width: 90vw;  /* Wide by default */
+    max-height: 90vh; /* Limit height */
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color, #ccc);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2); /* Add shadow */
+}
+
+.interview-mode-modal h3 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    color: var(--text-primary);
+}
+
+.interview-error {
+    color: var(--key-invalid-color, red); /* Use variable from App.css */
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: 500;
+    padding: 8px;
+    background-color: #f8d7da; /* Light red background */
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+}
+:root[data-theme='dark'] .interview-error {
+    background-color: #4d2d30;
+    border-color: #8d424a;
+}
+
+
+.interview-layout {
+    display: flex;
+    gap: 15px;
+    flex-grow: 1; /* Take available space */
+    overflow: hidden; /* Prevent layout breaking */
+    margin-bottom: 15px;
+}
+
+.interview-camera-view {
+    flex: 1; /* Takes up 1 part of space */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #eee; /* Placeholder background */
+    border-radius: 6px;
+    overflow: hidden;
+    min-width: 200px; /* Minimum width */
+    border: 1px solid var(--border-color);
+}
+:root[data-theme='dark'] .interview-camera-view {
+    background: #333;
+}
+
+.interview-camera-view video {
+    width: 100%;
+    height: auto;
+    max-height: 300px; /* Limit video height */
+    object-fit: cover; /* Cover the area nicely */
+    background: #000; /* Black background while loading */
+    display: block; /* Remove extra space below video */
+}
+
+.interview-camera-view .placeholder {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    min-height: 150px; /* Ensure placeholder has size */
+    text-align: center;
+    padding: 10px;
+}
+
+.interview-notice {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    margin: 5px;
+    text-align: center;
+    padding: 3px 0;
+}
+
+.interview-chat-view {
+    flex: 2; /* Takes up 2 parts of space, wider than camera */
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 6px;
+    overflow: hidden; /* Contain chat messages */
+    background: var(--messages-bg); /* Match chat background */
+}
+
+.interview-messages {
+    flex-grow: 1; /* Takes available vertical space */
+    overflow-y: auto; /* Allow scrolling */
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.interview-message {
+    padding: 6px 12px;
+    border-radius: 12px;
+    max-width: 90%;
+    word-wrap: break-word;
+    line-height: 1.4;
+    font-size: 0.95em;
+}
+
+.interview-message p {
+    margin: 0; /* Remove default paragraph margin */
+}
+
+.interview-bot {
+    background: var(--bot-bubble-bg, #f0f0f0);
+    color: var(--text-primary);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px; /* Add speech bubble tail */
+}
+
+.interview-user {
+    background: var(--user-bubble-bg, #0d6efd);
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px; /* Add speech bubble tail */
+}
+
+.interview-loading {
+    align-self: center; /* Center loading dots */
+    margin: 10px 0;
+    background-color: var(--bot-bubble-bg); /* Give loading a background */
+    padding: 8px 15px;
+    border-radius: 12px;
+    display: flex; /* Needed for loading indicator alignment */
+    align-items: center;
+}
+
+.interview-status {
+    padding: 8px 10px;
+    background: var(--button-secondary-bg, #eee);
+    text-align: center;
+    font-style: italic;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    border-top: 1px solid var(--border-color, #ccc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+.recording-dot {
+    width: 10px;
+    height: 10px;
+    background-color: red;
+    border-radius: 50%;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.interview-result {
+    text-align: center;
+    font-size: 1.3em;
+    font-weight: bold;
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.interview-result.pass {
+    color: var(--key-valid-color, green); /* Use variable from App.css */
+    background-color: #d1e7dd;
+}
+.interview-result.fail {
+    color: var(--key-invalid-color, red); /* Use variable from App.css */
+    background-color: #f8d7da;
+}
+:root[data-theme='dark'] .interview-result.pass {
+    background-color: #1c3c30;
+}
+:root[data-theme='dark'] .interview-result.fail {
+    background-color: #4d2d30;
+}
+
+.interview-close-button {
+    padding: 10px 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    cursor: pointer;
+    background: var(--button-secondary-bg);
+    color: var(--text-primary);
+    margin-top: 10px;
+    align-self: center; /* Center button */
+    transition: background-color 0.2s ease;
+}
+
+.interview-close-button:hover:not(:disabled) {
+    background: var(--button-secondary-hover-bg);
+}
+
+.interview-close-button:disabled {
+    opacity: 0.6;
+    cursor: default;
+    background-color: var(--button-disabled-bg) !important;
+    color: var(--button-disabled-text) !important;
+}
+
+/* Basic Loading Indicator Styles (copied from App.css for self-containment if needed) */
+.loading-indicator span {
+    height: 6px;
+    width: 6px;
+    margin: 0 1px;
+    background-color: var(--text-secondary);
+    border-radius: 50%;
+    display: inline-block;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+.loading-indicator span:nth-child(1) { animation-delay: -0.32s; }
+.loading-indicator span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+    40% { transform: scale(1.0); opacity: 1; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .interview-mode-modal {
+        max-width: 95vw;
+        max-height: 95vh;
+        padding: 15px;
+    }
+    .interview-layout {
+        flex-direction: column; /* Stack camera and chat vertically */
+    }
+    .interview-camera-view video {
+        max-height: 200px; /* Adjust video height for smaller screens */
+    }
+    .interview-chat-view {
+        flex: 3; /* Give chat more space when stacked */
+    }
+}
