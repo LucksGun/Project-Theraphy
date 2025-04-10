@@ -9,6 +9,7 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import MediaCaptureModal from './MediaCaptureModal'; // Ensure this component exists
+import { FaUserTie, /* other icons */ } from 'react-icons/fa';
 
 // Import icons (using react-icons as an example)
 import { FaPlus, FaPaperclip, FaCamera, FaDesktop, FaEdit, FaMicrophone, FaPaperPlane, FaStopCircle } from 'react-icons/fa';
@@ -159,10 +160,11 @@ interface ChatbotPageProps {
     sttLang: SpeechLanguage;
     selectedPersona: Persona;
     accessKey: string;
+    onTriggerInterview: () => void; // <<< ADD PROP for triggering interview
 }
 
 // --- ChatbotPage Component ---
-function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona, accessKey }: ChatbotPageProps) {
+function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona, accessKey, onTriggerInterview }: ChatbotPageProps) {
     // --- State ---
     const [input, setInput] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -181,6 +183,10 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
     const [capturedImageDataUrl, setCapturedImageDataUrl] = useState<string | null>(null);
     // *** State for the Action Menu ***
     const [isActionMenuOpen, setIsActionMenuOpen] = useState<boolean>(false);
+    const handleMenuInterviewClick = () => {
+        onTriggerInterview(); // Call the function passed from App
+        setIsActionMenuOpen(false);
+    };
 
     // --- Refs ---
     const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -779,6 +785,9 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                             </button>
                             <button onClick={handleMenuAnalysisClick} className="action-menu-item" disabled={isLoading || isOnCooldown}>
                                 <FaEdit /> University Form
+                            </button>
+                            <button onClick={handleMenuInterviewClick} className="action-menu-item" disabled={isLoading || isOnCooldown}>
+                                <FaUserTie /> Start Interview
                             </button>
                         </div>
                     )}

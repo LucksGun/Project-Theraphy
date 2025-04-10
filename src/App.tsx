@@ -9,6 +9,7 @@ import AdminPage from './AdminPage';
 import ConfirmClearCupGame from './ConfirmClearCupGame';
 import PersonaPlinkoGame from './PersonaPlinkoGame';
 import ModelBuilderGame from './ModelBuilderGame';
+import InterviewMode from './InterviewMode'; // <<< IMPORT the new component
 
 // --- GA Initialization ---
 const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
@@ -79,6 +80,7 @@ function App() {
     const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash'); // Default to unrestricted
     const [sttLang, setSttLang] = useState<SpeechLanguage>(() => { const stored = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null; if (stored && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(stored)) { return stored; } return 'en-US'; });
     const [selectedPersona, setSelectedPersona] = useState<Persona>(DEFAULT_UNRESTRICTED_PERSONA); // Default to unrestricted
+    const [isInterviewModeOpen, setIsInterviewModeOpen] = useState(false); // <<< ADD State for Interview Mode
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const openAdvancedSettingsFromMain = () => {
         console.log("STEP 1: openAdvancedSettingsFromMain CALLED"); // <<< ADD THIS
@@ -229,7 +231,7 @@ function App() {
     // --- Event Handlers ---
 
     // Close ALL modals helper
-    const closeAllModals = useCallback(() => {
+    const closeAllModals = () => {
         setIsSettingsOpen(false);
         setIsAdvancedSettingsOpen(false);
         setIsStaffLoginModalVisible(false);
@@ -237,7 +239,8 @@ function App() {
         setIsClearCupGameVisible(false);
         setIsModelBuilderVisible(false);
         setIsPersonaPlinkoVisible(false);
-    }, []); // No dependencies needed
+        setIsInterviewModeOpen(false); // <<< ADD Interview Mode
+    };
 
     const handleAcceptBeta = () => { localStorage.setItem(BETA_ACCEPTED_KEY, 'true'); setShowBetaNotice(false); const introSeen = localStorage.getItem(INTRODUCTION_SEEN_KEY); if (introSeen !== 'true') { setShowIntroduction(true); setIntroSectionsAcknowledged(initialAcknowledgementState); } };
     const handleSectionToggle = (sectionKey: string) => { setIntroSectionsAcknowledged(prev => ({ ...prev, [sectionKey]: !prev[sectionKey] })); };
@@ -267,6 +270,20 @@ function App() {
     }
     // *** NEW Handler to open Advanced Settings from Main Settings ***
 
+    const openInterviewMode = () => {
+        // Optional: Check if key is valid if you want to restrict entry
+        // if (!keyStatus.isValid) {
+        //    alert("Access Key required for Interview Mode.");
+        //    return;
+        // }
+        closeAllModals(); // Close others
+        setIsInterviewModeOpen(true); // Open it
+    };
+
+    const closeInterviewMode = () => {
+        setIsInterviewModeOpen(false);
+        // Add any necessary cleanup specific to stopping the interview if needed
+    };
     const executeClearChat = () => { console.log("Executing clear chat logic after confirmation."); const timestamp = Date.now(); const clearMessage: Message = { id: timestamp, text: "Chat cleared.", sender: 'bot', timestamp: timestamp }; setMessages([clearMessage]); localStorage.removeItem(CHAT_STORAGE_KEY); closeAllModals(); };
     const handleAccessKeyChange=(e:ChangeEvent<HTMLInputElement>)=>{setEnteredKey(e.target.value);};
     const handleExportChat=()=>{ const msgs = messages.filter(m => m.sender !== 'loading'); if (msgs.length === 0 || (msgs.length === 1 && msgs[0].sender === 'bot' && msgs[0].text === "Welcome!")) { alert("Chat is empty or only contains the welcome message."); return; } let c = `Chat Export\nTimestamp: ${new Date().toLocaleString()}\nModel: ${selectedModel}\nPersona: ${selectedPersona}\nUser: ${keyStatus.isValid ? keyStatus.username : 'N/A (No valid key)'}\nTheme: ${currentTheme}\n----\n\n`; msgs.forEach(m => { const t = new Date(m.timestamp).toLocaleString(); c += `[${t}] ${m.sender === 'user' ? 'User' : 'Bot'}:\n${m.text}\n${m.imageUrl ? `(Image Attachment: ${m.imageUrl.substring(0,50)}...)\n` : ''}\n`; }); try { const b = new Blob([c], { type: 'text/plain;charset=utf-8' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); const f = `theraphy-chat-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`; a.href = u; a.download = f; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(u); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") ReactGA.event({ category: "Chat", action: "Export", label: `Msg Count: ${msgs.length}` }); closeAllModals(); } catch (e) { console.error("Export failed:", e); alert("Failed to export chat."); } };
@@ -509,7 +526,15 @@ function App() {
                     </div>
                 </div>
             )}
-
+            {isInterviewModeOpen && (
+                <InterviewMode
+                    isOpen={isInterviewModeOpen}
+                    onClose={closeInterviewMode} // Pass the closing handler
+                    selectedModel={selectedModel} // Pass relevant props
+                    accessKey={enteredKey}
+                    sttLang={sttLang}
+                />
+            )}
             {/* Feedback Modal */}
             {isFeedbackModalVisible && (
                 <div className="feedback-modal-overlay">
@@ -571,6 +596,7 @@ function App() {
                                 sttLang={sttLang}
                                 selectedPersona={selectedPersona}
                                 accessKey={enteredKey}
+                                onTriggerInterview={openInterviewMode} // <<< ADD PROP
                             />
                         </>
                     } />
