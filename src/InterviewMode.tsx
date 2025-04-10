@@ -373,6 +373,13 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 console.log("InterviewMode: STT initialized.");
             } catch (err) { console.error("Failed to initialize STT:", err); setError("Failed to initialize Speech Recognition."); setStage('error'); }
         }
+        recognitionRef.current.onstart = () => console.log("STT Event: onstart (Listening has started)");
+recognitionRef.current.onaudiostart = () => console.log("STT Event: onaudiostart (Audio capture started)");
+recognitionRef.current.onsoundstart = () => console.log("STT Event: onsoundstart (Sound detected)");
+recognitionRef.current.onspeechstart = () => console.log("STT Event: onspeechstart (Speech detected)");
+recognitionRef.current.onspeechend = () => console.log("STT Event: onspeechend (Finished detecting speech)");
+recognitionRef.current.onaudioend = () => console.log("STT Event: onaudioend (Audio capture ended)");
+recognitionRef.current.onnomatch = () => console.log("STT Event: onnomatch (No recognition match)");
         if (recognitionRef.current) { try { recognitionRef.current.lang = sttLang; } catch (e) { console.error("Failed to set STT language:", e); } }
          return () => { if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch(e){} recognitionRef.current.onresult = null; recognitionRef.current.onerror = null; recognitionRef.current.onend = null; } setIsSttActive(false); }
     }, [isOpen, sttLang, handleUserSpeech]); // Removed stage dependency
