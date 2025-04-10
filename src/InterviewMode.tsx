@@ -1,4 +1,4 @@
-// src/InterviewMode.tsx - Complete Code with Reordering Fix
+// src/InterviewMode.tsx - Complete Code with Redundant State Removed
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 // Assuming types and constants can be imported from App or another shared location
@@ -6,9 +6,19 @@ import { Message, GeminiModel, SpeechLanguage, ApiRequestBody, WORKER_URL } from
 import './InterviewMode.css'; // Make sure this CSS file exists
 
 // --- STT/TTS Setup & Browser API Declarations ---
+declare var SpeechRecognition: any;
+declare var webkitSpeechRecognition: any;
 declare var SpeechSynthesisUtterance: {
     prototype: SpeechSynthesisUtterance;
     new(text?: string): SpeechSynthesisUtterance;
+};
+declare var SpeechRecognitionEvent: {
+    prototype: SpeechRecognitionEvent;
+    new(type: string, eventInitDict: SpeechRecognitionEventInit): SpeechRecognitionEvent;
+};
+declare var SpeechSynthesisErrorEvent: {
+    prototype: SpeechSynthesisErrorEvent;
+    new(type: string, eventInitDict: SpeechSynthesisErrorEventInit): SpeechSynthesisErrorEvent;
 };
 
 const SpeechRecognitionImpl = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -84,7 +94,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isSttActive, setIsSttActive] = useState(false);
-    const [, setIsAiSpeaking] = useState(false);
+    // const [isAiSpeaking, setIsAiSpeaking] = useState(false); // REMOVED - Redundant state
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const recognitionRef = useRef<any>(null);
@@ -131,40 +141,42 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
     }, []);
 
     const stopStreams = useCallback(() => {
-        // Stop Camera/Mic Stream
         if (cameraStream) {
             console.log("InterviewMode: Stopping media streams.");
             cameraStream.getTracks().forEach(track => track.stop());
             setCameraStream(null);
         }
-        // Stop STT if active
         if (recognitionRef.current && isSttActive) {
              try { recognitionRef.current.abort(); } catch(e){ console.warn("Error aborting STT:", e)}
              setIsSttActive(false);
         }
-        // Stop TTS if active
          if (isSpeechSynthesisSupported && window.speechSynthesis.speaking) {
              window.speechSynthesis.cancel();
-             setIsAiSpeaking(false);
+             // No need to set isAiSpeaking false here anymore
          }
     }, [cameraStream, isSttActive]); // Dependencies
 
     // --- Callback Definitions (ORDER MATTERS!) ---
 
-    // 1. startListening (fewest dependencies among the core loop functions)
+    // 1. startListening
     const startListening = useCallback(() => {
+        // Prevent starting if not ready, already active, or not user's turn
+        // Also check if AI is speaking using stage instead of isAiSpeaking
         if (!recognitionRef.current || isSttActive || stage !== 'user_turn') {
             console.warn("Cannot start STT in current state:", { hasRef: !!recognitionRef.current, isSttActive, stage });
+            // If AI is speaking, cancel it
             if (isSpeechSynthesisSupported && window.speechSynthesis.speaking) {
                 window.speechSynthesis.cancel();
-                setIsAiSpeaking(false);
             }
-             if (stage === 'ai_speaking') { setStage('user_turn'); }
+             // If stage was ai_speaking, transition to user_turn before returning
+             if (stage === 'ai_speaking') {
+                 setStage('user_turn');
+             }
             return;
         }
         console.log("InterviewMode: Starting STT listening...");
         setError(null);
-        setStage('listening');
+        setStage('listening'); // Update stage to 'listening'
         try {
             recognitionRef.current.lang = sttLang;
             recognitionRef.current.start();
@@ -173,11 +185,11 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             console.error("Error starting STT:", e);
             setError(`Could not start microphone: ${(e as Error).message}`);
             setIsSttActive(false);
-            setStage('error');
+            setStage('error'); // Transition to error state if STT fails to start
         }
     }, [isSttActive, stage, sttLang]); // Dependencies
 
-    // 2. playAiResponse (depends on startListening)
+    // 2. playAiResponse (depends on startListening) - With error fix and isAiSpeaking removed
     const playAiResponse = useCallback((text: string) => {
          if (!isSpeechSynthesisSupported || !text) {
              console.warn("TTS not supported or text empty. Moving to user turn.");
@@ -187,32 +199,32 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
          }
          console.log("InterviewMode: Playing AI response...");
          setStage('ai_speaking');
-         setIsAiSpeaking(true);
+         // setIsAiSpeaking(true); // REMOVED
 
          const cleanText = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(\*|_)(.*?)\1/g, '$2').replace(/#/g, '');
          const utterance = new SpeechSynthesisUtterance(cleanText);
 
          utterance.onend = () => {
-             console.log("InterviewMode: TTS finished.");
-             setIsAiSpeaking(false);
+             console.log("InterviewMode: TTS finished normally.");
+             // setIsAiSpeaking(false); // REMOVED
              setStage('user_turn');
              setTimeout(startListening, 300);
          };
+
          utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
-             console.error('Interview TTS Error:', event.error);
-             setError(`Speech synthesis error: ${event.error}`);
-             setIsAiSpeaking(false);
-             setStage('user_turn'); // Should be valid now
-             setTimeout(startListening, 300);
+            console.error('Interview TTS Error:', event.error); // FIXED - Removed event.message
+             setError(`Speech synthesis error: ${event.error || 'Unknown'}`);
+             // setIsAiSpeaking(false); // REMOVED
+             setStage('error'); // Go to error state
+             // Do not automatically start listening after TTS error
          };
 
          if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-            console.log("InterviewMode: Cancelling previous TTS.");
+            console.log("InterviewMode: Cancelling previous TTS before speaking new.");
             window.speechSynthesis.cancel();
          }
-         setTimeout(() => {
-             window.speechSynthesis.speak(utterance);
-         }, 50);
+
+         window.speechSynthesis.speak(utterance);
 
      }, [startListening]); // startListening is a dependency
 
@@ -269,10 +281,9 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
              stopStreams();
          }
 
-     }, [selectedModel, accessKey, playAiResponse, stopStreams]); // Dependencies
+     }, [selectedModel, accessKey, playAiResponse, stopStreams]);
 
     // 4. startInterview (depends on playAiResponse, stopStreams)
-    // *** DEFINED AFTER its dependencies ***
     const startInterview = useCallback(async () => {
         console.log("InterviewMode: Starting interview flow...");
         setStage('ai_thinking');
@@ -284,51 +295,41 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
              const initialPrompt = "Please begin the interview.";
              const response = await getBotResponseInterview(initialPrompt, [], selectedModel, INTERVIEWER_PERSONA_ID, accessKey);
 
-             if (response.text.startsWith("Error:")) {
-                 throw new Error(response.text.substring(7));
-             }
+             if (response.text.startsWith("Error:")) { throw new Error(response.text.substring(7)); }
 
              const firstBotMessage: Message = { id: Date.now(), text: response.text, sender: 'bot', timestamp: Date.now() };
              messageHistoryRef.current.push({ role: 'model', parts: [{ text: response.text }] });
              setMessages([firstBotMessage]);
-             playAiResponse(response.text); // Now defined
+             playAiResponse(response.text);
         } catch (e) {
              const errorMsg = `Failed to start interview: ${(e as Error).message}`;
              console.error(errorMsg);
              setError(errorMsg);
              setMessages([{ id: Date.now(), text: errorMsg, sender: 'bot', timestamp: Date.now()}]);
              setStage('error');
-             stopStreams(); // Use stopStreams here
+             stopStreams();
         }
-    }, [selectedModel, accessKey, playAiResponse, stopStreams]); // Dependencies
+    }, [selectedModel, accessKey, playAiResponse, stopStreams]);
 
-    // --- Effects (Defined AFTER callbacks they might use) ---
 
-    // Effect for Setup and Cleanup based on isOpen
+    // --- Effects (Defined AFTER callbacks) ---
+
+    // Setup/Cleanup Effect
     useEffect(() => {
         if (isOpen) {
             console.log("InterviewMode: Opened. Resetting and starting setup.");
-            setStage('idle'); // Set to idle first to trigger setup
+            setStage('idle');
             startInterviewSetup();
         } else {
-            // Cleanup if closing
-             if(stage !== 'idle') { // Avoid cleanup if already idle
-                stopStreams();
-                setStage('idle');
-             }
+             if(stage !== 'idle') { stopStreams(); setStage('idle'); }
         }
-        // Cleanup on unmount
         return () => {
-             if (isOpen) { // Only cleanup on unmount if it was open
-                console.log("InterviewMode: Unmounting/Cleanup.");
-                stopStreams();
-             }
+             if (isOpen) { stopStreams(); }
          };
-        // Only trigger when isOpen changes
-    }, [isOpen, startInterviewSetup, stopStreams]); // Added stopStreams
+    }, [isOpen, startInterviewSetup, stopStreams]);
 
 
-     // Effect to attach stream to video element
+     // Attach Stream Effect
      useEffect(() => {
          if (cameraStream && videoRef.current) {
              console.log("InterviewMode: Attaching stream to video element.");
@@ -336,24 +337,17 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
              videoRef.current.play().catch(playError => {
                  console.error("InterviewMode: Video element play error:", playError);
              });
-         } else if (videoRef.current) {
-             videoRef.current.srcObject = null;
-         }
-         // Cleanup function to ensure srcObject is cleared if stream changes/unmounts
+         } else if (videoRef.current) { videoRef.current.srcObject = null; }
           return () => {
-             if (videoRef.current) {
-                 videoRef.current.srcObject = null;
-             }
+             if (videoRef.current) { videoRef.current.srcObject = null; }
          };
      }, [cameraStream]);
 
     // --- STT Setup Effect ---
     useEffect(() => {
         if (!recognitionAvailable || !isOpen) return;
-
         if (!recognitionRef.current) {
             try {
-                 // ... (STT Initialization as before, with onresult, onerror, onend) ...
                  recognitionRef.current = new SpeechRecognitionImpl();
                  recognitionRef.current.continuous = true;
                  recognitionRef.current.interimResults = false;
@@ -369,7 +363,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                           setIsSttActive(false);
                           try { recognitionRef.current.stop(); } catch(e){}
                           setStage('processing_user');
-                          handleUserSpeech(trimmedTranscript); // handleUserSpeech must be defined before this effect runs
+                          handleUserSpeech(trimmedTranscript);
                      } else if (trimmedTranscript && stage !== 'listening'){
                          console.log("STT received transcript but not in listening stage, ignoring:", trimmedTranscript);
                      } else { console.log("STT received empty final transcript."); }
@@ -395,26 +389,19 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 setStage('error');
             }
         }
-
         if (recognitionRef.current) {
              try { recognitionRef.current.lang = sttLang; } catch (e) { console.error("Failed to set STT language:", e); }
         }
-
-        // STT Cleanup within effect
          return () => {
             if (recognitionRef.current) {
                 try { recognitionRef.current.abort(); } catch(e){}
-                // Detach handlers on cleanup phase of this effect run
                 recognitionRef.current.onresult = null;
                 recognitionRef.current.onerror = null;
                 recognitionRef.current.onend = null;
             }
-            // Don't nullify recognitionRef.current here if you want to reuse it
-            // Just ensure it's stopped and handlers removed
             setIsSttActive(false);
          }
-
-    }, [isOpen, sttLang, stage, handleUserSpeech]); // Added handleUserSpeech
+    }, [isOpen, sttLang, stage, handleUserSpeech]);
 
 
     // Effect to auto-start interview flow
@@ -460,7 +447,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                                          <div className="loading-indicator"><span></span><span></span><span></span></div>
                                      ) : (
                                          msg.text.split('\n').map((line, index) => (
-                                             <p key={index} style={{margin: '0 0 0.2em 0'}}>{line || '\u00A0'}</p> // Render lines
+                                             <p key={index} style={{margin: '0 0 0.2em 0'}}>{line || '\u00A0'}</p>
                                          ))
                                      )}
                                 </div>
@@ -492,7 +479,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 )}
 
                 <button
-                    onClick={onClose} // onClose prop handles state and cleanup via useEffect
+                    onClick={onClose}
                     className="interview-close-button"
                     disabled={stage === 'ai_thinking' || stage === 'ai_speaking'}
                     title={stage === 'ai_thinking' || stage === 'ai_speaking' ? "Wait for AI turn to finish" : (stage === 'finished' ? 'Close' : 'Leave Interview')}
