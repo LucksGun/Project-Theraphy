@@ -1,4 +1,4 @@
-// src/App.tsx - FINAL Version with Advanced Settings Modal
+// src/App.tsx - FINAL Version with REVERTED Model Selection (No Game)
 
 import React, { useState, useEffect, ChangeEvent, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
@@ -8,8 +8,8 @@ import ChatbotPage from './ChatbotPage';
 import AdminPage from './AdminPage';
 import ConfirmClearCupGame from './ConfirmClearCupGame';
 import PersonaPlinkoGame from './PersonaPlinkoGame';
-import ModelBuilderGame from './ModelBuilderGame';
-import InterviewMode from './InterviewMode'; // <<< IMPORT the new component
+// import ModelBuilderGame from './ModelBuilderGame'; // <<< REMOVE Import
+import InterviewMode from './InterviewMode';
 
 // --- GA Initialization ---
 const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
@@ -59,10 +59,10 @@ const getInitialTheme = (): AppTheme => { if (typeof window !== 'undefined') { c
 // --- Define Introduction Sections ---
 const introductionSections = [
  { key: 'textInput', title: 'การส่งข้อความ', text: 'พิมพ์คำถามหรือสิ่งที่คุณต้องการบอก ในช่องด้านล่างที่เขียนว่า "Type your message..."\nกดส่ง: กดปุ่มลูกศรชี้ขวา (➤) เพื่อส่งข้อความของคุณ' },
- { key: 'imageInput', title: 'การส่งรูปภาพ', text: 'คุณสามารถส่งรูปภาพได้ 3 วิธี:\n\n•\u00A0\u00A0\u00A0\u00A0**อัปโหลดรูป (📎):** กดปุ่มเครื่องหมายบวก (+) > เลือก "Upload Image" > เลือกรูป > พิมพ์ข้อความ (ไม่บังคับ) > กดส่ง (➤)\n•\u00A0\u00A0\u00A0\u00A0**ถ่ายรูปจากกล้อง (📷):** กดปุ่ม (+) > เลือก "Use Camera" > (อาจต้องอนุญาต) > กด "Capture Photo" (📸) > กดส่ง (➤)\n•\u00A0\u00A0\u00A0\u00A0**จับภาพหน้าจอ (🖥️):** กดปุ่ม (+) > เลือก "Capture Screen" > เลือกจอ > กด "Share" > กด "Capture Frame" (🖼️) > กดส่ง (➤)' }, // Updated instructions for plus menu
+ { key: 'imageInput', title: 'การส่งรูปภาพ', text: 'คุณสามารถส่งรูปภาพได้ 3 วิธี:\n\n•\u00A0\u00A0\u00A0\u00A0**อัปโหลดรูป (📎):** กดปุ่มเครื่องหมายบวก (+) > เลือก "Upload Image" > เลือกรูป > พิมพ์ข้อความ (ไม่บังคับ) > กดส่ง (➤)\n•\u00A0\u00A0\u00A0\u00A0**ถ่ายรูปจากกล้อง (📷):** กดปุ่ม (+) > เลือก "Use Camera" > (อาจต้องอนุญาต) > กด "Capture Photo" (📸) > กดส่ง (➤)\n•\u00A0\u00A0\u00A0\u00A0**จับภาพหน้าจอ (🖥️):** กดปุ่ม (+) > เลือก "Capture Screen" > เลือกจอ > กด "Share" > กด "Capture Frame" (🖼️) > กดส่ง (➤)' },
  { key: 'voiceInput', title: 'การใช้เสียงพูดแทนการพิมพ์', text: 'กดปุ่มไมค์ (🎤) > เริ่มพูด (อาจต้องอนุญาต) > ระบบอาจหยุดเองเมื่อพูดจบ หรือกดหยุด (🛑) > ตรวจสอบข้อความ > กดส่ง (➤)' },
  { key: 'ttsOutput', title: 'การฟังคำตอบของบอท', text: 'หากต้องการฟังเสียงอ่าน ให้มองหาปุ่มรูปลำโพง (🔊) ข้างข้อความบอทแล้วกด หากต้องการหยุด ให้กดปุ่มเดิมอีกครั้ง (อาจเปลี่ยนเป็น ⏹️)' },
- { key: 'uniForm', title: 'ฟอร์มแนะนำมหาวิทยาลัย', text: 'หากต้องการคำแนะนำเรื่องเรียนต่อ ให้กดปุ่มบวก (+) > เลือก "University Form" (📝) > กรอกข้อมูลในฟอร์ม > กด "Submit for Advice" เพื่อให้ AI วิเคราะห์' }, // Updated instructions for plus menu
+ { key: 'uniForm', title: 'ฟอร์มแนะนำมหาวิทยาลัย', text: 'หากต้องการคำแนะนำเรื่องเรียนต่อ ให้กดปุ่มบวก (+) > เลือก "University Form" (📝) > กรอกข้อมูลในฟอร์ม > กด "Submit for Advice" เพื่อให้ AI วิเคราะห์' },
  { key: 'suggestions', title: 'การใช้ข้อเสนอแนะ (Suggestions)', text: 'บางครั้ง บอทอาจแสดงปุ่มข้อแนะนำต่อท้ายคำตอบ คุณสามารถกดปุ่มนั้นเพื่อถามต่อได้ทันที' }
 ];
 const initialAcknowledgementState = introductionSections.reduce((acc, section) => { acc[section.key] = false; return acc; }, {} as { [key: string]: boolean });
@@ -80,15 +80,14 @@ function App() {
     const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash'); // Default to unrestricted
     const [sttLang, setSttLang] = useState<SpeechLanguage>(() => { const stored = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null; if (stored && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(stored)) { return stored; } return 'en-US'; });
     const [selectedPersona, setSelectedPersona] = useState<Persona>(DEFAULT_UNRESTRICTED_PERSONA); // Default to unrestricted
-    const [isInterviewModeOpen, setIsInterviewModeOpen] = useState(false); // <<< ADD State for Interview Mode
+    const [isInterviewModeOpen, setIsInterviewModeOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const openAdvancedSettingsFromMain = () => {
-        console.log("STEP 1: openAdvancedSettingsFromMain CALLED"); // <<< ADD THIS
+        console.log("STEP 1: openAdvancedSettingsFromMain CALLED");
         setIsSettingsOpen(false);
-        console.log("STEP 2: Setting isAdvancedSettingsOpen to TRUE"); // <<< ADD THIS
+        console.log("STEP 2: Setting isAdvancedSettingsOpen to TRUE");
         setIsAdvancedSettingsOpen(true);
     };
-    // *** NEW STATE for Advanced Settings Modal ***
     const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState<boolean>(false);
     const [keyStatus, setKeyStatus] = useState<KeyValidationStatus>({ isValid: null, username: null, loading: false, error: null });
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -106,7 +105,7 @@ function App() {
     const [currentTheme, setCurrentTheme] = useState<AppTheme>(getInitialTheme);
     const [isPersonaPlinkoVisible, setIsPersonaPlinkoVisible] = useState<boolean>(false);
     const [isClearCupGameVisible, setIsClearCupGameVisible] = useState(false);
-    const [isModelBuilderVisible, setIsModelBuilderVisible] = useState(false);
+    // const [isModelBuilderVisible, setIsModelBuilderVisible] = useState(false); // <<< REMOVE State
 
     const navigate = useNavigate();
 
@@ -114,7 +113,7 @@ function App() {
     const allIntroSectionsAcknowledged = Object.values(introSectionsAcknowledged).every(status => status === true);
     const availablePersonasForGame = AVAILABLE_PERSONAS.filter(p => !p.restricted || keyStatus.isValid === true);
     const canChangePersona = keyStatus.isValid === true && availablePersonasForGame.length >= 1;
-    const canAccessAdvanced = keyStatus.isValid === true; // Condition for advanced access
+    const canAccessAdvanced = keyStatus.isValid === true;
 
     // --- Effects ---
     // Key Validation Effect
@@ -122,13 +121,11 @@ function App() {
         const keyTrimmed = enteredKey.trim();
         if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
 
-        // Store current restricted selections before validation potentially resets them
         const currentModelBeforeValidation = selectedModel;
         const currentPersonaBeforeValidation = selectedPersona;
 
         if (!keyTrimmed) {
             setKeyStatus({ isValid: null, username: null, loading: false, error: null });
-            // Reset to defaults ONLY if current selection IS restricted
             if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.0-flash');
             if (RESTRICTED_PERSONAS_VALUES.includes(currentPersonaBeforeValidation)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
             return;
@@ -143,26 +140,23 @@ function App() {
 
                 if (d.isValid) {
                     setKeyStatus({ isValid: true, username: d.username || 'User', loading: false, error: null });
-                    // Keep previously selected model/persona if valid, otherwise restore from before validation
                     setSelectedModel(currentModelBeforeValidation);
                     setSelectedPersona(currentPersonaBeforeValidation);
                 } else {
                     setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key.' });
-                    // Reset to defaults ONLY if current selection IS restricted
                     if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.0-flash');
                     if (RESTRICTED_PERSONAS_VALUES.includes(currentPersonaBeforeValidation)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
                 }
             } catch (e) {
                 const msg = e instanceof Error ? e.message : "Validation network error.";
                 setKeyStatus({ isValid: false, username: null, loading: false, error: msg });
-                // Reset to defaults ONLY if current selection IS restricted
                 if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.0-flash');
                 if (RESTRICTED_PERSONAS_VALUES.includes(currentPersonaBeforeValidation)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
             }
         }, VALIDATION_DEBOUNCE_MS);
 
         return () => { if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current); };
-    }, [enteredKey]); // Removed selectedModel, selectedPersona dependency to avoid loops
+    }, [enteredKey]);
 
     // Initial Load Effect
     useEffect(() => {
@@ -178,11 +172,9 @@ function App() {
         let initialPersona: Persona = DEFAULT_UNRESTRICTED_PERSONA;
         if (storedPersona && ALL_PERSONAS.includes(storedPersona)) initialPersona = storedPersona;
 
-        // Apply initial model/persona state first
         setSelectedModel(initialModel);
         setSelectedPersona(initialPersona);
 
-        // Then validate the key and potentially adjust model/persona if key invalid AND initial choice was restricted
         if (initialKey.trim()) {
             const validateInitialKey = async (k: string, m: GeminiModel, p: Persona) => {
                 setKeyStatus(pr => ({ ...pr, loading: true }));
@@ -191,29 +183,25 @@ function App() {
                     const d = await r.json().catch(() => ({ error: 'Invalid JSON' }));
                     if (r.ok && d.isValid) {
                         setKeyStatus({ isValid: true, username: d.username || 'User', loading: false, error: null });
-                        // Key is valid, keep initial/stored model and persona
                         setSelectedModel(m);
                         setSelectedPersona(p);
                     } else {
                         setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key' });
-                        // Key is invalid, reset only if stored model/persona was restricted
                         if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.0-flash');
                         if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
                     }
                 } catch (e) {
                     setKeyStatus({ isValid: false, username: null, loading: false, error: 'Validation failed' });
-                    // Network error, reset only if stored model/persona was restricted
-                     if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.0-flash');
-                     if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
+                       if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.0-flash');
+                       if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
                 }
             };
             validateInitialKey(initialKey, initialModel, initialPersona);
         } else {
-             // No key stored, reset only if stored model/persona was restricted
              if (RESTRICTED_MODELS_VALUES.includes(initialModel)) setSelectedModel('gemini-2.0-flash');
              if (RESTRICTED_PERSONAS_VALUES.includes(initialPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
         }
-    }, []); // Run only on mount
+    }, []);
 
     // Message Saving Effect
     useEffect(() => { const messagesToSave = messages.filter(m => m.sender !== 'loading'); if (messagesToSave.length > 1 || (messagesToSave.length === 1 && messagesToSave[0].sender !== 'bot')) { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave)); } else if (messagesToSave.length === 0 || (messagesToSave.length === 1 && messagesToSave[0].sender === 'bot' && messagesToSave[0].text === "Chat cleared.")) { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([])); } }, [messages]);
@@ -237,9 +225,9 @@ function App() {
         setIsStaffLoginModalVisible(false);
         setIsFeedbackModalVisible(false);
         setIsClearCupGameVisible(false);
-        setIsModelBuilderVisible(false);
+        // setIsModelBuilderVisible(false); // <<< REMOVE
         setIsPersonaPlinkoVisible(false);
-        setIsInterviewModeOpen(false); // <<< ADD Interview Mode
+        setIsInterviewModeOpen(false);
     };
 
     const handleAcceptBeta = () => { localStorage.setItem(BETA_ACCEPTED_KEY, 'true'); setShowBetaNotice(false); const introSeen = localStorage.getItem(INTRODUCTION_SEEN_KEY); if (introSeen !== 'true') { setShowIntroduction(true); setIntroSectionsAcknowledged(initialAcknowledgementState); } };
@@ -248,47 +236,48 @@ function App() {
     const handleMoveButton = () => { const vw = window.innerWidth; const vh = window.innerHeight; const buttonWidth = 180; const buttonHeight = 45; const randomTop = Math.random() * (vh - buttonHeight); const randomLeft = Math.random() * (vw - buttonWidth); setContinueButtonStyle({ position: 'fixed', top: `${randomTop}px`, left: `${randomLeft}px`, zIndex: 1070 }); };
     const handleSttLangChange=(e:ChangeEvent<HTMLSelectElement>)=>{setSttLang(e.target.value as SpeechLanguage);};
 
-    // *** MODIFIED Settings Toggle ***
+    // Settings Toggle
     const toggleSettings=()=>{
         const currentlyVisible = isSettingsOpen;
-        closeAllModals(); // Close everything else first
+        closeAllModals();
         if (!currentlyVisible) {
-            setIsSettingsOpen(true); // Only open if it was closed
+            setIsSettingsOpen(true);
         }
     };
 
-    // *** NEW Advanced Settings Toggle ***
+    // Advanced Settings Toggle
     const toggleAdvancedSettings = () => {
         const currentlyVisible = isAdvancedSettingsOpen;
-        closeAllModals(); // Close everything else first
-         // Only open if key is valid and it was previously closed
-        if (!currentlyVisible && canAccessAdvanced) {
+        closeAllModals();
+        // Only open if it was previously closed (no key check needed here, options inside will be disabled)
+        if (!currentlyVisible) {
              setIsAdvancedSettingsOpen(true);
-        } else if (!canAccessAdvanced) {
-            console.warn("Attempted to open advanced settings without valid key.");
         }
     }
-    // *** NEW Handler to open Advanced Settings from Main Settings ***
+
+    // *** ADDED: Direct handler for model selection change ***
+    const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => {
+        const newModel = event.target.value as GeminiModel;
+        // No need to check restriction here because the effect that saves
+        // the model to localStorage runs, and the key validation effect
+        // will reset it later if the key becomes invalid.
+        setSelectedModel(newModel);
+    };
+
 
     const openInterviewMode = () => {
-        // Optional: Check if key is valid if you want to restrict entry
-        // if (!keyStatus.isValid) {
-        //    alert("Access Key required for Interview Mode.");
-        //    return;
-        // }
-        closeAllModals(); // Close others
-        setIsInterviewModeOpen(true); // Open it
+        closeAllModals();
+        setIsInterviewModeOpen(true);
     };
 
     const closeInterviewMode = () => {
         setIsInterviewModeOpen(false);
-        // Add any necessary cleanup specific to stopping the interview if needed
     };
     const executeClearChat = () => { console.log("Executing clear chat logic after confirmation."); const timestamp = Date.now(); const clearMessage: Message = { id: timestamp, text: "Chat cleared.", sender: 'bot', timestamp: timestamp }; setMessages([clearMessage]); localStorage.removeItem(CHAT_STORAGE_KEY); closeAllModals(); };
     const handleAccessKeyChange=(e:ChangeEvent<HTMLInputElement>)=>{setEnteredKey(e.target.value);};
     const handleExportChat=()=>{ const msgs = messages.filter(m => m.sender !== 'loading'); if (msgs.length === 0 || (msgs.length === 1 && msgs[0].sender === 'bot' && msgs[0].text === "Welcome!")) { alert("Chat is empty or only contains the welcome message."); return; } let c = `Chat Export\nTimestamp: ${new Date().toLocaleString()}\nModel: ${selectedModel}\nPersona: ${selectedPersona}\nUser: ${keyStatus.isValid ? keyStatus.username : 'N/A (No valid key)'}\nTheme: ${currentTheme}\n----\n\n`; msgs.forEach(m => { const t = new Date(m.timestamp).toLocaleString(); c += `[${t}] ${m.sender === 'user' ? 'User' : 'Bot'}:\n${m.text}\n${m.imageUrl ? `(Image Attachment: ${m.imageUrl.substring(0,50)}...)\n` : ''}\n`; }); try { const b = new Blob([c], { type: 'text/plain;charset=utf-8' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); const f = `theraphy-chat-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`; a.href = u; a.download = f; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(u); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") ReactGA.event({ category: "Chat", action: "Export", label: `Msg Count: ${msgs.length}` }); closeAllModals(); } catch (e) { console.error("Export failed:", e); alert("Failed to export chat."); } };
 
-    // *** MODIFIED Staff Login Toggle ***
+    // Staff Login Toggle
     const toggleStaffLoginModal = () => {
         const currentlyVisible = isStaffLoginModalVisible;
         closeAllModals();
@@ -299,7 +288,7 @@ function App() {
     const handleStaffKeyChange = (e: ChangeEvent<HTMLInputElement>) => { setEnteredStaffKey(e.target.value); setStaffLoginError(null);};
     const handleStaffLogin = async () => { if (!enteredStaffKey.trim()) { setStaffLoginError("Staff key is required."); return; } setIsStaffLoginLoading(true); setStaffLoginError(null); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'staffLogin', staffKey: enteredStaffKey }) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON response from server.' })); if (!res.ok || !data.isValid) { throw new Error(data?.error || `Login Failed (Status: ${res.status})`); } sessionStorage.setItem('staffKey', enteredStaffKey); closeAllModals(); setEnteredStaffKey(''); navigate('/admin'); } catch (e) { setStaffLoginError(e instanceof Error ? e.message : "Login failed due to an unknown error."); sessionStorage.removeItem('staffKey'); } finally { setIsStaffLoginLoading(false); } };
 
-    // *** MODIFIED Feedback Modal Toggle ***
+    // Feedback Modal Toggle
     const toggleFeedbackModal = () => {
         const currentlyVisible = isFeedbackModalVisible;
         closeAllModals();
@@ -310,29 +299,28 @@ function App() {
     const handleFeedbackSubmit = async (e: React.FormEvent) => { e.preventDefault(); if (feedbackRating === 0) { setFeedbackError("Please select a star rating."); return; } if (!feedbackComment.trim()) { setFeedbackError("Please provide a comment."); return; } if (feedbackComment.length > 2000) { setFeedbackError("Comment is too long (max 2000 characters)."); return; } setIsSubmittingFeedback(true); setFeedbackError(null); setFeedbackSuccess(null); const payload: ApiRequestBody = { action: 'submitFeedback', email: feedbackEmail.trim() || null, rating: feedbackRating, comment: feedbackComment.trim() }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON response' })); if (!res.ok || !data.success) { throw new Error(data?.error || `Submit failed: ${res.statusText}`); } setFeedbackSuccess("Thank you! Your feedback has been submitted."); setFeedbackEmail(''); setFeedbackRating(0); setFeedbackComment(''); if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") { ReactGA.event({ category: "Feedback", action: "Submit", label: `Rating: ${feedbackRating}` }); } } catch (err) { setFeedbackError(err instanceof Error ? err.message : "Failed to submit feedback."); } finally { setIsSubmittingFeedback(false); } };
     const toggleTheme = useCallback(() => { setCurrentTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light')); }, []);
 
-    // *** MODIFIED Game Modal Triggers ***
+    // Modified Game Modal Triggers
     const openPersonaPlinko = () => {
-        if (!canAccessAdvanced) return; // Should be disabled, but check anyway
-        setIsAdvancedSettingsOpen(false); // Close advanced settings first
+        if (!canAccessAdvanced) return;
+        setIsAdvancedSettingsOpen(false);
         setIsPersonaPlinkoVisible(true);
     }
     const openClearCupGame = () => {
-        setIsSettingsOpen(false); // Close main settings first
+        setIsSettingsOpen(false);
         setIsClearCupGameVisible(true);
     }
-    const openModelBuilder = () => {
-         if (!canAccessAdvanced) return; // Also depends on key if called from advanced
-        setIsAdvancedSettingsOpen(false); // Close advanced settings first
-        setIsModelBuilderVisible(true);
-    }
+    // const openModelBuilder = () => { // <<< REMOVE this function
+    //    if (!canAccessAdvanced) return;
+    //    setIsAdvancedSettingsOpen(false);
+    //    setIsModelBuilderVisible(true);
+    // }
 
     // Handler for Persona selected from Plinko game
-    const handlePersonaSelectedFromPlinko = (persona: Persona) => { setSelectedPersona(persona); setIsPersonaPlinkoVisible(false); }; // Game closes itself
+    const handlePersonaSelectedFromPlinko = (persona: Persona) => { setSelectedPersona(persona); setIsPersonaPlinkoVisible(false); };
     // Handler for Model selected from Builder game
-    const handleModelSelectedFromBuilder = (model: GeminiModel) => { setSelectedModel(model); setIsModelBuilderVisible(false); }; // Game closes itself
+    // const handleModelSelectedFromBuilder = (model: GeminiModel) => { setSelectedModel(model); setIsModelBuilderVisible(false); }; // <<< REMOVE this handler
 
 
-    // --- JSX ---
     // --- JSX ---
     return (
         <div className="App">
@@ -385,7 +373,6 @@ function App() {
             {isSettingsOpen && (
                 <div className="settings-menu" role="dialog" aria-labelledby="settings-title">
                     <h3 id="settings-title">Settings</h3>
-                    {/* Use single column layout now */}
                     <div className="settings-column" style={{gap: '20px'}}>
 
                         {/* Speech Input Lang */}
@@ -413,21 +400,19 @@ function App() {
                             <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                                 <button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button>
                                 <button onClick={openClearCupGame} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat History</button>
-                             </div>
+                               </div>
                         </div>
 
                         {/* Advanced Settings Button */}
                         <div className="settings-option">
                             <label>Advanced Configuration:</label>
                              <button
-                                onClick={() => { console.log("CLICK: Advanced Settings Button"); openAdvancedSettingsFromMain(); }} // <<< ADD LOG TO onClick
-                                className="settings-action-button advanced-settings-trigger-button" // Styled green via CSS
-                                // No 'disabled' attribute here
+                                onClick={() => { console.log("CLICK: Advanced Settings Button"); openAdvancedSettingsFromMain(); }}
+                                className="settings-action-button advanced-settings-trigger-button"
                                 title="Configure Model, Persona & Key"
                             >
                                 🔑 Advanced Settings...
                             </button>
-                             {/* No conditional helper text here */}
                         </div>
 
                         {/* Admin Area */}
@@ -483,25 +468,40 @@ function App() {
                             </button>
                             {!canChangePersona && (<p className="settings-helper-text">Enter key to change.</p>)}
                         </div>
-                        {/* AI Model Setting */}
+
+                        {/* <<<< MODIFIED: AI Model Setting >>>> */}
                         <div className="settings-option">
-                            <label>AI Model:</label>
-                            <p className="current-persona-display">
-                                {ALL_AVAILABLE_MODELS_FRONTEND.find(m => m.value === selectedModel)?.label || selectedModel}
-                            </p>
-                             <button
-                                onClick={openModelBuilder}
-                                className="settings-action-button model-builder-trigger-button" // Keep this class for green styling
-                                disabled={!canAccessAdvanced} // <<< ADD THIS restriction
-                                title={!canAccessAdvanced ? "Requires a valid Access Key" : "Build custom model combination"} // <<< ADD conditional title
-                            >
-                                🔧 Build AI Model...
-                            </button>
-                            {/* <<< ADD conditional helper text >>> */}
-                            {!canAccessAdvanced && (
-                                <p className="settings-helper-text">Enter key to build models.</p>
-                            )}
-                         </div>
+                             <label htmlFor="model-select-adv">AI Model:</label>
+                             <select
+                                 id="model-select-adv"
+                                 className="settings-select" // Reuse styling or create specific one
+                                 value={selectedModel}
+                                 onChange={handleModelChange} // Use the new direct handler
+                                 aria-label="Select AI Model"
+                             >
+                                 {ALL_AVAILABLE_MODELS_FRONTEND.map(modelInfo => {
+                                     const isDisabled = modelInfo.restricted && !keyStatus.isValid;
+                                     return (
+                                         <option
+                                             key={modelInfo.value}
+                                             value={modelInfo.value}
+                                             disabled={isDisabled}
+                                             style={isDisabled ? {color: 'grey'} : {}} // Optional: Style disabled options
+                                         >
+                                             {modelInfo.label}{isDisabled ? ' (Requires Key)' : ''}
+                                         </option>
+                                     );
+                                 })}
+                             </select>
+                             {/* Show helper text only if some models ARE restricted AND the key is invalid */}
+                             {RESTRICTED_MODELS_VALUES.length > 0 && !keyStatus.isValid && (
+                                 <p className="settings-helper-text">
+                                     Enter a valid Access Key to use restricted models.
+                                 </p>
+                             )}
+                        </div>
+                        {/* <<<< END MODIFIED: AI Model Setting >>>> */}
+
                      </div>
                     <hr className="settings-separator" />
                     <button onClick={toggleAdvancedSettings} className="close-settings-button">Close Advanced</button>
@@ -529,8 +529,8 @@ function App() {
             {isInterviewModeOpen && (
                 <InterviewMode
                     isOpen={isInterviewModeOpen}
-                    onClose={closeInterviewMode} // Pass the closing handler
-                    selectedModel={selectedModel} // Pass relevant props
+                    onClose={closeInterviewMode}
+                    selectedModel={selectedModel}
                     accessKey={enteredKey}
                     sttLang={sttLang}
                 />
@@ -571,10 +571,12 @@ function App() {
                 </div>
             )}
 
-            {/* --- Render Correct Game Modals --- */}
+            {/* --- Render Correct Game Modals (excluding ModelBuilderGame) --- */}
             {isPersonaPlinkoVisible && ( <PersonaPlinkoGame isOpen={isPersonaPlinkoVisible} onClose={() => setIsPersonaPlinkoVisible(false)} onPersonaSelected={handlePersonaSelectedFromPlinko} keyStatus={keyStatus} allPersonas={AVAILABLE_PERSONAS} /> )}
             {isClearCupGameVisible && ( <ConfirmClearCupGame isOpen={isClearCupGameVisible} onClose={() => setIsClearCupGameVisible(false)} onConfirm={executeClearChat} /> )}
-            {isModelBuilderVisible && ( <ModelBuilderGame isOpen={isModelBuilderVisible} onClose={() => setIsModelBuilderVisible(false)} onModelSelected={handleModelSelectedFromBuilder} keyStatus={keyStatus} allModelsInfo={ALL_AVAILABLE_MODELS_FRONTEND} restrictedModels={RESTRICTED_MODELS_VALUES} /> )}
+            {/* {isModelBuilderVisible && ( <ModelBuilderGame isOpen={isModelBuilderVisible} onClose={() => setIsModelBuilderVisible(false)} onModelSelected={handleModelSelectedFromBuilder} keyStatus={keyStatus} allModelsInfo={ALL_AVAILABLE_MODELS_FRONTEND} restrictedModels={RESTRICTED_MODELS_VALUES} /> )} */}
+            {/* <<< REMOVE ModelBuilderGame Rendering >>> */}
+
 
             {/* Main Routing and Layout */}
             {!showBetaNotice && !showIntroduction && (
@@ -596,7 +598,7 @@ function App() {
                                 sttLang={sttLang}
                                 selectedPersona={selectedPersona}
                                 accessKey={enteredKey}
-                                onTriggerInterview={openInterviewMode} // <<< ADD PROP
+                                onTriggerInterview={openInterviewMode}
                             />
                         </>
                     } />
@@ -607,7 +609,7 @@ function App() {
                     } />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
-             )}
+               )}
 
         </div> // End div.App
     );
