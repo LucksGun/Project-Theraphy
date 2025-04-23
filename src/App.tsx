@@ -17,7 +17,7 @@ if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_
 
 // --- Types & Interfaces ---
 export interface Message { id: number; text: string; sender: 'user' | 'bot' | 'loading'; timestamp: number; imageUrl?: string; modelUsed?: string; }
-export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.0-flash-lite' | 'gemini-2.5-pro-exp-03-25' | 'gemini-2.0-flash-thinking-exp-01-21' | 'gemini-2.0-flash-exp-image-generation';
+export type GeminiModel = 'gemini-2.5-flash-preview-04-17' | 'gemini-2.5-pro-preview-03-25';
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR';
 export type Persona = 'normal' | 'therapist' | 'university_master';
 export interface KeyValidationStatus { isValid: boolean | null; username: string | null; loading: boolean; error?: string | null; }
@@ -31,7 +31,9 @@ const CHAT_STORAGE_KEY = 'chatMessages'; const BETA_ACCEPTED_KEY = 'betaAccepted
 
 // --- Configurations ---
 export interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
-export const ALL_AVAILABLE_MODELS_FRONTEND: ModelInfo[] = [ { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', restricted: false }, { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', restricted: false }, { value: 'gemini-2.0-flash-thinking-exp-01-21', label: 'Gemini 2.0 Flash Thinking Exp', restricted: true }, { value: 'gemini-2.0-flash-exp-image-generation', label: 'Gemini 2.0 Flash Image Gen Exp', restricted: true }, { value: 'gemini-2.5-pro-exp-03-25', label: 'Gemini 2.5 Pro Exp', restricted: true } ];
+export const ALL_AVAILABLE_MODELS_FRONTEND: ModelInfo[] = [ 
+    { value: 'gemini-2.5-flash-preview-04-17', label: 'Gemini 2.5 Flash Preview', restricted: false }, 
+    { value: 'gemini-2.5-pro-preview-03-25', label: 'Gemini 2.5 Pro Preview', restricted: true } ];
 export const ALL_MODEL_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.map(m => m.value);
 export interface PersonaInfo { value: Persona; label: string; emoji: string; restricted: boolean; }
 export const AVAILABLE_PERSONAS: PersonaInfo[] = [ { value: 'university_master', label: 'University Master', emoji: '🎓', restricted: false }, { value: 'normal', label: 'Normal Bot', emoji: '🤖', restricted: true }, { value: 'therapist', label: 'Therapist', emoji: '🧠', restricted: true } ];
@@ -77,7 +79,7 @@ function App() {
     const [introSectionsAcknowledged, setIntroSectionsAcknowledged] = useState<{ [key: string]: boolean }>(initialAcknowledgementState);
     const [continueButtonStyle, setContinueButtonStyle] = useState<React.CSSProperties>({});
     const [enteredKey, setEnteredKey] = useState<string>(() => localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '');
-    const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash'); // Default to unrestricted
+    const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.5-flash-preview-04-17'); // Default to unrestricted
     const [sttLang, setSttLang] = useState<SpeechLanguage>(() => { const stored = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null; if (stored && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(stored)) { return stored; } return 'en-US'; });
     const [selectedPersona, setSelectedPersona] = useState<Persona>(DEFAULT_UNRESTRICTED_PERSONA); // Default to unrestricted
     const [isInterviewModeOpen, setIsInterviewModeOpen] = useState(false);
@@ -126,7 +128,7 @@ function App() {
 
         if (!keyTrimmed) {
             setKeyStatus({ isValid: null, username: null, loading: false, error: null });
-            if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.0-flash');
+            if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.5-flash-preview-04-17');
             if (RESTRICTED_PERSONAS_VALUES.includes(currentPersonaBeforeValidation)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
             return;
         }
@@ -144,13 +146,13 @@ function App() {
                     setSelectedPersona(currentPersonaBeforeValidation);
                 } else {
                     setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key.' });
-                    if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.0-flash');
+                    if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.5-flash-preview-04-17');
                     if (RESTRICTED_PERSONAS_VALUES.includes(currentPersonaBeforeValidation)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
                 }
             } catch (e) {
                 const msg = e instanceof Error ? e.message : "Validation network error.";
                 setKeyStatus({ isValid: false, username: null, loading: false, error: msg });
-                if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.0-flash');
+                if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.5-flash-preview-04-17');
                 if (RESTRICTED_PERSONAS_VALUES.includes(currentPersonaBeforeValidation)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
             }
         }, VALIDATION_DEBOUNCE_MS);
@@ -167,7 +169,7 @@ function App() {
         const initialKey = localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '';
         const storedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null;
         const storedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null;
-        let initialModel: GeminiModel = 'gemini-2.0-flash';
+        let initialModel: GeminiModel = 'gemini-2.5-flash-preview-04-17';
         if (storedModel && ALL_MODEL_VALUES.includes(storedModel)) initialModel = storedModel;
         let initialPersona: Persona = DEFAULT_UNRESTRICTED_PERSONA;
         if (storedPersona && ALL_PERSONAS.includes(storedPersona)) initialPersona = storedPersona;
@@ -187,18 +189,18 @@ function App() {
                         setSelectedPersona(p);
                     } else {
                         setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key' });
-                        if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.0-flash');
+                        if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.5-flash-preview-04-17');
                         if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
                     }
                 } catch (e) {
                     setKeyStatus({ isValid: false, username: null, loading: false, error: 'Validation failed' });
-                       if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.0-flash');
+                       if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.5-flash-preview-04-17');
                        if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
                 }
             };
             validateInitialKey(initialKey, initialModel, initialPersona);
         } else {
-             if (RESTRICTED_MODELS_VALUES.includes(initialModel)) setSelectedModel('gemini-2.0-flash');
+             if (RESTRICTED_MODELS_VALUES.includes(initialModel)) setSelectedModel('gemini-2.5-flash-preview-04-17');
              if (RESTRICTED_PERSONAS_VALUES.includes(initialPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
         }
     }, []);
