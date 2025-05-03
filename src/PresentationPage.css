@@ -1,5 +1,6 @@
 /* src/PresentationPage.css */
 
+/* --- Styles for Password Prompt --- */
 .presentation-password-container {
     display: flex;
     justify-content: center;
@@ -79,18 +80,136 @@
     color: #666;
 }
 
-/* Styles for the actual presentation content area */
+/* --- Styles for Full Screen Presentation Area --- */
 .presentation-content-area {
-    padding: 30px;
-    max-width: 1200px; /* Limit width */
-    margin: 20px auto; /* Center content */
-    background-color: #fff; /* White background for content */
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    width: 100vw; /* 100% of viewport width */
+    height: 100vh; /* 100% of viewport height */
+    margin: 0; /* Remove default margins */
+    padding: 0; /* Remove default padding, or set as needed for content */
+    background-color: #282c34; /* Example dark background for slides */
+    color: white; /* Example light text color */
+    display: flex; /* Use flexbox to manage slide content */
+    flex-direction: column; /* Stack elements vertically */
+    justify-content: center; /* Center slide content vertically (adjust as needed) */
+    align-items: center; /* Center slide content horizontally */
+    box-sizing: border-box; /* Include padding/border in dimensions */
+    overflow: hidden; /* Hide anything that might overflow */
+    /* Properties below were removed/commented out to ensure full-screen */
+    /* max-width: 1200px; */
+    /* border-radius: 8px; */
+    /* box-shadow: 0 2px 8px rgba(0,0,0,0.1); */
 }
 
-.presentation-content-area h1 {
+/* Optional: Basic styling for elements inside the slide area */
+.presentation-content-area h1,
+.presentation-content-area h2,
+.presentation-content-area p {
     text-align: center;
-    margin-bottom: 30px;
-    color: #333;
+    max-width: 90%; /* Prevent text from touching edges */
 }
+
+/* --- Styles for Navigation Buttons --- */
+.slide-navigation {
+    position: fixed; /* Keep buttons fixed on screen */
+    bottom: 20px; /* Position near the bottom */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%);
+    z-index: 10; /* Ensure buttons are above slide content */
+    display: flex;
+    gap: 20px; /* Space between buttons */
+    align-items: center; /* Align items vertically */
+}
+
+/* Style for the slide counter text */
+.slide-navigation span {
+    color: white;
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.nav-button {
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: 1px solid white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s ease;
+}
+
+.nav-button:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.nav-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* --- Basic Slide Styling (Example) --- */
+.slide {
+    width: 100%;
+    height: 100%; /* Take full height of container */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px; /* Add some padding inside the slide */
+    box-sizing: border-box;
+    /* Add transitions for smooth slide changes (optional) */
+    /* transition: opacity 0.5s ease-in-out; */
+    /* You might need more complex animation logic in JS/React for transitions */
+}
+
+.slide h2 {
+    font-size: 3em; /* Adjust as needed */
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+.slide p {
+    font-size: 1.5em; /* Adjust as needed */
+    line-height: 1.6;
+}
+
+.slide ul {
+    list-style: disc; /* Or none, or custom */
+    font-size: 1.3em; /* Adjust as needed */
+    text-align: left;
+    max-width: 700px; /* Limit width of bullet points */
+    margin-top: 20px;
+}
+
+.slide li {
+    margin-bottom: 15px;
+}
+
+/* Example styling for specific slide types (optional) */
+.title-slide h2 {
+    font-size: 4em; /* Larger title for title slide */
+}
+
+.title-slide p {
+     font-size: 1.8em;
+     margin-top: 10px;
+     color: #ccc; /* Lighter subtitle */
+}
+
+.content-slide p {
+    text-align: left;
+    max-width: 800px;
+    font-size: 1.2em;
+}
+
+/* Add more specific styles for image slides, code slides, etc. */
+/*
+.image-slide img {
+    max-width: 80%;
+    max-height: 70vh;
+    margin-top: 20px;
+    border: 1px solid #555;
+}
+*/
