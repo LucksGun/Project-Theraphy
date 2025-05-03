@@ -1,0 +1,96 @@
+/* src/PresentationPage.css */
+
+.presentation-password-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Full viewport height */
+    background-color: #f0f2f5; /* Light background */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.presentation-password-box {
+    background-color: white;
+    padding: 30px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+.presentation-password-box h2 {
+    margin-top: 0;
+    margin-bottom: 25px;
+    color: #333;
+    font-size: 1.5em;
+}
+
+.presentation-password-box .form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.presentation-password-box label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+}
+
+.presentation-password-box input[type="password"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* Include padding in width */
+    font-size: 1em;
+}
+
+.password-error {
+    color: #d93025; /* Red color for errors */
+    margin-top: -10px; /* Pull up slightly */
+    margin-bottom: 15px;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+.submit-password-button {
+    background-color: #007bff; /* Blue */
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 4px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    width: 100%; /* Make button full width */
+    margin-top: 10px;
+}
+
+.submit-password-button:hover {
+    background-color: #0056b3; /* Darker blue */
+}
+
+.password-note {
+    margin-top: 25px;
+    font-size: 0.85em;
+    color: #666;
+}
+
+/* Styles for the actual presentation content area */
+.presentation-content-area {
+    padding: 30px;
+    max-width: 1200px; /* Limit width */
+    margin: 20px auto; /* Center content */
+    background-color: #fff; /* White background for content */
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.presentation-content-area h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+}

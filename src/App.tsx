@@ -10,6 +10,7 @@ import ConfirmClearCupGame from './ConfirmClearCupGame';
 import PersonaPlinkoGame from './PersonaPlinkoGame';
 // import ModelBuilderGame from './ModelBuilderGame'; // <<< REMOVE Import
 import InterviewMode from './InterviewMode';
+import PresentationPage from './PresentationPage';
 
 // --- GA Initialization ---
 const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
@@ -609,6 +610,8 @@ function App() {
                             <AdminPage />
                         </ProtectedRoute>
                     } />
+                    {/* --- NEW Presentation Route --- */}
+                    <Route path="/present" element={<PresentationPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
                )}
