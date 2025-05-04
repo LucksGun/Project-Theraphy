@@ -1,13 +1,11 @@
-// src/InvoiceManagerPage.tsx (Refetch in Finally Block)
+// src/InvoiceManagerPage.tsx (Final Version with Refetch & Copy ID)
 import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QRCodeCanvas } from 'qrcode.react';
 import './InvoiceManagerPage.css'; // Make sure this CSS file exists and is styled
 
 // --- Configuration ---
-// <<< --- REPLACE with your actual Worker URL --- >>>
 const WORKER_API_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
-// <<< --- REPLACE with the password set in Worker secrets --- >>>
 const INVOICE_ACCESS_PASSWORD = '1234';
 
 // --- Helper: Format Date for Input ---
@@ -131,41 +129,42 @@ const InvoiceManagerPage: React.FC = () => {
     const addLineItem = () => { setFormLineItems(prevItems => [ ...prevItems, { id: `temp-${Date.now()}`, description: '', amount: 0 } ]); };
     const removeLineItem = (index: number) => { setFormLineItems(prevItems => prevItems.filter((_, i) => i !== index)); };
 
+    // --- Copy ID Handler ---
+    const handleCopyId = async (idToCopy: string) => {
+        try {
+            await navigator.clipboard.writeText(idToCopy);
+            setSuccessMessage(`Invoice ID copied!`); // Give feedback
+        } catch (err) {
+            console.error('Failed to copy invoice ID: ', err);
+            setApiError('Could not copy ID to clipboard.'); // Show error
+        }
+    };
+
     // --- Invoice Action Handlers (API Calls - Refetch in Finally) ---
     const handleCreateInvoiceSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
          event.preventDefault(); setApiError(null); setSuccessMessage(null); setIsSubmitting(true);
          if (formLineItems.length === 0) { setApiError("Please add at least one line item."); setIsSubmitting(false); return; }
-         const itemsToSend = formLineItems.map(({ id, ...rest }) => rest);
-         console.log("Submitting new invoice:", baseFormData, itemsToSend);
+         const itemsToSend = formLineItems.map(({ id, ...rest }) => rest); console.log("Submitting new invoice:", baseFormData, itemsToSend);
          try {
              const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceCreate', ...baseFormData, lineItems: itemsToSend }) });
              const data = await response.json(); console.log("Create response:", data);
              if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-             setSuccessMessage("Invoice created successfully!"); // Set success message
-             closeModal(); // Close modal on success
+             setSuccessMessage("Invoice created successfully!"); closeModal();
          } catch (err: any) { console.error("Create Invoice Err:", err); setApiError(`Create failed: ${err.message}`); }
-         finally {
-             setIsSubmitting(false);
-             if (isAuthenticated) fetchInvoices(); // <<<--- Refetch regardless of success/failure (if authenticated)
-         }
-     }, [baseFormData, formLineItems, fetchInvoices, isAuthenticated]); // Added isAuthenticated
+         finally { setIsSubmitting(false); if (isAuthenticated) fetchInvoices(); }
+     }, [baseFormData, formLineItems, fetchInvoices, isAuthenticated]);
 
     const handleDeleteInvoice = useCallback(async (idToDelete: string) => {
          if (!window.confirm(`Are you sure you want to delete invoice ${idToDelete}?`)) return;
-         setApiError(null); setSuccessMessage(null); setIsSubmitting(true);
-         console.log("Deleting invoice:", idToDelete);
+         setApiError(null); setSuccessMessage(null); setIsSubmitting(true); console.log("Deleting invoice:", idToDelete);
          try {
              const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceDelete', invoiceId: idToDelete }) });
               const data = await response.json(); console.log("Delete response:", data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-             setSuccessMessage("Invoice deleted successfully!"); // Set success message
-             console.log("Invoice delete API call successful.");
+             setSuccessMessage("Invoice deleted successfully!"); console.log("Invoice delete API call successful.");
          } catch (err: any) { console.error("Failed to delete invoice:", err); setApiError(`Delete failed: ${err.message}`); }
-         finally {
-             setIsSubmitting(false);
-             if (isAuthenticated) fetchInvoices(); // <<<--- Refetch regardless of success/failure (if authenticated)
-         }
-     }, [fetchInvoices, isAuthenticated]); // Added isAuthenticated
+         finally { setIsSubmitting(false); if (isAuthenticated) fetchInvoices(); }
+     }, [fetchInvoices, isAuthenticated]);
 
      const handleEditInvoiceSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
          event.preventDefault(); if (!editingInvoice) { setApiError("Cannot save, no invoice selected."); return; }
@@ -178,34 +177,24 @@ const InvoiceManagerPage: React.FC = () => {
              const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceUpdate', ...updatedInvoiceData }) });
               const data = await response.json(); console.log("Update response:", data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-              setSuccessMessage("Invoice updated successfully!"); // Set success message
-              closeModal(); // Close modal on success
+              setSuccessMessage("Invoice updated successfully!"); closeModal();
          } catch (err: any) { console.error("Update Invoice Err:", err); setApiError(`Update failed: ${err.message}`); }
-         finally {
-             setIsSubmitting(false);
-             if (isAuthenticated) fetchInvoices(); // <<<--- Refetch regardless of success/failure (if authenticated)
-         }
-     }, [editingInvoice, baseFormData, formLineItems, fetchInvoices, isAuthenticated]); // Added isAuthenticated
+         finally { setIsSubmitting(false); if (isAuthenticated) fetchInvoices(); }
+     }, [editingInvoice, baseFormData, formLineItems, fetchInvoices, isAuthenticated]);
 
     const handleUpdateStatusSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
          event.preventDefault(); if (!statusPopupInvoiceId) { setApiError("Please enter an Invoice ID."); return; }
-          // const invoiceExists = invoices.some(inv => inv.id === statusPopupInvoiceId); // Can remove this local check
-          // if (!invoiceExists) { setApiError(`Invoice with ID "${statusPopupInvoiceId}" not found locally.`); }
           setApiError(null); setSuccessMessage(null); setIsSubmitting(true);
           console.log(`Updating status for ${statusPopupInvoiceId} to ${statusPopupNewStatus}`);
           try {
               const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceUpdateStatus', invoiceId: statusPopupInvoiceId, newStatus: statusPopupNewStatus }) });
               const data = await response.json(); console.log("Update status response:", data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-              setSuccessMessage("Status updated successfully!"); // Set success message
-              closeModal(); // Close modal on success
+              setSuccessMessage("Status updated successfully!"); closeModal();
               console.log(`Status update API call successful for ${statusPopupInvoiceId}`);
           } catch (err: any) { console.error("Update Status Err:", err); setApiError(`Status update failed: ${err.message}`); }
-          finally {
-             setIsSubmitting(false);
-             if (isAuthenticated) fetchInvoices(); // <<<--- Refetch regardless of success/failure (if authenticated)
-          }
-     }, [statusPopupInvoiceId, statusPopupNewStatus, fetchInvoices, isAuthenticated]); // Removed invoices, Added isAuthenticated
+          finally { setIsSubmitting(false); if (isAuthenticated) fetchInvoices(); }
+     }, [statusPopupInvoiceId, statusPopupNewStatus, fetchInvoices, isAuthenticated]);
 
     // --- Print Invoice Handler ---
     const handlePrintInvoice = useCallback((invoice: Invoice) => {
@@ -235,7 +224,7 @@ const InvoiceManagerPage: React.FC = () => {
             root.render( <React.StrictMode> <QRCodeCanvas value={invoice.id} size={100} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={true} /> </React.StrictMode> );
             setTimeout(() => { printWindow.focus(); printWindow.print(); }, 300);
         } else { console.error("Could not find QR target."); printWindow.print(); }
-    }, []); // Empty dependency array as it only depends on the invoice passed in
+    }, []);
 
     // --- Modal Open/Close Handlers ---
     const openCreateModal = () => { setBaseFormData(initialBaseFormData); setFormLineItems([{ id: `temp-${Date.now()}`, description: '', amount: 0 }]); setIsCreateModalOpen(true); setApiError(null); setSuccessMessage(null); };
@@ -264,27 +253,19 @@ const InvoiceManagerPage: React.FC = () => {
     // --- Render Invoice Manager UI ---
     return (
         <div className="invoice-manager-container">
-            <button onClick={() => setIsAuthenticated(false)} style={{ float: 'right', backgroundColor: '#6c757d', color: 'white', marginBottom: '10px' }} className="action-button" disabled={isSubmitting}> Logout </button>
-            <h1>Invoice Management</h1>
+            <div className="invoice-manager-header">
+                <h1>Invoice Management</h1>
+                <button onClick={() => setIsAuthenticated(false)} className="logout-button" disabled={isSubmitting}> Logout </button>
+            </div>
             <div className="invoice-actions">
                  <button onClick={openCreateModal} className="action-button create-button" disabled={isSubmitting}> + Create New Invoice </button>
                  <button onClick={openStatusPopup} className="action-button status-button" disabled={isSubmitting}> Edit Invoice Status by ID </button>
             </div>
-
-            {/* Display Loading / API Errors / Success Messages */}
-             <div className="status-messages" style={{ minHeight: '30px', margin: '10px 0' }}> {/* Container for messages */}
+             <div className="status-messages">
                  {isLoading && <p className="loading-message">Loading invoices...</p>}
-                 {/* Show API error only if not loading and no success message */}
-                 {apiError && !isLoading && !successMessage &&
-                     <p className="api-error-message"> Error: {apiError} </p>
-                 }
-                 {/* Show success message */}
-                 {successMessage &&
-                     <p className="api-success-message"> {successMessage} </p>
-                 }
+                 {apiError && !isLoading && !successMessage && <p className="api-error-message"> Error: {apiError} </p> }
+                 {successMessage && <p className="api-success-message"> {successMessage} </p> }
              </div>
-
-            {/* Invoice List Table - Render only if not loading */}
             {!isLoading && (
                 <div className="invoice-list">
                     <h2>Invoices</h2>
@@ -301,7 +282,10 @@ const InvoiceManagerPage: React.FC = () => {
                                     const rowTotal = calculateTotal(invoice.lineItems);
                                     return (
                                         <tr key={invoice.id}>
-                                            <td style={{ wordBreak: 'break-all', maxWidth: '150px' }}>{invoice.id}</td>
+                                            <td style={{ display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '200px' }}>
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexGrow: 1 }} title={invoice.id}> {invoice.id} </span>
+                                                <button onClick={() => handleCopyId(invoice.id)} className="copy-id-button" title="Copy ID" disabled={isSubmitting}> 📋 </button>
+                                            </td>
                                             <td>{invoice.customerName}</td>
                                             <td>${rowTotal.toFixed(2)}</td>
                                             <td>{invoice.dueDate}</td>
@@ -316,7 +300,7 @@ const InvoiceManagerPage: React.FC = () => {
                                 })}
                             </tbody>
                         </table>
-                    ) : null /* Don't render table if error and no invoices */ }
+                    ) : null }
                 </div>
             )}
 
@@ -325,25 +309,26 @@ const InvoiceManagerPage: React.FC = () => {
                 <div className="modal-overlay" onClick={closeModal}>
                      <div className="modal-content wide-modal" onClick={(e) => e.stopPropagation()}>
                          <h2>{isEditModalOpen ? `Edit Invoice (ID: ${editingInvoice?.id.substring(0,8)}...)` : 'Create New Invoice'}</h2>
-                         {/* Display API error specific to this modal */}
                          {apiError && <p className="api-error-message">{apiError}</p>}
                          <form onSubmit={isEditModalOpen ? handleEditInvoiceSubmit : handleCreateInvoiceSubmit}>
-                            <div className="form-section">
-                                 <div className="form-group"> <label htmlFor="customerName">Customer Name:</label> <input type="text" id="customerName" name="customerName" value={baseFormData.customerName} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
-                                 <div className="form-group"> <label htmlFor="dueDate">Due Date:</label> <input type="date" id="dueDate" name="dueDate" value={baseFormData.dueDate} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
-                             </div>
-                             <div className="form-section line-items-section">
-                                 <h3>Line Items</h3>
-                                 {formLineItems.map((item, index) => (
-                                     <div key={item.id} className="line-item-row">
-                                         <input type="text" placeholder="Description" value={item.description} onChange={(e) => handleLineItemChange(index, 'description', e.target.value)} required className="line-item-description" disabled={isSubmitting} />
-                                         <input type="number" placeholder="Amount" value={item.amount} onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)} required min="0" step="0.01" className="line-item-amount" disabled={isSubmitting} />
-                                         {formLineItems.length > 1 && ( <button type="button" onClick={() => removeLineItem(index)} className="remove-line-item-btn" disabled={isSubmitting}> 🗑️ </button> )}
-                                     </div>
-                                 ))}
-                                 <button type="button" onClick={addLineItem} className="add-line-item-btn" disabled={isSubmitting}> + Add Line Item </button>
-                                 <div className="form-total"> <strong>Total: ${formTotalAmount.toFixed(2)}</strong> </div>
-                             </div>
+                            <div className="form-scroll-area">
+                                <div className="form-section">
+                                     <div className="form-group"> <label htmlFor="customerName">Customer Name:</label> <input type="text" id="customerName" name="customerName" value={baseFormData.customerName} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
+                                     <div className="form-group"> <label htmlFor="dueDate">Due Date:</label> <input type="date" id="dueDate" name="dueDate" value={baseFormData.dueDate} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
+                                 </div>
+                                 <div className="form-section line-items-section">
+                                     <h3>Line Items</h3>
+                                     {formLineItems.map((item, index) => (
+                                         <div key={item.id} className="line-item-row">
+                                             <input type="text" placeholder="Description" value={item.description} onChange={(e) => handleLineItemChange(index, 'description', e.target.value)} required className="line-item-description" disabled={isSubmitting} />
+                                             <input type="number" placeholder="Amount" value={item.amount} onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)} required min="0" step="0.01" className="line-item-amount" disabled={isSubmitting} />
+                                             {formLineItems.length > 1 && ( <button type="button" onClick={() => removeLineItem(index)} className="remove-line-item-btn" disabled={isSubmitting}> 🗑️ </button> )}
+                                         </div>
+                                     ))}
+                                     <button type="button" onClick={addLineItem} className="add-line-item-btn" disabled={isSubmitting}> + Add Line Item </button>
+                                     <div className="form-total"> <strong>Total: ${formTotalAmount.toFixed(2)}</strong> </div>
+                                 </div>
+                             </div> {/* --- *** END SCROLL WRAPPER *** --- */}
                              <div className="modal-actions">
                                  <button type="submit" className={`action-button ${isEditModalOpen ? 'edit-button' : 'create-button'}`} disabled={isSubmitting}>
                                      {isSubmitting ? 'Saving...' : (isEditModalOpen ? 'Save Changes' : 'Create Invoice')}
@@ -372,7 +357,7 @@ const InvoiceManagerPage: React.FC = () => {
                      </div>
                  </div>
              )}
-        </div>
+        </div> // End invoice-manager-container
     );
 };
 
