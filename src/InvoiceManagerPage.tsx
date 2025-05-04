@@ -6,7 +6,7 @@ import './InvoiceManagerPage.css'; // Make sure this CSS file exists and is styl
 // <<< --- REPLACE with your actual Worker URL --- >>>
 const WORKER_API_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
 // <<< --- REPLACE with the password set in Worker secrets --- >>>
-const INVOICE_ACCESS_PASSWORD = 'YourStrongInvoicePassword!';
+const INVOICE_ACCESS_PASSWORD = '1234';
 
 // --- Helper: Format Date for Input ---
 const formatDateForInput = (isoDateString: string): string => {
