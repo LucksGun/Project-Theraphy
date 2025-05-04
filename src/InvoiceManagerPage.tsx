@@ -1,12 +1,14 @@
-// src/InvoiceManagerPage.tsx (with Line Items & Final Info)
+// src/InvoiceManagerPage.tsx (Refetch on Update/Delete/Status Change)
 import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QRCodeCanvas } from 'qrcode.react';
 import './InvoiceManagerPage.css'; // Make sure this CSS file exists and is styled
 
 // --- Configuration ---
-const WORKER_API_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/'; // Your Worker URL
-const INVOICE_ACCESS_PASSWORD = '1234'; // Your Invoice Password
+// <<< --- REPLACE with your actual Worker URL --- >>>
+const WORKER_API_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
+// <<< --- REPLACE with the password set in Worker secrets --- >>>
+const INVOICE_ACCESS_PASSWORD = '1234';
 
 // --- Helper: Format Date for Input ---
 const formatDateForInput = (isoDateString: string): string => {
@@ -31,7 +33,8 @@ const InvoiceManagerPage: React.FC = () => {
     const [enteredPassword, setEnteredPassword] = useState<string>('');
     const [authError, setAuthError] = useState<string | null>(null);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(false); // General loading for fetch
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Specific loading for form submits
     const [apiError, setApiError] = useState<string | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
@@ -54,7 +57,6 @@ const InvoiceManagerPage: React.FC = () => {
         setIsLoading(true);
         setApiError(null);
         let response: Response | null = null;
-
         try {
             response = await fetch(WORKER_API_URL, {
                 method: 'POST',
@@ -62,8 +64,7 @@ const InvoiceManagerPage: React.FC = () => {
                 body: JSON.stringify({ action: 'invoiceGet' })
             });
             console.log("Fetch response status:", response.status);
-
-            const data = await response.json();
+            const data = await response.json(); // Read body ONCE as JSON
 
             if (!response.ok) {
                 throw new Error(data?.error || `API Error: ${response.status} ${response.statusText}`);
@@ -92,11 +93,10 @@ const InvoiceManagerPage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [isAuthenticated]); // Removed WORKER_API_URL, INVOICE_ACCESS_PASSWORD from deps
+    }, [isAuthenticated]); // Dependencies remain the same
 
     useEffect(() => {
-        if (isAuthenticated) { fetchInvoices(); }
-        else { setInvoices([]); }
+        if (isAuthenticated) { fetchInvoices(); } else { setInvoices([]); }
     }, [isAuthenticated, fetchInvoices]);
 
     // --- Password Handlers ---
@@ -108,108 +108,77 @@ const InvoiceManagerPage: React.FC = () => {
     };
 
     // --- Form Input Handlers ---
-     const handleBaseFormChange = (event: ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = event.target;
-        setBaseFormData(prev => ({ ...prev, [name]: value }));
-    };
-    const handleLineItemChange = (index: number, field: keyof Omit<LineItem, 'id'>, value: string | number) => {
-        setFormLineItems(prevItems => {
-            const newItems = [...prevItems];
-            const processedValue = field === 'amount' ? (value === '' ? 0 : parseFloat(value as string)) : value;
-            newItems[index] = { ...newItems[index], [field]: processedValue };
-            return newItems;
-        });
-    };
+     const handleBaseFormChange = (event: ChangeEvent<HTMLInputElement>) => { const { name, value } = event.target; setBaseFormData(prev => ({ ...prev, [name]: value })); };
+    const handleLineItemChange = (index: number, field: keyof Omit<LineItem, 'id'>, value: string | number) => { setFormLineItems(prevItems => { const newItems = [...prevItems]; const processedValue = field === 'amount' ? (value === '' ? 0 : parseFloat(value as string)) : value; newItems[index] = { ...newItems[index], [field]: processedValue }; return newItems; }); };
     const addLineItem = () => { setFormLineItems(prevItems => [ ...prevItems, { id: `temp-${Date.now()}`, description: '', amount: 0 } ]); };
     const removeLineItem = (index: number) => { setFormLineItems(prevItems => prevItems.filter((_, i) => i !== index)); };
 
     // --- Invoice Action Handlers (API Calls) ---
     const handleCreateInvoiceSubmit = async (event: FormEvent<HTMLFormElement>) => {
-         event.preventDefault();
-         setApiError(null);
-         if (formLineItems.length === 0) { setApiError("Please add at least one line item."); return; }
+         event.preventDefault(); setApiError(null); setIsSubmitting(true);
+         if (formLineItems.length === 0) { setApiError("Please add at least one line item."); setIsSubmitting(false); return; }
          const itemsToSend = formLineItems.map(({ id, ...rest }) => rest);
          console.log("Submitting new invoice:", baseFormData, itemsToSend);
          try {
-             const response = await fetch(WORKER_API_URL, {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, },
-                 body: JSON.stringify({ action: 'invoiceCreate', ...baseFormData, lineItems: itemsToSend })
-             });
-             const data = await response.json();
-             console.log("Create response:", data);
+             const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceCreate', ...baseFormData, lineItems: itemsToSend }) });
+             const data = await response.json(); console.log("Create response:", data);
              if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-             if (data.invoice && data.invoice.id) {
-                 const newInvoice = { ...data.invoice, lineItems: typeof data.invoice.lineItems === 'string' ? JSON.parse(data.invoice.lineItems) : (data.invoice.lineItems || []) };
-                 setInvoices(prev => [...prev, newInvoice]);
-             } else { console.warn("Create successful, but invoice data missing. Refetching."); fetchInvoices(); }
+             // Refetch the list to ensure consistency
+             fetchInvoices(); // <<<--- Refetch on success
              closeModal();
          } catch (err: any) { console.error("Create Invoice Err:", err); setApiError(`Create failed: ${err.message}`); }
+         finally { setIsSubmitting(false); }
      };
+
     const handleDeleteInvoice = async (idToDelete: string) => {
          if (!window.confirm(`Are you sure you want to delete invoice ${idToDelete}?`)) return;
-         setApiError(null);
+         setApiError(null); setIsSubmitting(true);
          console.log("Deleting invoice:", idToDelete);
          try {
-             const response = await fetch(WORKER_API_URL, {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, },
-                 body: JSON.stringify({ action: 'invoiceDelete', invoiceId: idToDelete })
-             });
-              const data = await response.json();
-              console.log("Delete response:", data);
+             const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceDelete', invoiceId: idToDelete }) });
+              const data = await response.json(); console.log("Delete response:", data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-             setInvoices(prevInvoices => prevInvoices.filter(inv => inv.id !== idToDelete));
-             console.log("Invoice deleted successfully from state.");
+             // Refetch the list instead of manually removing
+             fetchInvoices(); // <<<--- Refetch on success
+             console.log("Invoice delete API call successful.");
          } catch (err: any) { console.error("Failed to delete invoice:", err); setApiError(`Delete failed: ${err.message}`); }
+         finally { setIsSubmitting(false); }
      };
+
      const handleEditInvoiceSubmit = async (event: FormEvent<HTMLFormElement>) => {
-         event.preventDefault();
-         if (!editingInvoice) { setApiError("Cannot save, no invoice selected."); return; }
-         setApiError(null);
-          if (formLineItems.length === 0) { setApiError("Please add at least one line item."); return; }
+         event.preventDefault(); if (!editingInvoice) { setApiError("Cannot save, no invoice selected."); return; }
+         setApiError(null); setIsSubmitting(true);
+          if (formLineItems.length === 0) { setApiError("Please add at least one line item."); setIsSubmitting(false); return; }
          const itemsToSend = formLineItems.map(({ id, ...rest }) => rest);
-         const updatedInvoiceData = {
-              id: editingInvoice.id, customerName: baseFormData.customerName, dueDate: baseFormData.dueDate,
-              status: editingInvoice.status, lineItems: itemsToSend
-         };
+         const updatedInvoiceData = { id: editingInvoice.id, customerName: baseFormData.customerName, dueDate: baseFormData.dueDate, status: editingInvoice.status, lineItems: itemsToSend };
          console.log("Submitting updated invoice:", updatedInvoiceData);
          try {
-             const response = await fetch(WORKER_API_URL, {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, },
-                 body: JSON.stringify({ action: 'invoiceUpdate', ...updatedInvoiceData })
-             });
-              const data = await response.json();
-              console.log("Update response:", data);
+             const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceUpdate', ...updatedInvoiceData }) });
+              const data = await response.json(); console.log("Update response:", data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-              if (data.invoice && data.invoice.id) {
-                 const updatedInvoice = { ...data.invoice, lineItems: typeof data.invoice.lineItems === 'string' ? JSON.parse(data.invoice.lineItems) : (data.invoice.lineItems || []) };
-                  setInvoices(prev => prev.map(inv => inv.id === updatedInvoice.id ? updatedInvoice : inv));
-              } else { console.warn("Update successful, but invoice data missing. Refetching."); fetchInvoices(); }
+              // Refetch the list instead of manually updating
+              fetchInvoices(); // <<<--- Refetch on success
               closeModal();
          } catch (err: any) { console.error("Update Invoice Err:", err); setApiError(`Update failed: ${err.message}`); }
+         finally { setIsSubmitting(false); }
      };
+
     const handleUpdateStatusSubmit = async (event: FormEvent<HTMLFormElement>) => {
-         event.preventDefault();
-         if (!statusPopupInvoiceId) { setApiError("Please enter an Invoice ID."); return; }
+         event.preventDefault(); if (!statusPopupInvoiceId) { setApiError("Please enter an Invoice ID."); return; }
           const invoiceExists = invoices.some(inv => inv.id === statusPopupInvoiceId);
-          if (!invoiceExists) { setApiError(`Invoice with ID "${statusPopupInvoiceId}" not found locally.`); }
-          setApiError(null);
+          if (!invoiceExists) { setApiError(`Invoice with ID "${statusPopupInvoiceId}" not found locally.`); } // Keep the check, but don't return early
+          setApiError(null); setIsSubmitting(true);
           console.log(`Updating status for ${statusPopupInvoiceId} to ${statusPopupNewStatus}`);
           try {
-              const response = await fetch(WORKER_API_URL, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, },
-                  body: JSON.stringify({ action: 'invoiceUpdateStatus', invoiceId: statusPopupInvoiceId, newStatus: statusPopupNewStatus })
-              });
-              const data = await response.json();
-              console.log("Update status response:", data);
+              const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceUpdateStatus', invoiceId: statusPopupInvoiceId, newStatus: statusPopupNewStatus }) });
+              const data = await response.json(); console.log("Update status response:", data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-              setInvoices(prev => prev.map(inv => inv.id === statusPopupInvoiceId ? { ...inv, status: statusPopupNewStatus } : inv));
-              console.log(`Status updated locally for ${statusPopupInvoiceId}`);
+              // Refetch the list instead of manually updating
+              fetchInvoices(); // <<<--- Refetch on success
+              console.log(`Status update API call successful for ${statusPopupInvoiceId}`);
               closeModal();
           } catch (err: any) { console.error("Update Status Err:", err); setApiError(`Status update failed: ${err.message}`); }
+          finally { setIsSubmitting(false); }
      };
 
     // --- Print Invoice Handler ---
@@ -218,23 +187,14 @@ const InvoiceManagerPage: React.FC = () => {
         if (!printWindow) { alert("Could not open print window. Check popup blockers."); return; }
         const totalAmount = calculateTotal(invoice.lineItems);
         let itemRowsHtml = '';
-        invoice.lineItems.forEach(item => {
-            itemRowsHtml += `<tr><td>${item.description || '(No description)'}</td><td class="text-right">$${(item.amount || 0).toFixed(2)}</td></tr>`;
-        });
-
-        // --- Updated HTML with your info ---
+        invoice.lineItems.forEach(item => { itemRowsHtml += `<tr><td>${item.description || '(No description)'}</td><td class="text-right">$${(item.amount || 0).toFixed(2)}</td></tr>`; });
         const printContent = `
             <html> <head> <title>Invoice ${invoice.id}</title> <style> body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; font-size: 12px; color: #333; } .container { max-width: 750px; margin: 20px auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.05); } .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;} .header .logo { font-size: 1.5em; font-weight: bold; color: #555; } .header .company-details p { margin: 2px 0; font-size: 0.9em; text-align: right; color: #555; } .invoice-info { display: flex; justify-content: space-between; margin-bottom: 30px; } .invoice-info .bill-to p { margin: 2px 0; } .invoice-info .invoice-meta p { margin: 2px 0; text-align: right; } .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; } .invoice-table th, .invoice-table td { border: 1px solid #eee; padding: 8px; text-align: left; } .invoice-table th { background-color: #f8f9fa; font-weight: bold; } .invoice-table .total-row td { font-weight: bold; border-top: 2px solid #aaa; } .invoice-table .text-right { text-align: right; } .payment-info { margin-top: 30px; padding-top: 15px; border-top: 1px solid #eee; font-size: 0.9em; color: #555; } .payment-info h3 { margin-bottom: 10px; font-size: 1.1em; } .qr-code-section { display: flex; align-items: center; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;} .qr-code-container { text-align: center; } .qr-code-container p { font-size: 0.8em; margin-top: 5px; word-break: break-all; max-width: 150px; } .notes { margin-top: 20px; font-size: 0.85em; color: #777; } @media print { body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .container { border: none; box-shadow: none; margin: 0; max-width: 100%; padding: 10px; } .no-print { display: none; } } </style> </head>
             <body>
                 <div class="container">
                     <div class="header">
-                        <div class="logo">Project Theraphy</div> 
-                        <div class="company-details">
-                            <p>01 Sanambin Road</p> 
-                            <p>Nai Mueng, Phitsanulok 65000</p> 
-                            <p>088-555-1946</p> 
-                            <p>thammalucka67@nu.ac.th</p> 
-                        </div>
+                        <div class="logo">Project Theraphy</div>
+                        <div class="company-details"> <p>01 Sanambin Road</p> <p>Nai Mueng, Phitsanulok 65000</p> <p>088-555-1946</p> <p>thammalucka67@nu.ac.th</p> </div>
                     </div>
                     <div class="invoice-info">
                         <div class="bill-to"> <strong>Bill To:</strong><br> ${invoice.customerName} </div>
@@ -247,9 +207,9 @@ const InvoiceManagerPage: React.FC = () => {
                     <div class="payment-info">
                        <h3>Payment Information</h3>
                        <p>Please make payment to the following account:</p>
-                       <p>Bank Name: Kasikorn Bank</p> 
-                       <p>Account Name: ธรรมลักษณ์ อริยธรรมนิตย์</p> 
-                       <p>Account Number: 153-2-86554-5</p> 
+                       <p>Bank Name: Kasikorn Bank</p>
+                       <p>Account Name: ธรรมลักษณ์ อริยธรรมนิตย์</p>
+                       <p>Account Number: 153-2-86554-5</p>
                        <p>Reference: Invoice ${invoice.id.substring(0, 8)}</p>
                     </div>
                     <div class="qr-code-section">
@@ -260,17 +220,12 @@ const InvoiceManagerPage: React.FC = () => {
                 <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 10px; right: 10px; padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px;">Print Invoice</button>
             </body> </html>
         `;
-
         printWindow.document.write(printContent);
         printWindow.document.close();
         const qrTarget = printWindow.document.getElementById('qr-code-target');
         if (qrTarget) {
             const root = createRoot(qrTarget);
-            root.render(
-                 <React.StrictMode>
-                    <QRCodeCanvas value={invoice.id} size={100} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={true} />
-                 </React.StrictMode>
-            );
+            root.render( <React.StrictMode> <QRCodeCanvas value={invoice.id} size={100} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={true} /> </React.StrictMode> );
             setTimeout(() => { printWindow.focus(); printWindow.print(); }, 300);
         } else { console.error("Could not find QR target."); printWindow.print(); }
     };
@@ -281,6 +236,7 @@ const InvoiceManagerPage: React.FC = () => {
     const openEditModal = (invoiceToEdit: Invoice) => { setEditingInvoice(invoiceToEdit); setBaseFormData({ customerName: invoiceToEdit.customerName, dueDate: formatDateForInput(invoiceToEdit.dueDate) }); setFormLineItems(invoiceToEdit.lineItems.map(item => ({ ...item, id: item.id || `temp-${Math.random()}` }))); setIsEditModalOpen(true); setApiError(null); };
     const openStatusPopup = () => { setStatusPopupInvoiceId(''); setStatusPopupNewStatus('Pending'); setIsStatusPopupOpen(true); setApiError(null); };
     const closeModal = () => { setIsCreateModalOpen(false); setIsEditModalOpen(false); setIsStatusPopupOpen(false); setEditingInvoice(null); setBaseFormData(initialBaseFormData); setFormLineItems([]); setStatusPopupInvoiceId(''); setStatusPopupNewStatus('Pending'); setApiError(null); };
+
 
     // --- Render Password Prompt ---
     if (!isAuthenticated) {
@@ -302,11 +258,11 @@ const InvoiceManagerPage: React.FC = () => {
     // --- Render Invoice Manager UI ---
     return (
         <div className="invoice-manager-container">
-            <button onClick={() => setIsAuthenticated(false)} style={{ float: 'right', backgroundColor: '#6c757d', color: 'white', marginBottom: '10px' }} className="action-button"> Logout </button>
+            <button onClick={() => setIsAuthenticated(false)} style={{ float: 'right', backgroundColor: '#6c757d', color: 'white', marginBottom: '10px' }} className="action-button" disabled={isSubmitting}> Logout </button>
             <h1>Invoice Management</h1>
             <div className="invoice-actions">
-                 <button onClick={openCreateModal} className="action-button create-button"> + Create New Invoice </button>
-                 <button onClick={openStatusPopup} className="action-button status-button"> Edit Invoice Status by ID </button>
+                 <button onClick={openCreateModal} className="action-button create-button" disabled={isSubmitting}> + Create New Invoice </button>
+                 <button onClick={openStatusPopup} className="action-button status-button" disabled={isSubmitting}> Edit Invoice Status by ID </button>
             </div>
             {isLoading && <p className="loading-message">Loading invoices...</p>}
             {apiError && !isCreateModalOpen && !isEditModalOpen && !isStatusPopupOpen &&
@@ -334,9 +290,9 @@ const InvoiceManagerPage: React.FC = () => {
                                             <td>{invoice.dueDate}</td>
                                             <td> <span className={`status-badge status-${invoice.status.toLowerCase()}`}> {invoice.status} </span> </td>
                                             <td>
-                                                <button onClick={() => openEditModal(invoice)} className="table-button edit">Edit</button>
-                                                <button onClick={() => handleDeleteInvoice(invoice.id)} className="table-button delete">Delete</button>
-                                                <button onClick={() => handlePrintInvoice(invoice)} className="table-button print" style={{backgroundColor: '#0dcaf0', color: 'white'}}>Print</button>
+                                                <button onClick={() => openEditModal(invoice)} className="table-button edit" disabled={isSubmitting}>Edit</button>
+                                                <button onClick={() => handleDeleteInvoice(invoice.id)} className="table-button delete" disabled={isSubmitting}>Delete</button>
+                                                <button onClick={() => handlePrintInvoice(invoice)} className="table-button print" style={{backgroundColor: '#0dcaf0', color: 'white'}} disabled={isSubmitting}>Print</button>
                                             </td>
                                         </tr>
                                     );
@@ -355,24 +311,26 @@ const InvoiceManagerPage: React.FC = () => {
                          {apiError && <p className="api-error-message">{apiError}</p>}
                          <form onSubmit={isEditModalOpen ? handleEditInvoiceSubmit : handleCreateInvoiceSubmit}>
                             <div className="form-section">
-                                 <div className="form-group"> <label htmlFor="customerName">Customer Name:</label> <input type="text" id="customerName" name="customerName" value={baseFormData.customerName} onChange={handleBaseFormChange} required /> </div>
-                                 <div className="form-group"> <label htmlFor="dueDate">Due Date:</label> <input type="date" id="dueDate" name="dueDate" value={baseFormData.dueDate} onChange={handleBaseFormChange} required /> </div>
+                                 <div className="form-group"> <label htmlFor="customerName">Customer Name:</label> <input type="text" id="customerName" name="customerName" value={baseFormData.customerName} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
+                                 <div className="form-group"> <label htmlFor="dueDate">Due Date:</label> <input type="date" id="dueDate" name="dueDate" value={baseFormData.dueDate} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
                              </div>
                              <div className="form-section line-items-section">
                                  <h3>Line Items</h3>
                                  {formLineItems.map((item, index) => (
                                      <div key={item.id} className="line-item-row">
-                                         <input type="text" placeholder="Description" value={item.description} onChange={(e) => handleLineItemChange(index, 'description', e.target.value)} required className="line-item-description" />
-                                         <input type="number" placeholder="Amount" value={item.amount} onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)} required min="0" step="0.01" className="line-item-amount" />
-                                         {formLineItems.length > 1 && ( <button type="button" onClick={() => removeLineItem(index)} className="remove-line-item-btn"> 🗑️ </button> )}
+                                         <input type="text" placeholder="Description" value={item.description} onChange={(e) => handleLineItemChange(index, 'description', e.target.value)} required className="line-item-description" disabled={isSubmitting} />
+                                         <input type="number" placeholder="Amount" value={item.amount} onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)} required min="0" step="0.01" className="line-item-amount" disabled={isSubmitting} />
+                                         {formLineItems.length > 1 && ( <button type="button" onClick={() => removeLineItem(index)} className="remove-line-item-btn" disabled={isSubmitting}> 🗑️ </button> )}
                                      </div>
                                  ))}
-                                 <button type="button" onClick={addLineItem} className="add-line-item-btn"> + Add Line Item </button>
+                                 <button type="button" onClick={addLineItem} className="add-line-item-btn" disabled={isSubmitting}> + Add Line Item </button>
                                  <div className="form-total"> <strong>Total: ${formTotalAmount.toFixed(2)}</strong> </div>
                              </div>
                              <div className="modal-actions">
-                                 <button type="submit" className={`action-button ${isEditModalOpen ? 'edit-button' : 'create-button'}`}> {isEditModalOpen ? 'Save Changes' : 'Create Invoice'} </button>
-                                 <button type="button" onClick={closeModal} className="cancel-button">Cancel</button>
+                                 <button type="submit" className={`action-button ${isEditModalOpen ? 'edit-button' : 'create-button'}`} disabled={isSubmitting}>
+                                     {isSubmitting ? 'Saving...' : (isEditModalOpen ? 'Save Changes' : 'Create Invoice')}
+                                 </button>
+                                 <button type="button" onClick={closeModal} className="cancel-button" disabled={isSubmitting}>Cancel</button>
                              </div>
                          </form>
                      </div>
@@ -384,9 +342,14 @@ const InvoiceManagerPage: React.FC = () => {
                          <h2>Edit Invoice Status</h2>
                          {apiError && <p className="api-error-message">{apiError}</p>}
                          <form onSubmit={handleUpdateStatusSubmit}>
-                             <div className="form-group"> <label htmlFor="status-invoice-id">Invoice ID:</label> <input type="text" id="status-invoice-id" value={statusPopupInvoiceId} onChange={(e) => setStatusPopupInvoiceId(e.target.value)} placeholder="Enter full ID to edit" required /> </div>
-                             <div className="form-group"> <label htmlFor="status-new-status">New Status:</label> <select id="status-new-status" value={statusPopupNewStatus} onChange={(e) => setStatusPopupNewStatus(e.target.value as Invoice['status'])} required > <option value="Pending">Pending</option> <option value="Paid">Paid</option> <option value="Overdue">Overdue</option> </select> </div>
-                             <div className="popup-actions"> <button type="submit" className="action-button status-button"> Update Status </button> <button type="button" onClick={closeModal} className="cancel-button">Cancel</button> </div>
+                             <div className="form-group"> <label htmlFor="status-invoice-id">Invoice ID:</label> <input type="text" id="status-invoice-id" value={statusPopupInvoiceId} onChange={(e) => setStatusPopupInvoiceId(e.target.value)} placeholder="Enter full ID to edit" required disabled={isSubmitting}/> </div>
+                             <div className="form-group"> <label htmlFor="status-new-status">New Status:</label> <select id="status-new-status" value={statusPopupNewStatus} onChange={(e) => setStatusPopupNewStatus(e.target.value as Invoice['status'])} required disabled={isSubmitting}> <option value="Pending">Pending</option> <option value="Paid">Paid</option> <option value="Overdue">Overdue</option> </select> </div>
+                             <div className="popup-actions">
+                                 <button type="submit" className="action-button status-button" disabled={isSubmitting}>
+                                     {isSubmitting ? 'Updating...' : 'Update Status'}
+                                 </button>
+                                 <button type="button" onClick={closeModal} className="cancel-button" disabled={isSubmitting}>Cancel</button>
+                             </div>
                          </form>
                      </div>
                  </div>
