@@ -1,4 +1,4 @@
-/* src/InvoiceManagerPage.css - Fix Line Item Alignment */
+/* src/InvoiceManagerPage.css - Fix Line Item Description Width */
 
 /* --- Base Variables --- */
 :root {
@@ -138,7 +138,7 @@
     display: flex;
     gap: 10px;
     margin-bottom: 8px;
-    padding: 0 5px 8px 5px; /* Match row padding + bottom padding */
+    padding: 0 5px 8px 5px;
     font-size: 0.85em;
     color: var(--text-secondary);
     font-weight: 500;
@@ -161,10 +161,8 @@
     text-align: center;
 }
 /* --- Container for Mapped Items --- */
-.line-items-container {
-     max-height: 250px; 
-     overflow-y: auto; 
-}
+/* .line-items-container { } */ /* Removed empty ruleset */
+
 /* --- Input Row --- */
 .line-item-row {
     display: flex;
@@ -174,16 +172,17 @@
 }
 .line-item-description {
     flex-grow: 1; /* Take remaining space */
-    min-width: 0; /* Allow shrinking */
+    flex-basis: 0; /* Allow growing from zero */
+    min-width: 0; /* Allow shrinking below content size */
 }
 .line-item-amount {
     width: 100px; /* Fixed width - MUST match label */
-    flex-shrink: 0;
+    flex-shrink: 0; /* Prevent shrinking */
     text-align: right;
 }
 .line-item-action {
     width: 35px; /* Fixed width - MUST match label */
-    flex-shrink: 0;
+    flex-shrink: 0; /* Prevent shrinking */
     text-align: center;
 }
 .remove-line-item-btn { background: none; border: none; color: var(--button-danger-bg); cursor: pointer; font-size: 1.1em; padding: 0; line-height: 1; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; }
