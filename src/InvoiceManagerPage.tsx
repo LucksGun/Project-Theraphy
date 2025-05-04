@@ -1,13 +1,11 @@
-// src/InvoiceManagerPage.tsx (Refetch on Update/Delete/Status Change)
+// src/InvoiceManagerPage.tsx (Stable Refetch on Update/Delete/Status Change)
 import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QRCodeCanvas } from 'qrcode.react';
 import './InvoiceManagerPage.css'; // Make sure this CSS file exists and is styled
 
 // --- Configuration ---
-// <<< --- REPLACE with your actual Worker URL --- >>>
 const WORKER_API_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
-// <<< --- REPLACE with the password set in Worker secrets --- >>>
 const INVOICE_ACCESS_PASSWORD = '1234';
 
 // --- Helper: Format Date for Input ---
@@ -50,9 +48,9 @@ const InvoiceManagerPage: React.FC = () => {
     const calculateTotal = (items: LineItem[]): number => items.reduce((sum, item) => sum + (item.amount || 0), 0);
     const formTotalAmount = useMemo(() => calculateTotal(formLineItems), [formLineItems]);
 
-    // --- Fetch Invoices ---
+    // --- Fetch Invoices (Stable with useCallback) ---
     const fetchInvoices = useCallback(async () => {
-        if (!isAuthenticated) return;
+        // No need to check isAuthenticated here, as it's checked in the useEffect that calls this
         console.log("Fetching invoices...");
         setIsLoading(true);
         setApiError(null);
@@ -64,7 +62,7 @@ const InvoiceManagerPage: React.FC = () => {
                 body: JSON.stringify({ action: 'invoiceGet' })
             });
             console.log("Fetch response status:", response.status);
-            const data = await response.json(); // Read body ONCE as JSON
+            const data = await response.json();
 
             if (!response.ok) {
                 throw new Error(data?.error || `API Error: ${response.status} ${response.statusText}`);
@@ -93,11 +91,18 @@ const InvoiceManagerPage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [isAuthenticated]); // Dependencies remain the same
+    // fetchInvoices doesn't depend on other state besides constants, so empty dependency array is fine.
+    // It's called conditionally based on isAuthenticated in useEffect.
+    }, []);
 
+    // Effect to fetch data when authentication changes
     useEffect(() => {
-        if (isAuthenticated) { fetchInvoices(); } else { setInvoices([]); }
-    }, [isAuthenticated, fetchInvoices]);
+        if (isAuthenticated) {
+            fetchInvoices();
+        } else {
+            setInvoices([]); // Clear data if logged out
+        }
+    }, [isAuthenticated, fetchInvoices]); // Include fetchInvoices here
 
     // --- Password Handlers ---
     const handlePasswordChange = (event: ChangeEvent<HTMLInputElement>) => { setEnteredPassword(event.target.value); setAuthError(null); };
@@ -114,7 +119,8 @@ const InvoiceManagerPage: React.FC = () => {
     const removeLineItem = (index: number) => { setFormLineItems(prevItems => prevItems.filter((_, i) => i !== index)); };
 
     // --- Invoice Action Handlers (API Calls) ---
-    const handleCreateInvoiceSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    // Wrap handlers in useCallback if they depend on other state/props, include fetchInvoices
+    const handleCreateInvoiceSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
          event.preventDefault(); setApiError(null); setIsSubmitting(true);
          if (formLineItems.length === 0) { setApiError("Please add at least one line item."); setIsSubmitting(false); return; }
          const itemsToSend = formLineItems.map(({ id, ...rest }) => rest);
@@ -123,14 +129,13 @@ const InvoiceManagerPage: React.FC = () => {
              const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceCreate', ...baseFormData, lineItems: itemsToSend }) });
              const data = await response.json(); console.log("Create response:", data);
              if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-             // Refetch the list to ensure consistency
-             fetchInvoices(); // <<<--- Refetch on success
-             closeModal();
+             closeModal(); // Close modal first
+             fetchInvoices(); // Then refetch
          } catch (err: any) { console.error("Create Invoice Err:", err); setApiError(`Create failed: ${err.message}`); }
          finally { setIsSubmitting(false); }
-     };
+     }, [baseFormData, formLineItems, fetchInvoices]); // Add dependencies
 
-    const handleDeleteInvoice = async (idToDelete: string) => {
+    const handleDeleteInvoice = useCallback(async (idToDelete: string) => {
          if (!window.confirm(`Are you sure you want to delete invoice ${idToDelete}?`)) return;
          setApiError(null); setIsSubmitting(true);
          console.log("Deleting invoice:", idToDelete);
@@ -138,14 +143,13 @@ const InvoiceManagerPage: React.FC = () => {
              const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceDelete', invoiceId: idToDelete }) });
               const data = await response.json(); console.log("Delete response:", data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-             // Refetch the list instead of manually removing
-             fetchInvoices(); // <<<--- Refetch on success
+             fetchInvoices(); // Refetch on success
              console.log("Invoice delete API call successful.");
          } catch (err: any) { console.error("Failed to delete invoice:", err); setApiError(`Delete failed: ${err.message}`); }
          finally { setIsSubmitting(false); }
-     };
+     }, [fetchInvoices]); // Add dependency
 
-     const handleEditInvoiceSubmit = async (event: FormEvent<HTMLFormElement>) => {
+     const handleEditInvoiceSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
          event.preventDefault(); if (!editingInvoice) { setApiError("Cannot save, no invoice selected."); return; }
          setApiError(null); setIsSubmitting(true);
           if (formLineItems.length === 0) { setApiError("Please add at least one line item."); setIsSubmitting(false); return; }
@@ -156,33 +160,31 @@ const InvoiceManagerPage: React.FC = () => {
              const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceUpdate', ...updatedInvoiceData }) });
               const data = await response.json(); console.log("Update response:", data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-              // Refetch the list instead of manually updating
-              fetchInvoices(); // <<<--- Refetch on success
-              closeModal();
+              closeModal(); // Close modal first
+              fetchInvoices(); // Then refetch
          } catch (err: any) { console.error("Update Invoice Err:", err); setApiError(`Update failed: ${err.message}`); }
          finally { setIsSubmitting(false); }
-     };
+     }, [editingInvoice, baseFormData, formLineItems, fetchInvoices]); // Add dependencies
 
-    const handleUpdateStatusSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    const handleUpdateStatusSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
          event.preventDefault(); if (!statusPopupInvoiceId) { setApiError("Please enter an Invoice ID."); return; }
           const invoiceExists = invoices.some(inv => inv.id === statusPopupInvoiceId);
-          if (!invoiceExists) { setApiError(`Invoice with ID "${statusPopupInvoiceId}" not found locally.`); } // Keep the check, but don't return early
+          if (!invoiceExists) { setApiError(`Invoice with ID "${statusPopupInvoiceId}" not found locally.`); }
           setApiError(null); setIsSubmitting(true);
           console.log(`Updating status for ${statusPopupInvoiceId} to ${statusPopupNewStatus}`);
           try {
               const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceUpdateStatus', invoiceId: statusPopupInvoiceId, newStatus: statusPopupNewStatus }) });
               const data = await response.json(); console.log("Update status response:", data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-              // Refetch the list instead of manually updating
-              fetchInvoices(); // <<<--- Refetch on success
+              closeModal(); // Close modal first
+              fetchInvoices(); // Then refetch
               console.log(`Status update API call successful for ${statusPopupInvoiceId}`);
-              closeModal();
           } catch (err: any) { console.error("Update Status Err:", err); setApiError(`Status update failed: ${err.message}`); }
           finally { setIsSubmitting(false); }
-     };
+     }, [statusPopupInvoiceId, statusPopupNewStatus, invoices, fetchInvoices]); // Add dependencies
 
     // --- Print Invoice Handler ---
-    const handlePrintInvoice = (invoice: Invoice) => {
+    const handlePrintInvoice = useCallback((invoice: Invoice) => {
         const printWindow = window.open('', '_blank', 'height=800,width=800');
         if (!printWindow) { alert("Could not open print window. Check popup blockers."); return; }
         const totalAmount = calculateTotal(invoice.lineItems);
@@ -192,30 +194,11 @@ const InvoiceManagerPage: React.FC = () => {
             <html> <head> <title>Invoice ${invoice.id}</title> <style> body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; font-size: 12px; color: #333; } .container { max-width: 750px; margin: 20px auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.05); } .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;} .header .logo { font-size: 1.5em; font-weight: bold; color: #555; } .header .company-details p { margin: 2px 0; font-size: 0.9em; text-align: right; color: #555; } .invoice-info { display: flex; justify-content: space-between; margin-bottom: 30px; } .invoice-info .bill-to p { margin: 2px 0; } .invoice-info .invoice-meta p { margin: 2px 0; text-align: right; } .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; } .invoice-table th, .invoice-table td { border: 1px solid #eee; padding: 8px; text-align: left; } .invoice-table th { background-color: #f8f9fa; font-weight: bold; } .invoice-table .total-row td { font-weight: bold; border-top: 2px solid #aaa; } .invoice-table .text-right { text-align: right; } .payment-info { margin-top: 30px; padding-top: 15px; border-top: 1px solid #eee; font-size: 0.9em; color: #555; } .payment-info h3 { margin-bottom: 10px; font-size: 1.1em; } .qr-code-section { display: flex; align-items: center; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;} .qr-code-container { text-align: center; } .qr-code-container p { font-size: 0.8em; margin-top: 5px; word-break: break-all; max-width: 150px; } .notes { margin-top: 20px; font-size: 0.85em; color: #777; } @media print { body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .container { border: none; box-shadow: none; margin: 0; max-width: 100%; padding: 10px; } .no-print { display: none; } } </style> </head>
             <body>
                 <div class="container">
-                    <div class="header">
-                        <div class="logo">Project Theraphy</div>
-                        <div class="company-details"> <p>01 Sanambin Road</p> <p>Nai Mueng, Phitsanulok 65000</p> <p>088-555-1946</p> <p>thammalucka67@nu.ac.th</p> </div>
-                    </div>
-                    <div class="invoice-info">
-                        <div class="bill-to"> <strong>Bill To:</strong><br> ${invoice.customerName} </div>
-                        <div class="invoice-meta"> <p><strong>Invoice #:</strong> ${invoice.id}</p> <p><strong>Date Issued:</strong> ${new Date().toLocaleDateString()}</p> <p><strong>Due Date:</strong> ${invoice.dueDate}</p> <p><strong>Status:</strong> ${invoice.status}</p> </div>
-                    </div>
-                    <table class="invoice-table">
-                        <thead> <tr> <th>Description</th> <th class="text-right">Amount</th> </tr> </thead>
-                        <tbody> ${itemRowsHtml} <tr class="total-row"> <td class="text-right"><strong>Total Due:</strong></td> <td class="text-right"><strong>$${totalAmount.toFixed(2)}</strong></td> </tr> </tbody>
-                    </table>
-                    <div class="payment-info">
-                       <h3>Payment Information</h3>
-                       <p>Please make payment to the following account:</p>
-                       <p>Bank Name: Kasikorn Bank</p>
-                       <p>Account Name: ธรรมลักษณ์ อริยธรรมนิตย์</p>
-                       <p>Account Number: 153-2-86554-5</p>
-                       <p>Reference: Invoice ${invoice.id.substring(0, 8)}</p>
-                    </div>
-                    <div class="qr-code-section">
-                        <div class="notes"> Pay before due date, If there is any question regarding the innovice please let Thammalucks know! </div>
-                        <div class="qr-code-container"> <div id="qr-code-target"></div> <p>${invoice.id}</p> </div>
-                    </div>
+                    <div class="header"> <div class="logo">Project Theraphy</div> <div class="company-details"> <p>01 Sanambin Road</p> <p>Nai Mueng, Phitsanulok 65000</p> <p>088-555-1946</p> <p>thammalucka67@nu.ac.th</p> </div> </div>
+                    <div class="invoice-info"> <div class="bill-to"> <strong>Bill To:</strong><br> ${invoice.customerName} </div> <div class="invoice-meta"> <p><strong>Invoice #:</strong> ${invoice.id}</p> <p><strong>Date Issued:</strong> ${new Date().toLocaleDateString()}</p> <p><strong>Due Date:</strong> ${invoice.dueDate}</p> <p><strong>Status:</strong> ${invoice.status}</p> </div> </div>
+                    <table class="invoice-table"> <thead> <tr> <th>Description</th> <th class="text-right">Amount</th> </tr> </thead> <tbody> ${itemRowsHtml} <tr class="total-row"> <td class="text-right"><strong>Total Due:</strong></td> <td class="text-right"><strong>$${totalAmount.toFixed(2)}</strong></td> </tr> </tbody> </table>
+                    <div class="payment-info"> <h3>Payment Information</h3> <p>Please make payment to the following account:</p> <p>Bank Name: Kasikorn Bank</p> <p>Account Name: ธรรมลักษณ์ อริยธรรมนิตย์</p> <p>Account Number: 153-2-86554-5</p> <p>Reference: Invoice ${invoice.id.substring(0, 8)}</p> </div>
+                    <div class="qr-code-section"> <div class="notes"> Pay before due date, If there is any question regarding the innovice please let Thammalucks know! </div> <div class="qr-code-container"> <div id="qr-code-target"></div> <p>${invoice.id}</p> </div> </div>
                 </div>
                 <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 10px; right: 10px; padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px;">Print Invoice</button>
             </body> </html>
@@ -228,8 +211,7 @@ const InvoiceManagerPage: React.FC = () => {
             root.render( <React.StrictMode> <QRCodeCanvas value={invoice.id} size={100} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={true} /> </React.StrictMode> );
             setTimeout(() => { printWindow.focus(); printWindow.print(); }, 300);
         } else { console.error("Could not find QR target."); printWindow.print(); }
-    };
-    // --- End Print Handler ---
+    }, []); // Empty dependency array as it only depends on the invoice passed in
 
     // --- Modal Open/Close Handlers ---
     const openCreateModal = () => { setBaseFormData(initialBaseFormData); setFormLineItems([{ id: `temp-${Date.now()}`, description: '', amount: 0 }]); setIsCreateModalOpen(true); setApiError(null); };
