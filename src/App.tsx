@@ -11,6 +11,7 @@ import PersonaPlinkoGame from './PersonaPlinkoGame';
 // import ModelBuilderGame from './ModelBuilderGame'; // <<< REMOVE Import
 import InterviewMode from './InterviewMode';
 import PresentationPage from './PresentationPage';
+import InvoiceManagerPage from './InvoiceManagerPage';
 
 // --- GA Initialization ---
 const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
@@ -612,9 +613,10 @@ function App() {
                     } />
                     {/* --- NEW Presentation Route --- */}
                     <Route path="/present" element={<PresentationPage />} />
+                    {/* --- NEW Invoice Manager Route --- */}
+                    <Route path="/pay" element={<InvoiceManagerPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
-                    <Route path="/pay" element={<PresentationPage />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    
                 </Routes>
                )}
 
