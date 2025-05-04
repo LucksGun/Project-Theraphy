@@ -1,46 +1,26 @@
-// src/InvoiceManagerPage.tsx (with Print QR functionality - Fixed Render API)
+// src/InvoiceManagerPage.tsx (with Print QR functionality - Improved Print Style)
 import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback } from 'react';
-// import ReactDOM from 'react-dom'; // No longer need the main 'react-dom' import for this
-import { createRoot } from 'react-dom/client'; // <<<--- IMPORT createRoot
-import { QRCodeCanvas } from 'qrcode.react'; // Import QR Code component
-import './InvoiceManagerPage.css'; // Make sure this CSS file exists and is styled
+import { createRoot } from 'react-dom/client';
+import { QRCodeCanvas } from 'qrcode.react';
+import './InvoiceManagerPage.css';
 
 // --- Configuration ---
-// <<< --- REPLACE with your actual Worker URL --- >>>
-const WORKER_API_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
-// <<< --- REPLACE with the password set in Worker secrets --- >>>
-const INVOICE_ACCESS_PASSWORD = '1234';
+const WORKER_API_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/'; // <<< --- REPLACE
+const INVOICE_ACCESS_PASSWORD = '1234'; // <<< --- REPLACE
 
 // --- Helper: Format Date for Input ---
 const formatDateForInput = (isoDateString: string): string => {
     try {
-        if (isoDateString && /^\d{4}-\d{2}-\d{2}$/.test(isoDateString)) {
-            return isoDateString;
-        }
+        if (isoDateString && /^\d{4}-\d{2}-\d{2}$/.test(isoDateString)) { return isoDateString; }
         const date = new Date(isoDateString);
-        if (isNaN(date.getTime())) {
-             console.warn("Invalid date string received:", isoDateString);
-             return '';
-        }
+        if (isNaN(date.getTime())) { console.warn("Invalid date string:", isoDateString); return ''; }
         return date.toISOString().split('T')[0];
-    } catch (e) {
-        console.error("Error formatting date:", isoDateString, e);
-        return '';
-    }
+    } catch (e) { console.error("Error formatting date:", isoDateString, e); return ''; }
 };
 
-
 // --- Data Structures ---
-interface Invoice {
-    id: string;
-    customerName: string;
-    amount: number;
-    dueDate: string; // Storing as<x_bin_534>-MM-DD
-    status: 'Pending' | 'Paid' | 'Overdue';
-}
-
+interface Invoice { id: string; customerName: string; amount: number; dueDate: string; status: 'Pending' | 'Paid' | 'Overdue'; }
 type InvoiceFormData = Omit<Invoice, 'id' | 'status'>;
-
 
 // --- Component ---
 const InvoiceManagerPage: React.FC = () => {
@@ -61,7 +41,7 @@ const InvoiceManagerPage: React.FC = () => {
     const [statusPopupNewStatus, setStatusPopupNewStatus] = useState<Invoice['status']>('Pending');
 
     // --- Fetch Invoices ---
-    const fetchInvoices = useCallback(async () => {
+    const fetchInvoices = useCallback(async () => { /* ... (keep existing fetch logic) ... */
         if (!isAuthenticated) return;
         console.log("Fetching invoices...");
         setIsLoading(true);
@@ -77,7 +57,6 @@ const InvoiceManagerPage: React.FC = () => {
             });
             const responseBodyText = await response.text();
             console.log("Fetch response status:", response.status);
-            // console.log("Fetch response body:", responseBodyText); // Less verbose logging
             if (!response.ok) {
                  let errorMsg = `API Error: ${response.status}`;
                  try { const errorData = JSON.parse(responseBodyText); errorMsg = errorData.error || errorMsg; }
@@ -94,7 +73,7 @@ const InvoiceManagerPage: React.FC = () => {
             setApiError(err.message);
             setInvoices([]);
         } finally { setIsLoading(false); }
-    }, [isAuthenticated]);
+     }, [isAuthenticated]);
 
     useEffect(() => {
         if (isAuthenticated) { fetchInvoices(); }
@@ -102,11 +81,11 @@ const InvoiceManagerPage: React.FC = () => {
     }, [isAuthenticated, fetchInvoices]);
 
     // --- Password Handlers ---
-    const handlePasswordChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const handlePasswordChange = (event: ChangeEvent<HTMLInputElement>) => { /* ... (keep existing logic) ... */
         setEnteredPassword(event.target.value);
         setAuthError(null);
-    };
-    const handlePasswordSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+     };
+    const handlePasswordSubmit = (event: React.FormEvent<HTMLFormElement>) => { /* ... (keep existing logic) ... */
         event.preventDefault();
         if (enteredPassword === INVOICE_ACCESS_PASSWORD) {
             setIsAuthenticated(true);
@@ -116,19 +95,19 @@ const InvoiceManagerPage: React.FC = () => {
             setAuthError('Incorrect password.');
             setIsAuthenticated(false);
         }
-    };
+     };
 
     // --- Form Input Handler ---
-     const handleFormChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+     const handleFormChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { /* ... (keep existing logic) ... */
         const { name, value, type } = event.target;
         setFormData(prev => ({
             ...prev,
             [name]: type === 'number' ? (value === '' ? 0 : parseFloat(value)) : value
         }));
-    };
+      };
 
     // --- Invoice Action Handlers (API Calls) ---
-    const handleCreateInvoiceSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    const handleCreateInvoiceSubmit = async (event: FormEvent<HTMLFormElement>) => { /* ... (keep existing logic) ... */
         event.preventDefault();
         setApiError(null);
         console.log("Submitting new invoice:", formData);
@@ -145,9 +124,8 @@ const InvoiceManagerPage: React.FC = () => {
             else { console.warn("Create successful, but invoice data missing. Refetching."); fetchInvoices(); }
             closeModal();
         } catch (err: any) { console.error("Create Invoice Err:", err); setApiError(`Create failed: ${err.message}`); }
-    };
-
-    const handleDeleteInvoice = async (idToDelete: string) => {
+     };
+    const handleDeleteInvoice = async (idToDelete: string) => { /* ... (keep existing logic) ... */
         if (!window.confirm(`Are you sure you want to delete invoice ${idToDelete}?`)) return;
         setApiError(null);
         console.log("Deleting invoice:", idToDelete);
@@ -163,9 +141,8 @@ const InvoiceManagerPage: React.FC = () => {
             setInvoices(prevInvoices => prevInvoices.filter(inv => inv.id !== idToDelete));
             console.log("Invoice deleted successfully from state.");
         } catch (err: any) { console.error("Failed to delete invoice:", err); setApiError(`Delete failed: ${err.message}`); }
-    };
-
-     const handleEditInvoiceSubmit = async (event: FormEvent<HTMLFormElement>) => {
+     };
+     const handleEditInvoiceSubmit = async (event: FormEvent<HTMLFormElement>) => { /* ... (keep existing logic) ... */
         event.preventDefault();
         if (!editingInvoice) { setApiError("Cannot save, no invoice selected."); return; }
         setApiError(null);
@@ -190,9 +167,8 @@ const InvoiceManagerPage: React.FC = () => {
              else { console.warn("Update successful, but invoice data missing. Refetching."); fetchInvoices(); }
              closeModal();
         } catch (err: any) { console.error("Update Invoice Err:", err); setApiError(`Update failed: ${err.message}`); }
-    };
-
-    const handleUpdateStatusSubmit = async (event: FormEvent<HTMLFormElement>) => {
+      };
+    const handleUpdateStatusSubmit = async (event: FormEvent<HTMLFormElement>) => { /* ... (keep existing logic) ... */
         event.preventDefault();
         if (!statusPopupInvoiceId) { setApiError("Please enter an Invoice ID."); return; }
          const invoiceExists = invoices.some(inv => inv.id === statusPopupInvoiceId);
@@ -212,90 +188,149 @@ const InvoiceManagerPage: React.FC = () => {
              console.log(`Status updated locally for ${statusPopupInvoiceId}`);
              closeModal();
          } catch (err: any) { console.error("Update Status Err:", err); setApiError(`Status update failed: ${err.message}`); }
-    };
+     };
 
-    // --- NEW: Print Invoice Handler ---
+    // --- UPDATED: Print Invoice Handler ---
     const handlePrintInvoice = (invoice: Invoice) => {
-        const printWindow = window.open('', '_blank', 'height=600,width=800');
+        const printWindow = window.open('', '_blank', 'height=800,width=800'); // Slightly larger window
 
         if (printWindow) {
-            // Basic HTML structure for the print view
+            // --- Improved HTML structure and CSS ---
             const printContent = `
                 <html>
                 <head>
                     <title>Invoice ${invoice.id}</title>
                     <style>
-                        body { font-family: sans-serif; margin: 20px; }
-                        .invoice-details { margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 15px; }
-                        .invoice-details p { margin: 5px 0; }
-                        .qr-code-container { margin-top: 30px; text-align: center; }
-                        h1, h2 { text-align: center; }
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; font-size: 12px; color: #333; }
+                        .container { max-width: 750px; margin: 20px auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+                        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;}
+                        .header .logo { font-size: 1.5em; font-weight: bold; color: #555; /* Replace with <img> tag if you have a logo */ }
+                        .header .company-details p { margin: 2px 0; font-size: 0.9em; text-align: right; color: #555; }
+                        .invoice-info { display: flex; justify-content: space-between; margin-bottom: 30px; }
+                        .invoice-info .bill-to p { margin: 2px 0; }
+                        .invoice-info .invoice-meta p { margin: 2px 0; text-align: right; }
+                        .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                        .invoice-table th, .invoice-table td { border: 1px solid #eee; padding: 8px; text-align: left; }
+                        .invoice-table th { background-color: #f8f9fa; font-weight: bold; }
+                        .invoice-table .total-row td { font-weight: bold; border-top: 2px solid #aaa; }
+                        .invoice-table .text-right { text-align: right; }
+                        .payment-info { margin-top: 30px; padding-top: 15px; border-top: 1px solid #eee; font-size: 0.9em; color: #555; }
+                        .payment-info h3 { margin-bottom: 10px; font-size: 1.1em; }
+                        .qr-code-section { display: flex; align-items: center; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;}
+                        .qr-code-container { text-align: center; }
+                        .qr-code-container p { font-size: 0.8em; margin-top: 5px; word-break: break-all; max-width: 150px; }
+                        .notes { margin-top: 20px; font-size: 0.85em; color: #777; }
                         @media print {
-                            body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } /* Ensure styles print */
-                            .no-print { display: none; } /* Hide elements not for printing */
+                            body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                            .container { border: none; box-shadow: none; margin: 0; max-width: 100%; padding: 10px; }
+                            .no-print { display: none; }
                         }
                     </style>
                 </head>
                 <body>
-                    <h1>Invoice Details</h1>
-                    <div class="invoice-details">
-                        <p><strong>Invoice ID:</strong> ${invoice.id}</p>
-                        <p><strong>Customer:</strong> ${invoice.customerName}</p>
-                        <p><strong>Amount:</strong> $${invoice.amount.toFixed(2)}</p>
-                        <p><strong>Due Date:</strong> ${invoice.dueDate}</p>
-                        <p><strong>Status:</strong> ${invoice.status}</p>
+                    <div class="container">
+                        <div class="header">
+                            <div class="logo">Your Company Name</div> {/* Or <img src="your_logo_url" alt="Logo" style="max-height: 50px;"/> */}
+                            <div class="company-details">
+                                <p>Your Street Address</p>
+                                <p>Your City, Postal Code</p>
+                                <p>Your Phone</p>
+                                <p>Your Email</p>
+                            </div>
+                        </div>
+
+                        <div class="invoice-info">
+                            <div class="bill-to">
+                                <strong>Bill To:</strong><br>
+                                ${invoice.customerName}
+                                {/* Add customer address here if available */}
+                            </div>
+                            <div class="invoice-meta">
+                                <p><strong>Invoice #:</strong> ${invoice.id}</p>
+                                <p><strong>Date Issued:</strong> ${new Date().toLocaleDateString()}</p> {/* Use current date */}
+                                <p><strong>Due Date:</strong> ${invoice.dueDate}</p>
+                                <p><strong>Status:</strong> ${invoice.status}</p>
+                            </div>
+                        </div>
+
+                        <table class="invoice-table">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th class="text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Service/Product Description (Update as needed)</td>
+                                    <td class="text-right">$${invoice.amount.toFixed(2)}</td>
+                                </tr>
+                                {/* Add more rows here if invoices have multiple items */}
+                                <tr class="total-row">
+                                    <td class="text-right"><strong>Total Due:</strong></td>
+                                    <td class="text-right"><strong>$${invoice.amount.toFixed(2)}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="payment-info">
+                           <h3>Payment Information</h3>
+                           <p>Please make payment to the following account:</p>
+                           <p>Bank Name: [Your Bank Name]</p>
+                           <p>Account Name: [Your Account Name]</p>
+                           <p>Account Number: [Your Account Number]</p>
+                           <p>Reference: Invoice ${invoice.id.substring(0, 8)}</p>
+                           {/* Or provide a payment link */}
+                           {/* <p>Pay online: <a href="your_payment_link">your_payment_link</a></p> */}
+                        </div>
+
+                        <div class="qr-code-section">
+                            <div class="notes">
+                                Thank you for your business!
+                            </div>
+                            <div class="qr-code-container">
+                                <div id="qr-code-target"></div> {/* Placeholder for QR code */}
+                                <p>${invoice.id}</p> {/* Show ID below QR */}
+                            </div>
+                        </div>
+
                     </div>
-                    <div class="qr-code-container">
-                        <h2>Scan ID</h2>
-                        <div id="qr-code-target"></div> {/* Placeholder for QR code */}
-                         <p style="font-size: 0.8em; margin-top: 5px;">${invoice.id}</p>
-                    </div>
-                     {/* Add a Print button that's hidden when printing */}
-                     <button class="no-print" onclick="window.print()" style="display:block; margin: 20px auto; padding: 10px 20px; cursor: pointer;">Print</button>
+                    <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 10px; right: 10px; padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px;">Print Invoice</button>
                 </body>
                 </html>
             `;
 
             printWindow.document.write(printContent);
-            printWindow.document.close(); // Important for some browsers
+            printWindow.document.close();
 
-            // Find the target div in the new window to render the QR code
             const qrTarget = printWindow.document.getElementById('qr-code-target');
-
             if (qrTarget) {
-                // --- *** FIX: Use createRoot *** ---
-                const root = createRoot(qrTarget); // Create a root attached to the target div
-                root.render( // Render the QR code component using the root
-                     <React.StrictMode> {/* Optional: Wrap in StrictMode */}
+                const root = createRoot(qrTarget);
+                root.render(
+                     <React.StrictMode>
                         <QRCodeCanvas
-                            value={invoice.id} // The data to encode (the invoice ID)
-                            size={128}         // Size of the QR code
+                            value={invoice.id} // Encode the full ID
+                            size={100} // Adjust size as needed
                             bgColor={"#ffffff"}
                             fgColor={"#000000"}
-                            level={"L"}         // Error correction level
-                            includeMargin={false}
+                            level={"L"}
+                            includeMargin={true} // Add margin for better scanning
                         />
                      </React.StrictMode>
                 );
-
-                // Use a small timeout to allow QR code rendering before printing
                 setTimeout(() => {
-                    printWindow.focus(); // Focus the new window
+                    printWindow.focus();
                     printWindow.print();
-                    // Optional: close the window after printing attempt
-                    // printWindow.close();
-                }, 250); // Adjust timeout if needed
-
+                }, 300); // Slightly longer timeout for potentially more complex layout
             } else {
                 console.error("Could not find QR code target element in print window.");
-                // Fallback print without QR code if target isn't found
                 printWindow.print();
             }
-
         } else {
             alert("Could not open print window. Please check your browser's popup blocker settings.");
         }
     };
+    // --- End Print Handler ---
 
 
     // --- Modal Open/Close Handlers ---
@@ -311,7 +346,7 @@ const InvoiceManagerPage: React.FC = () => {
 
 
     // --- Render Password Prompt ---
-    if (!isAuthenticated) {
+    if (!isAuthenticated) { /* ... (keep existing password prompt JSX) ... */
         return (
             <div className="invoice-manager-password-container">
                 <div className="invoice-manager-password-box">
@@ -325,28 +360,30 @@ const InvoiceManagerPage: React.FC = () => {
                 </div>
             </div>
         );
-    }
+     }
 
     // --- Render Invoice Manager UI ---
     return (
         <div className="invoice-manager-container">
-            <button onClick={() => { setIsAuthenticated(false); /* Clear other state if needed */ }} style={{ float: 'right', backgroundColor: '#6c757d', color: 'white', marginBottom: '10px' }} className="action-button"> Logout </button>
+            {/* ... (keep Logout button, H1, Action Buttons, Loading/Error messages) ... */}
+             <button onClick={() => { setIsAuthenticated(false); }} style={{ float: 'right', backgroundColor: '#6c757d', color: 'white', marginBottom: '10px' }} className="action-button"> Logout </button>
             <h1>Invoice Management</h1>
             <div className="invoice-actions">
                  <button onClick={openCreateModal} className="action-button create-button"> + Create New Invoice </button>
                  <button onClick={openStatusPopup} className="action-button status-button"> Edit Invoice Status by ID </button>
             </div>
             {isLoading && <p className="loading-message">Loading invoices...</p>}
-            {/* Display general API errors outside modals */}
             {apiError && !isCreateModalOpen && !isEditModalOpen && !isStatusPopupOpen &&
                 <p className="api-error-message" style={{ color: 'red', border: '1px solid red', padding: '10px', marginTop: '10px' }}>
                     Error: {apiError}
                 </p>
             }
-            {!isLoading && ( // Don't show table if loading
+
+            {/* Invoice List Table */}
+            {!isLoading && (
                 <div className="invoice-list">
                     <h2>Invoices</h2>
-                    {invoices.length === 0 && !apiError ? ( <p>No invoices found. Create one!</p> ) : invoices.length > 0 ? ( // Only show table if invoices exist
+                    {invoices.length === 0 && !apiError ? ( <p>No invoices found. Create one!</p> ) : invoices.length > 0 ? (
                         <table>
                             <thead>
                                 <tr>
@@ -375,16 +412,15 @@ const InvoiceManagerPage: React.FC = () => {
                                 ))}
                             </tbody>
                         </table>
-                    ) : null /* Don't render table if error and no invoices */}
+                    ) : null }
                 </div>
             )}
 
-            {/* --- Modals --- */}
-            {isCreateModalOpen && (
+            {/* --- Modals (keep existing JSX for Create, Edit, Status modals) --- */}
+             {isCreateModalOpen && ( /* ... Create Modal JSX ... */
                 <div className="modal-overlay" onClick={closeModal}>
                      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                          <h2>Create New Invoice</h2>
-                         {/* Display API error specific to this modal */}
                          {apiError && <p className="api-error-message" style={{color: 'red', marginBottom: '15px'}}>{apiError}</p>}
                          <form onSubmit={handleCreateInvoiceSubmit}>
                              <div className="form-group"> <label htmlFor="customerName">Customer Name:</label> <input type="text" id="customerName" name="customerName" value={formData.customerName} onChange={handleFormChange} required /> </div>
@@ -394,8 +430,8 @@ const InvoiceManagerPage: React.FC = () => {
                          </form>
                      </div>
                 </div>
-            )}
-             {isEditModalOpen && editingInvoice && (
+              )}
+             {isEditModalOpen && editingInvoice && ( /* ... Edit Modal JSX ... */
                 <div className="modal-overlay" onClick={closeModal}>
                      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                          <h2>Edit Invoice (ID: {editingInvoice.id.substring(0,8)}...)</h2>
@@ -408,8 +444,8 @@ const InvoiceManagerPage: React.FC = () => {
                          </form>
                      </div>
                 </div>
-            )}
-            {isStatusPopupOpen && (
+              )}
+            {isStatusPopupOpen && ( /* ... Status Popup JSX ... */
                  <div className="modal-overlay" onClick={closeModal}>
                      <div className="modal-content status-popup" onClick={(e) => e.stopPropagation()}>
                          <h2>Edit Invoice Status</h2>
@@ -421,10 +457,10 @@ const InvoiceManagerPage: React.FC = () => {
                          </form>
                      </div>
                  </div>
-            )}
+             )}
+
         </div> // End invoice-manager-container
     );
 };
 
 export default InvoiceManagerPage;
-
