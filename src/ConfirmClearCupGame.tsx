@@ -18,7 +18,7 @@ interface CupState {
     isRevealed: boolean; // Only true for the chosen cup AFTER selection
     isConfirmCup: boolean;
     showConfirmInitially: boolean; // Flag for initial reveal phase
-}
+} 
 
 // --- Constants ---
 const INITIAL_REVEAL_MS = 3000; // How long to show the confirm cup location

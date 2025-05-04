@@ -613,6 +613,8 @@ function App() {
                     {/* --- NEW Presentation Route --- */}
                     <Route path="/present" element={<PresentationPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="/pay" element={<PresentationPage />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
                )}
 

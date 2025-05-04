@@ -1,0 +1,131 @@
+/* src/InvoiceManagerPage.css */
+
+/* Password Prompt Styles (copy relevant styles from PresentationPage.css if needed) */
+.invoice-manager-password-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #e9ebee; /* Slightly different background */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.invoice-manager-password-box {
+    background-color: white;
+    padding: 30px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+/* Shared form/button styles can go here or in a global CSS */
+.form-group { margin-bottom: 15px; text-align: left; }
+label { display: block; margin-bottom: 5px; font-weight: bold; }
+input[type="text"], input[type="password"], input[type="number"], input[type="date"], select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+.password-error { color: red; margin-bottom: 15px; }
+.submit-password-button, .action-button, .table-button, .popup-actions button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95em;
+    margin: 5px;
+}
+.submit-password-button { background-color: #007bff; color: white; }
+.password-note { margin-top: 15px; font-size: 0.9em; color: #555; }
+
+
+/* Invoice Manager UI Styles */
+.invoice-manager-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 20px auto;
+}
+
+.invoice-actions {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+
+.action-button {
+    background-color: #28a745; /* Green for create */
+    color: white;
+}
+.action-button.status-button {
+    background-color: #ffc107; /* Yellow for status */
+    color: #333;
+}
+
+.invoice-list {
+    margin-top: 20px;
+}
+
+.invoice-list table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.invoice-list th, .invoice-list td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+.invoice-list th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}
+
+.invoice-list tbody tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.table-button {
+    padding: 5px 10px;
+    font-size: 0.85em;
+    margin-right: 5px;
+}
+.table-button.edit { background-color: #17a2b8; color: white; }
+.table-button.delete { background-color: #dc3545; color: white; }
+
+
+/* Modal / Popup Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 8px;
+    min-width: 400px; /* Adjust as needed */
+    max-width: 600px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+.modal-content h2 { margin-top: 0; margin-bottom: 20px; }
+
+/* Specific styles for status popup */
+.status-popup label { margin-top: 15px;}
+.status-popup input, .status-popup select { margin-bottom: 15px; }
+.popup-actions { margin-top: 20px; text-align: right; }
+.popup-actions button:last-child { background-color: #6c757d; color: white; } /* Cancel button */
