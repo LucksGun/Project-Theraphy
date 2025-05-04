@@ -1,4 +1,4 @@
-// src/InvoiceManagerPage.tsx (Final Version with Refetch & Copy ID)
+// src/InvoiceManagerPage.tsx (Full Code with Line Items, Print, Copy, Scroll, Refetch, Payment Details)
 import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -11,17 +11,42 @@ const INVOICE_ACCESS_PASSWORD = '1234';
 // --- Helper: Format Date for Input ---
 const formatDateForInput = (isoDateString: string): string => {
     try {
-        if (isoDateString && /^\d{4}-\d{2}-\d{2}$/.test(isoDateString)) { return isoDateString; }
+        // Check if the string is already in YYYY-MM-DD format
+        if (isoDateString && /^\d{4}-\d{2}-\d{2}$/.test(isoDateString)) {
+            return isoDateString;
+        }
+        // Otherwise, try to parse and format
         const date = new Date(isoDateString);
-        if (isNaN(date.getTime())) { console.warn("Invalid date string:", isoDateString); return ''; }
+        if (isNaN(date.getTime())) { // Check if date is valid
+             console.warn("Invalid date string received:", isoDateString);
+             return ''; // Return empty for invalid date
+        }
         return date.toISOString().split('T')[0];
-    } catch (e) { console.error("Error formatting date:", isoDateString, e); return ''; }
+    } catch (e) {
+        console.error("Error formatting date:", isoDateString, e);
+        return ''; // Return empty on error
+    }
 };
 
+
 // --- Data Structures ---
-interface LineItem { id: string; description: string; amount: number; }
-interface Invoice { id: string; customerName: string; dueDate: string; status: 'Pending' | 'Paid' | 'Overdue'; lineItems: LineItem[]; }
-type InvoiceBaseFormData = Omit<Invoice, 'id' | 'status' | 'lineItems'>;
+interface LineItem {
+    id: string; // Temporary ID for React key
+    description: string;
+    amount: number;
+}
+
+interface Invoice {
+    id: string;
+    customerName: string;
+    dueDate: string; // Storing as YYYY-MM-DD
+    status: 'Pending' | 'Paid' | 'Overdue';
+    lineItems: LineItem[];
+    paymentMethod?: 'cash' | 'bank' | null; // Optional
+    paymentReference?: string | null;      // Optional
+}
+
+type InvoiceBaseFormData = Omit<Invoice, 'id' | 'status' | 'lineItems' | 'paymentMethod' | 'paymentReference'>;
 
 
 // --- Component ---
@@ -38,12 +63,14 @@ const InvoiceManagerPage: React.FC = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
     const [isStatusPopupOpen, setIsStatusPopupOpen] = useState<boolean>(false);
-    const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+    const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null); // Holds the full invoice being edited
     const initialBaseFormData: InvoiceBaseFormData = { customerName: '', dueDate: '' };
     const [baseFormData, setBaseFormData] = useState<InvoiceBaseFormData>(initialBaseFormData);
     const [formLineItems, setFormLineItems] = useState<LineItem[]>([]);
     const [statusPopupInvoiceId, setStatusPopupInvoiceId] = useState<string>('');
     const [statusPopupNewStatus, setStatusPopupNewStatus] = useState<Invoice['status']>('Pending');
+    const [statusPopupPaymentMethod, setStatusPopupPaymentMethod] = useState<'cash' | 'bank' | ''>('');
+    const [statusPopupPaymentReference, setStatusPopupPaymentReference] = useState<string>('');
 
     // --- Calculate Total Amount ---
     const calculateTotal = (items: LineItem[]): number => items.reduce((sum, item) => sum + (item.amount || 0), 0);
@@ -51,77 +78,31 @@ const InvoiceManagerPage: React.FC = () => {
 
     // --- Fetch Invoices (Stable with useCallback) ---
     const fetchInvoices = useCallback(async () => {
-        // No need to check isAuthenticated here, as it's checked in the useEffect that calls this
-        console.log("Fetching invoices...");
-        setIsLoading(true);
-        setApiError(null); // Clear previous errors before fetching
-        let response: Response | null = null;
+        console.log("Fetching invoices..."); setIsLoading(true); setApiError(null); let response: Response | null = null;
         try {
-            response = await fetch(WORKER_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, },
-                body: JSON.stringify({ action: 'invoiceGet' })
-            });
-            console.log("Fetch response status:", response.status);
-            const data = await response.json(); // Read body ONCE as JSON
-
-            if (!response.ok) {
-                throw new Error(data?.error || `API Error: ${response.status} ${response.statusText}`);
-            }
-
+            response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceGet' }) });
+            console.log("Fetch response status:", response.status); const data = await response.json();
+            if (!response.ok) { throw new Error(data?.error || `API Error: ${response.status} ${response.statusText}`); }
             if (data.success && Array.isArray(data.invoices)) {
-                const processedInvoices = data.invoices.map((inv: any) => ({
-                    ...inv,
-                    // Ensure lineItems is always an array, parse if it's a string
-                    lineItems: typeof inv.lineItems === 'string'
-                                ? JSON.parse(inv.lineItems)
-                                : (Array.isArray(inv.lineItems) ? inv.lineItems : [])
-                }));
-                setInvoices(processedInvoices);
-                console.log("Invoices loaded:", processedInvoices.length);
-            } else {
-                throw new Error(data.error || 'API response format incorrect');
-            }
+                const processedInvoices = data.invoices.map((inv: any) => ({ ...inv, lineItems: typeof inv.lineItems === 'string' ? JSON.parse(inv.lineItems) : (Array.isArray(inv.lineItems) ? inv.lineItems : []) }));
+                setInvoices(processedInvoices); console.log("Invoices loaded:", processedInvoices.length);
+            } else { throw new Error(data.error || 'API response format incorrect'); }
         } catch (err: any) {
-            console.error("Failed to fetch invoices:", err);
-            let errorMsg = err.message;
-            if (response && !response.ok && !errorMsg.startsWith('API Error')) {
-                 errorMsg = `API Error: ${response.status} ${response.statusText}. ${errorMsg}`;
-            }
-            setApiError(errorMsg || 'An unknown error occurred while fetching invoices.');
-            setInvoices([]);
-        } finally {
-            setIsLoading(false);
-        }
-    // fetchInvoices doesn't depend on other state besides constants, so empty dependency array is fine.
-    // It's called conditionally based on isAuthenticated in useEffect.
-    }, []);
+            console.error("Failed to fetch invoices:", err); let errorMsg = err.message;
+            if (response && !response.ok && !errorMsg.startsWith('API Error')) { errorMsg = `API Error: ${response.status} ${response.statusText}. ${errorMsg}`; }
+            setApiError(errorMsg || 'An unknown error occurred while fetching invoices.'); setInvoices([]);
+        } finally { setIsLoading(false); }
+    }, []); // No dependencies needed here
 
     // Effect to fetch data when authentication changes
-    useEffect(() => {
-        if (isAuthenticated) {
-            fetchInvoices(); // Initial fetch on auth
-        } else {
-            setInvoices([]); // Clear data if logged out
-        }
-    }, [isAuthenticated, fetchInvoices]); // Include fetchInvoices here
+    useEffect(() => { if (isAuthenticated) { fetchInvoices(); } else { setInvoices([]); } }, [isAuthenticated, fetchInvoices]);
 
     // Effect to clear success message after a delay
-     useEffect(() => {
-        let timer: NodeJS.Timeout | null = null;
-        if (successMessage) {
-            timer = setTimeout(() => setSuccessMessage(null), 3500); // Clear after 3.5 seconds
-        }
-        return () => { if (timer) clearTimeout(timer); }; // Cleanup timer
-    }, [successMessage]);
+     useEffect(() => { let timer: NodeJS.Timeout | null = null; if (successMessage) { timer = setTimeout(() => setSuccessMessage(null), 3500); } return () => { if (timer) clearTimeout(timer); }; }, [successMessage]);
 
     // --- Password Handlers ---
     const handlePasswordChange = (event: ChangeEvent<HTMLInputElement>) => { setEnteredPassword(event.target.value); setAuthError(null); };
-    const handlePasswordSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (enteredPassword === INVOICE_ACCESS_PASSWORD) { setIsAuthenticated(true); setAuthError(null); setEnteredPassword(''); }
-        else { setAuthError('Incorrect password.'); setIsAuthenticated(false); }
-    };
+    const handlePasswordSubmit = (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); if (enteredPassword === INVOICE_ACCESS_PASSWORD) { setIsAuthenticated(true); setAuthError(null); setEnteredPassword(''); } else { setAuthError('Incorrect password.'); setIsAuthenticated(false); } };
 
     // --- Form Input Handlers ---
      const handleBaseFormChange = (event: ChangeEvent<HTMLInputElement>) => { const { name, value } = event.target; setBaseFormData(prev => ({ ...prev, [name]: value })); };
@@ -130,15 +111,7 @@ const InvoiceManagerPage: React.FC = () => {
     const removeLineItem = (index: number) => { setFormLineItems(prevItems => prevItems.filter((_, i) => i !== index)); };
 
     // --- Copy ID Handler ---
-    const handleCopyId = async (idToCopy: string) => {
-        try {
-            await navigator.clipboard.writeText(idToCopy);
-            setSuccessMessage(`Invoice ID copied!`); // Give feedback
-        } catch (err) {
-            console.error('Failed to copy invoice ID: ', err);
-            setApiError('Could not copy ID to clipboard.'); // Show error
-        }
-    };
+    const handleCopyId = async (idToCopy: string) => { try { await navigator.clipboard.writeText(idToCopy); setSuccessMessage(`Invoice ID copied!`); } catch (err) { console.error('Failed to copy invoice ID: ', err); setApiError('Could not copy ID to clipboard.'); } };
 
     // --- Invoice Action Handlers (API Calls - Refetch in Finally) ---
     const handleCreateInvoiceSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
@@ -185,16 +158,28 @@ const InvoiceManagerPage: React.FC = () => {
     const handleUpdateStatusSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
          event.preventDefault(); if (!statusPopupInvoiceId) { setApiError("Please enter an Invoice ID."); return; }
           setApiError(null); setSuccessMessage(null); setIsSubmitting(true);
-          console.log(`Updating status for ${statusPopupInvoiceId} to ${statusPopupNewStatus}`);
+          let action = ''; let payload: any = { invoiceId: statusPopupInvoiceId };
           try {
-              const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceUpdateStatus', invoiceId: statusPopupInvoiceId, newStatus: statusPopupNewStatus }) });
-              const data = await response.json(); console.log("Update status response:", data);
+              if (statusPopupNewStatus === 'Paid') {
+                  action = 'invoiceUpdateStatus'; if (!statusPopupPaymentMethod) { throw new Error("Payment method required for Paid status."); }
+                  payload.newStatus = 'Paid'; payload.paymentMethod = statusPopupPaymentMethod;
+                  if (statusPopupPaymentMethod === 'bank') { if (!statusPopupPaymentReference.trim()) { throw new Error("Reference number required for bank transfer."); } payload.paymentReference = statusPopupPaymentReference.trim(); }
+                  else { payload.paymentReference = null; }
+                  console.log(`Marking Paid: ID='${payload.invoiceId}', Method='${payload.paymentMethod}', Ref='${payload.paymentReference}'`);
+              } else if (statusPopupNewStatus === 'Overdue') {
+                  action = 'invoiceMarkOverdue'; console.log(`Marking Overdue: ID='${payload.invoiceId}'`);
+              } else {
+                  action = 'invoiceUpdateStatus'; payload.newStatus = 'Pending'; payload.paymentMethod = null; payload.paymentReference = null;
+                  console.log(`Setting Pending: ID='${payload.invoiceId}'`);
+              }
+              const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: action, ...payload }) });
+              const data = await response.json(); console.log(`Update status response for ${action}:`, data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-              setSuccessMessage("Status updated successfully!"); closeModal();
+              setSuccessMessage(data.message || "Status updated!"); closeModal();
               console.log(`Status update API call successful for ${statusPopupInvoiceId}`);
           } catch (err: any) { console.error("Update Status Err:", err); setApiError(`Status update failed: ${err.message}`); }
           finally { setIsSubmitting(false); if (isAuthenticated) fetchInvoices(); }
-     }, [statusPopupInvoiceId, statusPopupNewStatus, fetchInvoices, isAuthenticated]);
+     }, [statusPopupInvoiceId, statusPopupNewStatus, statusPopupPaymentMethod, statusPopupPaymentReference, fetchInvoices, isAuthenticated]);
 
     // --- Print Invoice Handler ---
     const handlePrintInvoice = useCallback((invoice: Invoice) => {
@@ -229,8 +214,8 @@ const InvoiceManagerPage: React.FC = () => {
     // --- Modal Open/Close Handlers ---
     const openCreateModal = () => { setBaseFormData(initialBaseFormData); setFormLineItems([{ id: `temp-${Date.now()}`, description: '', amount: 0 }]); setIsCreateModalOpen(true); setApiError(null); setSuccessMessage(null); };
     const openEditModal = (invoiceToEdit: Invoice) => { setEditingInvoice(invoiceToEdit); setBaseFormData({ customerName: invoiceToEdit.customerName, dueDate: formatDateForInput(invoiceToEdit.dueDate) }); setFormLineItems(invoiceToEdit.lineItems.map(item => ({ ...item, id: item.id || `temp-${Math.random()}` }))); setIsEditModalOpen(true); setApiError(null); setSuccessMessage(null); };
-    const openStatusPopup = () => { setStatusPopupInvoiceId(''); setStatusPopupNewStatus('Pending'); setIsStatusPopupOpen(true); setApiError(null); setSuccessMessage(null); };
-    const closeModal = () => { setIsCreateModalOpen(false); setIsEditModalOpen(false); setIsStatusPopupOpen(false); setEditingInvoice(null); setBaseFormData(initialBaseFormData); setFormLineItems([]); setStatusPopupInvoiceId(''); setStatusPopupNewStatus('Pending'); setApiError(null); /* Keep success message */ };
+    const openStatusPopup = () => { setStatusPopupInvoiceId(''); setStatusPopupNewStatus('Pending'); setStatusPopupPaymentMethod(''); setStatusPopupPaymentReference(''); setIsStatusPopupOpen(true); setApiError(null); setSuccessMessage(null); };
+    const closeModal = () => { setIsCreateModalOpen(false); setIsEditModalOpen(false); setIsStatusPopupOpen(false); setEditingInvoice(null); setBaseFormData(initialBaseFormData); setFormLineItems([]); setStatusPopupInvoiceId(''); setStatusPopupNewStatus('Pending'); setStatusPopupPaymentMethod(''); setStatusPopupPaymentReference(''); setApiError(null); /* Keep success message */ };
 
 
     // --- Render Password Prompt ---
@@ -306,48 +291,34 @@ const InvoiceManagerPage: React.FC = () => {
 
             {/* --- Modals --- */}
             {(isCreateModalOpen || isEditModalOpen) && (
-                 <div className="modal-overlay" onClick={closeModal}>
-                 <div className="modal-content wide-modal" onClick={(e) => e.stopPropagation()}>
-                     <h2>{isEditModalOpen ? `Edit Invoice (ID: ${editingInvoice?.id.substring(0,8)}...)` : 'Create New Invoice'}</h2>
-                     {apiError && <p className="api-error-message">{apiError}</p>}
-                     <form onSubmit={isEditModalOpen ? handleEditInvoiceSubmit : handleCreateInvoiceSubmit}>
-           
-                        {/* --- THIS WRAPPER IS CRUCIAL for scrolling --- */}
-                        <div className="form-scroll-area">
-           
-                            <div className="form-section"> {/* Customer/Date Section */}
-                                 <div className="form-group"> <label htmlFor="customerName">Customer Name:</label> <input type="text" id="customerName" name="customerName" value={baseFormData.customerName} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
-                                 <div className="form-group"> <label htmlFor="dueDate">Due Date:</label> <input type="date" id="dueDate" name="dueDate" value={baseFormData.dueDate} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
-                             </div>
-           
-                             <div className="form-section line-items-section"> {/* Line Items Section */}
-                                 <h3>Line Items</h3>
-                                 <div className="line-item-row line-item-header">
-                                     <label className="line-item-description-label">Description</label>
-                                     <label className="line-item-amount-label">Amount ($)</label>
-                                     <div className="line-item-action-label">Action</div>
+                <div className="modal-overlay" onClick={closeModal}>
+                     <div className="modal-content wide-modal" onClick={(e) => e.stopPropagation()}>
+                         <h2>{isEditModalOpen ? `Edit Invoice (ID: ${editingInvoice?.id.substring(0,8)}...)` : 'Create New Invoice'}</h2>
+                         {apiError && <p className="api-error-message">{apiError}</p>}
+                         <form onSubmit={isEditModalOpen ? handleEditInvoiceSubmit : handleCreateInvoiceSubmit}>
+                            <div className="form-scroll-area">
+                                <div className="form-section">
+                                     <div className="form-group"> <label htmlFor="customerName">Customer Name:</label> <input type="text" id="customerName" name="customerName" value={baseFormData.customerName} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
+                                     <div className="form-group"> <label htmlFor="dueDate">Due Date:</label> <input type="date" id="dueDate" name="dueDate" value={baseFormData.dueDate} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
                                  </div>
-                                 <div className="line-items-container">
-                                     {formLineItems.map((item, index) => (
-                                         <div key={item.id} className="line-item-row">
-                                             <input type="text" placeholder="Description" value={item.description} onChange={(e) => handleLineItemChange(index, 'description', e.target.value)} required className="line-item-description" disabled={isSubmitting} />
-                                             <input type="number" placeholder="Amount" value={item.amount} onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)} required min="0" step="0.01" className="line-item-amount" disabled={isSubmitting} />
-                                             <div className="line-item-action">
-                                                {formLineItems.length > 1 && ( <button type="button" onClick={() => removeLineItem(index)} className="remove-line-item-btn" disabled={isSubmitting} title="Remove Item"> 🗑️ </button> )}
+                                 <div className="form-section line-items-section">
+                                     <h3>Line Items</h3>
+                                     <div className="line-item-row line-item-header"> <label className="line-item-description-label">Description</label> <label className="line-item-amount-label">Amount ($)</label> <div className="line-item-action-label">Action</div> </div>
+                                     <div className="line-items-container">
+                                         {formLineItems.map((item, index) => (
+                                             <div key={item.id} className="line-item-row">
+                                                 <input type="text" placeholder="Description" value={item.description} onChange={(e) => handleLineItemChange(index, 'description', e.target.value)} required className="line-item-description" disabled={isSubmitting} />
+                                                 <input type="number" placeholder="Amount" value={item.amount} onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)} required min="0" step="0.01" className="line-item-amount" disabled={isSubmitting} />
+                                                 <div className="line-item-action"> {formLineItems.length > 1 && ( <button type="button" onClick={() => removeLineItem(index)} className="remove-line-item-btn" disabled={isSubmitting} title="Remove Item"> 🗑️ </button> )} </div>
                                              </div>
-                                         </div>
-                                     ))}
+                                         ))}
+                                     </div>
+                                     <button type="button" onClick={addLineItem} className="add-line-item-btn" disabled={isSubmitting}> + Add Line Item </button>
+                                     <div className="form-total"> <strong>Total: ${formTotalAmount.toFixed(2)}</strong> </div>
                                  </div>
-                                 <button type="button" onClick={addLineItem} className="add-line-item-btn" disabled={isSubmitting}> + Add Line Item </button>
-                                 <div className="form-total"> <strong>Total: ${formTotalAmount.toFixed(2)}</strong> </div>
                              </div>
-           
-                         </div>
-                             {/* --- *** END SCROLL WRAPPER *** --- */}
                              <div className="modal-actions">
-                                 <button type="submit" className={`action-button ${isEditModalOpen ? 'edit-button' : 'create-button'}`} disabled={isSubmitting}>
-                                     {isSubmitting ? 'Saving...' : (isEditModalOpen ? 'Save Changes' : 'Create Invoice')}
-                                 </button>
+                                 <button type="submit" className={`action-button ${isEditModalOpen ? 'edit-button' : 'create-button'}`} disabled={isSubmitting}> {isSubmitting ? 'Saving...' : (isEditModalOpen ? 'Save Changes' : 'Create Invoice')} </button>
                                  <button type="button" onClick={closeModal} className="cancel-button" disabled={isSubmitting}>Cancel</button>
                              </div>
                          </form>
@@ -361,11 +332,16 @@ const InvoiceManagerPage: React.FC = () => {
                          {apiError && <p className="api-error-message">{apiError}</p>}
                          <form onSubmit={handleUpdateStatusSubmit}>
                              <div className="form-group"> <label htmlFor="status-invoice-id">Invoice ID:</label> <input type="text" id="status-invoice-id" value={statusPopupInvoiceId} onChange={(e) => setStatusPopupInvoiceId(e.target.value)} placeholder="Enter full ID to edit" required disabled={isSubmitting}/> </div>
-                             <div className="form-group"> <label htmlFor="status-new-status">New Status:</label> <select id="status-new-status" value={statusPopupNewStatus} onChange={(e) => setStatusPopupNewStatus(e.target.value as Invoice['status'])} required disabled={isSubmitting}> <option value="Pending">Pending</option> <option value="Paid">Paid</option> <option value="Overdue">Overdue</option> </select> </div>
+                             <div className="form-group"> <label htmlFor="status-new-status">New Status:</label> <select id="status-new-status" value={statusPopupNewStatus} onChange={(e) => { setStatusPopupNewStatus(e.target.value as Invoice['status']); setStatusPopupPaymentMethod(''); setStatusPopupPaymentReference(''); }} required disabled={isSubmitting}> <option value="Pending">Pending</option> <option value="Paid">Paid</option> <option value="Overdue">Overdue</option> </select> </div>
+                             {statusPopupNewStatus === 'Paid' && (
+                                 <div className="payment-details-section">
+                                     <div className="form-group"> <label htmlFor="status-payment-method">Payment Method:</label> <select id="status-payment-method" value={statusPopupPaymentMethod} onChange={(e) => setStatusPopupPaymentMethod(e.target.value as 'cash' | 'bank' | '')} required disabled={isSubmitting} > <option value="" disabled>-- Select Method --</option> <option value="cash">Cash</option> <option value="bank">Bank Transfer</option> </select> </div>
+                                     {statusPopupPaymentMethod === 'bank' && ( <div className="form-group"> <label htmlFor="status-payment-ref">Reference No:</label> <input type="text" id="status-payment-ref" value={statusPopupPaymentReference} onChange={(e) => setStatusPopupPaymentReference(e.target.value)} placeholder="Enter bank reference" required disabled={isSubmitting} /> </div> )}
+                                 </div>
+                             )}
+                             {statusPopupNewStatus === 'Overdue' && ( <p className="overdue-notice">Note: Marking as Overdue will add a $10.00 fee line item.</p> )}
                              <div className="popup-actions">
-                                 <button type="submit" className="action-button status-button" disabled={isSubmitting}>
-                                     {isSubmitting ? 'Updating...' : 'Update Status'}
-                                 </button>
+                                 <button type="submit" className="action-button status-button" disabled={isSubmitting}> {isSubmitting ? 'Updating...' : 'Update Status'} </button>
                                  <button type="button" onClick={closeModal} className="cancel-button" disabled={isSubmitting}>Cancel</button>
                              </div>
                          </form>
