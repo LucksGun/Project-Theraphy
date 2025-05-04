@@ -1,131 +1,261 @@
-/* src/InvoiceManagerPage.css */
+/* src/InvoiceManagerPage.css - Improved Styles & Scrollable Modal */
 
-/* Password Prompt Styles (copy relevant styles from PresentationPage.css if needed) */
+/* --- Base Variables (Consider defining these globally if not already) --- */
+:root {
+    --container-bg: #ffffff;
+    --border-color: #dee2e6;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --button-primary-bg: #0d6efd;
+    --button-primary-hover-bg: #0b5ed7;
+    --button-primary-text: #fff;
+    --button-secondary-bg: #e9ecef;
+    --button-secondary-hover-bg: #dee2e6;
+    --button-success-bg: #198754;
+    --button-success-hover-bg: #157347;
+    --button-warning-bg: #ffc107;
+    --button-warning-hover-bg: #ffca2c;
+    --button-warning-text: #000;
+    --button-danger-bg: #dc3545;
+    --button-danger-hover-bg: #bb2d3b;
+    --button-info-bg: #0dcaf0;
+    --button-info-hover-bg: #31d2f2;
+    --button-light-text: #fff;
+    --input-border-color: #ced4da;
+    --input-focus-border-color: #86b7fe;
+    --input-focus-shadow: rgba(13, 110, 253, 0.25);
+    --status-pending-bg: #fff3cd;
+    --status-pending-text: #664d03;
+    --status-paid-bg: #d1e7dd;
+    --status-paid-text: #0f5132;
+    --status-overdue-bg: #f8d7da;
+    --status-overdue-text: #842029;
+    --error-bg: #f8d7da;
+    --error-text: #842029;
+    --error-border: #f5c2c7;
+    --success-bg: #d1e7dd;
+    --success-text: #0f5132;
+    --success-border: #badbcc;
+}
+
+/* --- Password Prompt Styles --- */
 .invoice-manager-password-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background-color: #e9ebee; /* Slightly different background */
-    padding: 20px;
-    box-sizing: border-box;
+    display: flex; justify-content: center; align-items: center; min-height: 100vh;
+    background-color: #f0f2f5; padding: 20px; box-sizing: border-box;
 }
-
 .invoice-manager-password-box {
-    background-color: white;
-    padding: 30px 40px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    max-width: 400px;
-    width: 100%;
+    background-color: var(--container-bg); padding: 30px 40px; border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center; max-width: 400px; width: 100%;
 }
-
-/* Shared form/button styles can go here or in a global CSS */
+.invoice-manager-password-box h2 { margin-top: 0; margin-bottom: 25px; color: var(--text-primary); font-size: 1.5em; }
 .form-group { margin-bottom: 15px; text-align: left; }
-label { display: block; margin-bottom: 5px; font-weight: bold; }
-input[type="text"], input[type="password"], input[type="number"], input[type="date"], select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+.invoice-manager-password-box label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--text-secondary); font-size: 0.9em;}
+.invoice-manager-password-box input[type="password"] {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--input-border-color); border-radius: 4px;
+    box-sizing: border-box; font-size: 1em;
+}
+.invoice-manager-password-box input[type="password"]:focus {
+    border-color: var(--input-focus-border-color); outline: 0;
+    box-shadow: 0 0 0 0.25rem var(--input-focus-shadow);
+}
+.password-error { color: var(--error-text); margin-top: -10px; margin-bottom: 15px; font-size: 0.9em; text-align: center; }
+.submit-password-button {
+    background-color: var(--button-primary-bg); color: var(--button-primary-text); padding: 10px 25px;
+    border: none; border-radius: 4px; font-size: 1em; cursor: pointer; transition: background-color 0.2s ease;
+    width: 100%; margin-top: 10px; font-weight: 500;
+}
+.submit-password-button:hover { background-color: var(--button-primary-hover-bg); }
+.password-note { margin-top: 25px; font-size: 0.85em; color: var(--text-secondary); }
+
+/* --- Invoice Manager Page Layout --- */
+.invoice-manager-container {
+    padding: 25px 35px; /* Match admin padding */
+    background-color: var(--container-bg);
+    min-height: calc(100vh - 1px);
     box-sizing: border-box;
 }
-.password-error { color: red; margin-bottom: 15px; }
-.submit-password-button, .action-button, .table-button, .popup-actions button {
-    padding: 10px 15px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.95em;
-    margin: 5px;
+
+.invoice-manager-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap; gap: 15px;
 }
-.submit-password-button { background-color: #007bff; color: white; }
-.password-note { margin-top: 15px; font-size: 0.9em; color: #555; }
+.invoice-manager-header h1 { margin: 0; font-size: 1.8em; color: var(--text-primary); font-weight: 600; }
 
-
-/* Invoice Manager UI Styles */
-.invoice-manager-container {
-    padding: 20px;
-    max-width: 1200px;
-    margin: 20px auto;
+.logout-button { /* Style logout like admin */
+    width: auto; margin-top: 0; padding: 8px 16px; font-size: 0.9em;
+    background-color: var(--button-secondary-bg); border: 1px solid var(--border-color);
+    color: var(--text-primary); border-radius: 5px; cursor: pointer; transition: background-color 0.2s ease;
 }
+.logout-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); }
+.logout-button:disabled { opacity: 0.65; cursor: not-allowed; }
 
+
+/* Action Buttons (Create, Edit Status) */
 .invoice-actions {
-    margin-bottom: 20px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 15px;
+    margin-bottom: 25px; display: flex; gap: 10px; flex-wrap: wrap;
 }
-
 .action-button {
-    background-color: #28a745; /* Green for create */
-    color: white;
+    padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer;
+    font-size: 0.9em; font-weight: 500; transition: background-color 0.2s ease;
 }
-.action-button.status-button {
-    background-color: #ffc107; /* Yellow for status */
-    color: #333;
-}
+.action-button:disabled { opacity: 0.65; cursor: not-allowed; }
+.action-button.create-button { background-color: var(--button-success-bg); color: var(--button-light-text); }
+.action-button.create-button:hover:not(:disabled) { background-color: var(--button-success-hover-bg); }
+.action-button.status-button { background-color: var(--button-warning-bg); color: var(--button-warning-text); }
+.action-button.status-button:hover:not(:disabled) { background-color: var(--button-warning-hover-bg); }
 
-.invoice-list {
-    margin-top: 20px;
+/* Status Messages (Loading, Error, Success) */
+.status-messages { min-height: 30px; margin: 15px 0; font-size: 0.9em; }
+.loading-message { color: var(--text-secondary); font-style: italic; }
+.api-error-message {
+    color: var(--error-text); background-color: var(--error-bg); border: 1px solid var(--error-border);
+    padding: 10px 15px; border-radius: 4px;
 }
-
-.invoice-list table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-}
-
-.invoice-list th, .invoice-list td {
-    border: 1px solid #ddd;
-    padding: 10px;
-    text-align: left;
+.api-success-message {
+    color: var(--success-text); background-color: var(--success-bg); border: 1px solid var(--success-border);
+    padding: 10px 15px; border-radius: 4px;
 }
 
-.invoice-list th {
-    background-color: #f8f9fa;
-    font-weight: bold;
-}
+/* Invoice List Table */
+.invoice-list { margin-top: 20px; }
+.invoice-list h2 { font-size: 1.4em; margin-bottom: 15px; color: var(--text-primary); font-weight: 600; }
+.invoice-list table { width: 100%; border-collapse: collapse; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; /* Helps with radius */ }
+.invoice-list th, .invoice-list td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.9em; vertical-align: middle; }
+.invoice-list th { background-color: #f8f9fa; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+.invoice-list tr:last-child td { border-bottom: none; }
+.invoice-list tbody tr:hover { background-color: #f8f9fa; }
+.invoice-list td:first-child { /* ID Column */ max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; font-size: 0.95em; }
 
-.invoice-list tbody tr:nth-child(even) {
-    background-color: #f2f2f2;
-}
+/* Status Badges */
+.status-badge { padding: 3px 8px; font-size: 0.8em; border-radius: 10px; font-weight: 500; white-space: nowrap; }
+.status-pending { background-color: var(--status-pending-bg); color: var(--status-pending-text); }
+.status-paid { background-color: var(--status-paid-bg); color: var(--status-paid-text); }
+.status-overdue { background-color: var(--status-overdue-bg); color: var(--status-overdue-text); }
 
-.table-button {
-    padding: 5px 10px;
-    font-size: 0.85em;
-    margin-right: 5px;
-}
-.table-button.edit { background-color: #17a2b8; color: white; }
-.table-button.delete { background-color: #dc3545; color: white; }
+/* Table Action Buttons */
+.invoice-list .table-button { padding: 5px 10px; font-size: 0.85em; margin-right: 5px; border-radius: 4px; cursor: pointer; border: 1px solid transparent; transition: background-color 0.2s ease; }
+.invoice-list .table-button:last-child { margin-right: 0; }
+.invoice-list .table-button:disabled { opacity: 0.65; cursor: not-allowed; }
+.invoice-list .table-button.edit { background-color: var(--button-secondary-bg); border-color: var(--input-border-color); color: var(--text-secondary); }
+.invoice-list .table-button.edit:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); }
+.invoice-list .table-button.delete { background-color: #fff0f1; border-color: var(--error-border); color: var(--error-text); }
+.invoice-list .table-button.delete:hover:not(:disabled) { background-color: var(--error-bg); }
+.invoice-list .table-button.print { background-color: var(--button-info-bg); border-color: #6ff0ff; color: var(--button-light-text); }
+.invoice-list .table-button.print:hover:not(:disabled) { background-color: var(--button-info-hover-bg); }
 
 
-/* Modal / Popup Styles */
+/* --- Modal Styles --- */
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5); /* Darker overlay */
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000; padding: 20px; /* Add padding for smaller screens */
 }
-
 .modal-content {
-    background-color: white;
-    padding: 30px;
-    border-radius: 8px;
-    min-width: 400px; /* Adjust as needed */
-    max-width: 600px;
+    background-color: var(--container-bg); padding: 25px 30px; border-radius: 8px;
+    min-width: 300px; /* Min width */
+    max-width: 650px; /* Default max width */
+    width: 90%; /* Responsive width */
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    position: relative; /* Needed if adding a close button */
+    display: flex; flex-direction: column;
+    max-height: 85vh; /* Limit modal height */
 }
-.modal-content h2 { margin-top: 0; margin-bottom: 20px; }
+.modal-content.wide-modal { max-width: 750px; } /* Wider modal for create/edit */
+.modal-content h2 { margin-top: 0; margin-bottom: 20px; font-size: 1.5em; font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
 
-/* Specific styles for status popup */
-.status-popup label { margin-top: 15px;}
-.status-popup input, .status-popup select { margin-bottom: 15px; }
-.popup-actions { margin-top: 20px; text-align: right; }
-.popup-actions button:last-child { background-color: #6c757d; color: white; } /* Cancel button */
+/* Modal Form Styles */
+.modal-content form { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; /* Prevent form itself from overflowing */ }
+.modal-content .form-group { margin-bottom: 15px; }
+.modal-content label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.9em; color: var(--text-secondary); }
+.modal-content input[type="text"],
+.modal-content input[type="number"],
+.modal-content input[type="date"],
+.modal-content select {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--input-border-color); border-radius: 4px;
+    box-sizing: border-box; font-size: 0.95em;
+}
+.modal-content input:focus, .modal-content select:focus {
+    border-color: var(--input-focus-border-color); outline: 0;
+    box-shadow: 0 0 0 0.2rem var(--input-focus-shadow);
+}
+.modal-content input:disabled, .modal-content select:disabled, .modal-content button:disabled {
+    background-color: #e9ecef; opacity: 0.7; cursor: not-allowed;
+}
+
+/* Scrollable Area within Create/Edit Modal */
+.form-scroll-area {
+    overflow-y: auto; /* Enable vertical scroll */
+    flex-grow: 1; /* Allow this area to take up space */
+    padding: 5px 5px 15px 5px; /* Add some padding inside scroll area */
+    margin-bottom: 15px; /* Space before actions */
+    /* Optional: Add subtle scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: #ccc #f0f0f0;
+}
+/* Target Webkit browsers (Chrome, Safari) */
+.form-scroll-area::-webkit-scrollbar { width: 8px; }
+.form-scroll-area::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+.form-scroll-area::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+.form-scroll-area::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+.form-section { margin-bottom: 20px; }
+.form-section h3 { font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px; color: var(--text-primary); }
+
+/* Line Item Styling */
+.line-items-section { border: 1px solid var(--border-color); padding: 15px; border-radius: 5px; background-color: #fdfdfd; }
+.line-item-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+.line-item-description { flex-grow: 1; }
+.line-item-amount { width: 120px; flex-shrink: 0; text-align: right; }
+.remove-line-item-btn { background: none; border: none; color: var(--button-danger-bg); cursor: pointer; font-size: 1.2em; padding: 0 5px; line-height: 1; }
+.remove-line-item-btn:hover { color: #a0232f; }
+.add-line-item-btn {
+    margin-top: 5px; margin-bottom: 15px; padding: 6px 12px; font-size: 0.85em;
+    background-color: var(--button-secondary-bg); border: 1px solid var(--input-border-color); color: var(--text-primary);
+    border-radius: 4px; cursor: pointer;
+}
+.add-line-item-btn:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); }
+.form-total { text-align: right; margin-top: 15px; font-size: 1.1em; font-weight: bold; padding-top: 10px; border-top: 1px solid var(--border-color); }
+
+/* Modal Actions (Buttons at the bottom) */
+.modal-actions {
+    margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);
+    display: flex; justify-content: flex-end; gap: 10px;
+    flex-shrink: 0; /* Prevent actions from shrinking */
+}
+.modal-actions .action-button { padding: 8px 18px; font-weight: 500; }
+.modal-actions .cancel-button { background-color: var(--button-secondary-bg); color: var(--text-primary); border: 1px solid var(--input-border-color); }
+.modal-actions .cancel-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); }
+.modal-actions .edit-button { background-color: var(--button-info-bg); color: var(--button-light-text); } /* Example edit color */
+.modal-actions .edit-button:hover:not(:disabled) { background-color: var(--button-info-hover-bg); }
+
+/* Status Popup Specific Styles */
+.status-popup { max-width: 450px; } /* Smaller max-width */
+.status-popup .form-group { margin-bottom: 20px; }
+.popup-actions { margin-top: 25px; text-align: right; border: none; padding: 0; }
+
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .invoice-manager-container { padding: 15px 20px; }
+    .invoice-manager-header h1 { font-size: 1.5em; }
+    .invoice-list th, .invoice-list td { padding: 10px 8px; font-size: 0.85em; }
+    .invoice-list td:first-child { max-width: 100px; } /* Shorter ID on mobile */
+    .invoice-list .table-button { padding: 4px 8px; font-size: 0.8em; margin-right: 3px; }
+    .modal-content { padding: 20px; max-height: 90vh; }
+    .modal-content.wide-modal { max-width: 95%; }
+    .line-item-row { flex-wrap: wrap; } /* Allow line items to wrap */
+    .line-item-description { width: calc(100% - 130px); } /* Adjust width */
+    .line-item-amount { width: 100px; }
+}
+
+@media (max-width: 500px) {
+    .invoice-manager-container { padding: 10px 15px; }
+    .invoice-manager-header h1 { font-size: 1.3em; }
+    .invoice-list th, .invoice-list td { font-size: 0.8em; padding: 8px 5px;}
+    .invoice-list td:first-child { max-width: 80px; }
+    .modal-content h2 { font-size: 1.3em; }
+    .modal-actions { flex-direction: column; gap: 8px; }
+    .modal-actions button { width: 100%; }
+}

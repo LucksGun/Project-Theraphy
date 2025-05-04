@@ -1,11 +1,13 @@
-// src/InvoiceManagerPage.tsx (Stable Refetch on Update/Delete/Status Change)
+// src/InvoiceManagerPage.tsx (Refetch in Finally Block)
 import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QRCodeCanvas } from 'qrcode.react';
 import './InvoiceManagerPage.css'; // Make sure this CSS file exists and is styled
 
 // --- Configuration ---
+// <<< --- REPLACE with your actual Worker URL --- >>>
 const WORKER_API_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
+// <<< --- REPLACE with the password set in Worker secrets --- >>>
 const INVOICE_ACCESS_PASSWORD = '1234';
 
 // --- Helper: Format Date for Input ---
@@ -34,6 +36,7 @@ const InvoiceManagerPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState<boolean>(false); // General loading for fetch
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Specific loading for form submits
     const [apiError, setApiError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null); // For success feedback
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
     const [isStatusPopupOpen, setIsStatusPopupOpen] = useState<boolean>(false);
@@ -53,7 +56,7 @@ const InvoiceManagerPage: React.FC = () => {
         // No need to check isAuthenticated here, as it's checked in the useEffect that calls this
         console.log("Fetching invoices...");
         setIsLoading(true);
-        setApiError(null);
+        setApiError(null); // Clear previous errors before fetching
         let response: Response | null = null;
         try {
             response = await fetch(WORKER_API_URL, {
@@ -62,7 +65,7 @@ const InvoiceManagerPage: React.FC = () => {
                 body: JSON.stringify({ action: 'invoiceGet' })
             });
             console.log("Fetch response status:", response.status);
-            const data = await response.json();
+            const data = await response.json(); // Read body ONCE as JSON
 
             if (!response.ok) {
                 throw new Error(data?.error || `API Error: ${response.status} ${response.statusText}`);
@@ -71,6 +74,7 @@ const InvoiceManagerPage: React.FC = () => {
             if (data.success && Array.isArray(data.invoices)) {
                 const processedInvoices = data.invoices.map((inv: any) => ({
                     ...inv,
+                    // Ensure lineItems is always an array, parse if it's a string
                     lineItems: typeof inv.lineItems === 'string'
                                 ? JSON.parse(inv.lineItems)
                                 : (Array.isArray(inv.lineItems) ? inv.lineItems : [])
@@ -98,11 +102,20 @@ const InvoiceManagerPage: React.FC = () => {
     // Effect to fetch data when authentication changes
     useEffect(() => {
         if (isAuthenticated) {
-            fetchInvoices();
+            fetchInvoices(); // Initial fetch on auth
         } else {
             setInvoices([]); // Clear data if logged out
         }
     }, [isAuthenticated, fetchInvoices]); // Include fetchInvoices here
+
+    // Effect to clear success message after a delay
+     useEffect(() => {
+        let timer: NodeJS.Timeout | null = null;
+        if (successMessage) {
+            timer = setTimeout(() => setSuccessMessage(null), 3500); // Clear after 3.5 seconds
+        }
+        return () => { if (timer) clearTimeout(timer); }; // Cleanup timer
+    }, [successMessage]);
 
     // --- Password Handlers ---
     const handlePasswordChange = (event: ChangeEvent<HTMLInputElement>) => { setEnteredPassword(event.target.value); setAuthError(null); };
@@ -118,10 +131,9 @@ const InvoiceManagerPage: React.FC = () => {
     const addLineItem = () => { setFormLineItems(prevItems => [ ...prevItems, { id: `temp-${Date.now()}`, description: '', amount: 0 } ]); };
     const removeLineItem = (index: number) => { setFormLineItems(prevItems => prevItems.filter((_, i) => i !== index)); };
 
-    // --- Invoice Action Handlers (API Calls) ---
-    // Wrap handlers in useCallback if they depend on other state/props, include fetchInvoices
+    // --- Invoice Action Handlers (API Calls - Refetch in Finally) ---
     const handleCreateInvoiceSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
-         event.preventDefault(); setApiError(null); setIsSubmitting(true);
+         event.preventDefault(); setApiError(null); setSuccessMessage(null); setIsSubmitting(true);
          if (formLineItems.length === 0) { setApiError("Please add at least one line item."); setIsSubmitting(false); return; }
          const itemsToSend = formLineItems.map(({ id, ...rest }) => rest);
          console.log("Submitting new invoice:", baseFormData, itemsToSend);
@@ -129,29 +141,35 @@ const InvoiceManagerPage: React.FC = () => {
              const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceCreate', ...baseFormData, lineItems: itemsToSend }) });
              const data = await response.json(); console.log("Create response:", data);
              if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-             closeModal(); // Close modal first
-             fetchInvoices(); // Then refetch
+             setSuccessMessage("Invoice created successfully!"); // Set success message
+             closeModal(); // Close modal on success
          } catch (err: any) { console.error("Create Invoice Err:", err); setApiError(`Create failed: ${err.message}`); }
-         finally { setIsSubmitting(false); }
-     }, [baseFormData, formLineItems, fetchInvoices]); // Add dependencies
+         finally {
+             setIsSubmitting(false);
+             if (isAuthenticated) fetchInvoices(); // <<<--- Refetch regardless of success/failure (if authenticated)
+         }
+     }, [baseFormData, formLineItems, fetchInvoices, isAuthenticated]); // Added isAuthenticated
 
     const handleDeleteInvoice = useCallback(async (idToDelete: string) => {
          if (!window.confirm(`Are you sure you want to delete invoice ${idToDelete}?`)) return;
-         setApiError(null); setIsSubmitting(true);
+         setApiError(null); setSuccessMessage(null); setIsSubmitting(true);
          console.log("Deleting invoice:", idToDelete);
          try {
              const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceDelete', invoiceId: idToDelete }) });
               const data = await response.json(); console.log("Delete response:", data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-             fetchInvoices(); // Refetch on success
+             setSuccessMessage("Invoice deleted successfully!"); // Set success message
              console.log("Invoice delete API call successful.");
          } catch (err: any) { console.error("Failed to delete invoice:", err); setApiError(`Delete failed: ${err.message}`); }
-         finally { setIsSubmitting(false); }
-     }, [fetchInvoices]); // Add dependency
+         finally {
+             setIsSubmitting(false);
+             if (isAuthenticated) fetchInvoices(); // <<<--- Refetch regardless of success/failure (if authenticated)
+         }
+     }, [fetchInvoices, isAuthenticated]); // Added isAuthenticated
 
      const handleEditInvoiceSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
          event.preventDefault(); if (!editingInvoice) { setApiError("Cannot save, no invoice selected."); return; }
-         setApiError(null); setIsSubmitting(true);
+         setApiError(null); setSuccessMessage(null); setIsSubmitting(true);
           if (formLineItems.length === 0) { setApiError("Please add at least one line item."); setIsSubmitting(false); return; }
          const itemsToSend = formLineItems.map(({ id, ...rest }) => rest);
          const updatedInvoiceData = { id: editingInvoice.id, customerName: baseFormData.customerName, dueDate: baseFormData.dueDate, status: editingInvoice.status, lineItems: itemsToSend };
@@ -160,28 +178,34 @@ const InvoiceManagerPage: React.FC = () => {
              const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceUpdate', ...updatedInvoiceData }) });
               const data = await response.json(); console.log("Update response:", data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-              closeModal(); // Close modal first
-              fetchInvoices(); // Then refetch
+              setSuccessMessage("Invoice updated successfully!"); // Set success message
+              closeModal(); // Close modal on success
          } catch (err: any) { console.error("Update Invoice Err:", err); setApiError(`Update failed: ${err.message}`); }
-         finally { setIsSubmitting(false); }
-     }, [editingInvoice, baseFormData, formLineItems, fetchInvoices]); // Add dependencies
+         finally {
+             setIsSubmitting(false);
+             if (isAuthenticated) fetchInvoices(); // <<<--- Refetch regardless of success/failure (if authenticated)
+         }
+     }, [editingInvoice, baseFormData, formLineItems, fetchInvoices, isAuthenticated]); // Added isAuthenticated
 
     const handleUpdateStatusSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
          event.preventDefault(); if (!statusPopupInvoiceId) { setApiError("Please enter an Invoice ID."); return; }
-          const invoiceExists = invoices.some(inv => inv.id === statusPopupInvoiceId);
-          if (!invoiceExists) { setApiError(`Invoice with ID "${statusPopupInvoiceId}" not found locally.`); }
-          setApiError(null); setIsSubmitting(true);
+          // const invoiceExists = invoices.some(inv => inv.id === statusPopupInvoiceId); // Can remove this local check
+          // if (!invoiceExists) { setApiError(`Invoice with ID "${statusPopupInvoiceId}" not found locally.`); }
+          setApiError(null); setSuccessMessage(null); setIsSubmitting(true);
           console.log(`Updating status for ${statusPopupInvoiceId} to ${statusPopupNewStatus}`);
           try {
               const response = await fetch(WORKER_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Invoice-Password': INVOICE_ACCESS_PASSWORD, }, body: JSON.stringify({ action: 'invoiceUpdateStatus', invoiceId: statusPopupInvoiceId, newStatus: statusPopupNewStatus }) });
               const data = await response.json(); console.log("Update status response:", data);
               if (!response.ok || !data.success) { throw new Error(data.error || `API Error: ${response.status}`); }
-              closeModal(); // Close modal first
-              fetchInvoices(); // Then refetch
+              setSuccessMessage("Status updated successfully!"); // Set success message
+              closeModal(); // Close modal on success
               console.log(`Status update API call successful for ${statusPopupInvoiceId}`);
           } catch (err: any) { console.error("Update Status Err:", err); setApiError(`Status update failed: ${err.message}`); }
-          finally { setIsSubmitting(false); }
-     }, [statusPopupInvoiceId, statusPopupNewStatus, invoices, fetchInvoices]); // Add dependencies
+          finally {
+             setIsSubmitting(false);
+             if (isAuthenticated) fetchInvoices(); // <<<--- Refetch regardless of success/failure (if authenticated)
+          }
+     }, [statusPopupInvoiceId, statusPopupNewStatus, fetchInvoices, isAuthenticated]); // Removed invoices, Added isAuthenticated
 
     // --- Print Invoice Handler ---
     const handlePrintInvoice = useCallback((invoice: Invoice) => {
@@ -214,10 +238,10 @@ const InvoiceManagerPage: React.FC = () => {
     }, []); // Empty dependency array as it only depends on the invoice passed in
 
     // --- Modal Open/Close Handlers ---
-    const openCreateModal = () => { setBaseFormData(initialBaseFormData); setFormLineItems([{ id: `temp-${Date.now()}`, description: '', amount: 0 }]); setIsCreateModalOpen(true); setApiError(null); };
-    const openEditModal = (invoiceToEdit: Invoice) => { setEditingInvoice(invoiceToEdit); setBaseFormData({ customerName: invoiceToEdit.customerName, dueDate: formatDateForInput(invoiceToEdit.dueDate) }); setFormLineItems(invoiceToEdit.lineItems.map(item => ({ ...item, id: item.id || `temp-${Math.random()}` }))); setIsEditModalOpen(true); setApiError(null); };
-    const openStatusPopup = () => { setStatusPopupInvoiceId(''); setStatusPopupNewStatus('Pending'); setIsStatusPopupOpen(true); setApiError(null); };
-    const closeModal = () => { setIsCreateModalOpen(false); setIsEditModalOpen(false); setIsStatusPopupOpen(false); setEditingInvoice(null); setBaseFormData(initialBaseFormData); setFormLineItems([]); setStatusPopupInvoiceId(''); setStatusPopupNewStatus('Pending'); setApiError(null); };
+    const openCreateModal = () => { setBaseFormData(initialBaseFormData); setFormLineItems([{ id: `temp-${Date.now()}`, description: '', amount: 0 }]); setIsCreateModalOpen(true); setApiError(null); setSuccessMessage(null); };
+    const openEditModal = (invoiceToEdit: Invoice) => { setEditingInvoice(invoiceToEdit); setBaseFormData({ customerName: invoiceToEdit.customerName, dueDate: formatDateForInput(invoiceToEdit.dueDate) }); setFormLineItems(invoiceToEdit.lineItems.map(item => ({ ...item, id: item.id || `temp-${Math.random()}` }))); setIsEditModalOpen(true); setApiError(null); setSuccessMessage(null); };
+    const openStatusPopup = () => { setStatusPopupInvoiceId(''); setStatusPopupNewStatus('Pending'); setIsStatusPopupOpen(true); setApiError(null); setSuccessMessage(null); };
+    const closeModal = () => { setIsCreateModalOpen(false); setIsEditModalOpen(false); setIsStatusPopupOpen(false); setEditingInvoice(null); setBaseFormData(initialBaseFormData); setFormLineItems([]); setStatusPopupInvoiceId(''); setStatusPopupNewStatus('Pending'); setApiError(null); /* Keep success message */ };
 
 
     // --- Render Password Prompt ---
@@ -246,10 +270,21 @@ const InvoiceManagerPage: React.FC = () => {
                  <button onClick={openCreateModal} className="action-button create-button" disabled={isSubmitting}> + Create New Invoice </button>
                  <button onClick={openStatusPopup} className="action-button status-button" disabled={isSubmitting}> Edit Invoice Status by ID </button>
             </div>
-            {isLoading && <p className="loading-message">Loading invoices...</p>}
-            {apiError && !isCreateModalOpen && !isEditModalOpen && !isStatusPopupOpen &&
-                <p className="api-error-message"> Error: {apiError} </p>
-            }
+
+            {/* Display Loading / API Errors / Success Messages */}
+             <div className="status-messages" style={{ minHeight: '30px', margin: '10px 0' }}> {/* Container for messages */}
+                 {isLoading && <p className="loading-message">Loading invoices...</p>}
+                 {/* Show API error only if not loading and no success message */}
+                 {apiError && !isLoading && !successMessage &&
+                     <p className="api-error-message"> Error: {apiError} </p>
+                 }
+                 {/* Show success message */}
+                 {successMessage &&
+                     <p className="api-success-message"> {successMessage} </p>
+                 }
+             </div>
+
+            {/* Invoice List Table - Render only if not loading */}
             {!isLoading && (
                 <div className="invoice-list">
                     <h2>Invoices</h2>
@@ -281,7 +316,7 @@ const InvoiceManagerPage: React.FC = () => {
                                 })}
                             </tbody>
                         </table>
-                    ) : null }
+                    ) : null /* Don't render table if error and no invoices */ }
                 </div>
             )}
 
@@ -290,6 +325,7 @@ const InvoiceManagerPage: React.FC = () => {
                 <div className="modal-overlay" onClick={closeModal}>
                      <div className="modal-content wide-modal" onClick={(e) => e.stopPropagation()}>
                          <h2>{isEditModalOpen ? `Edit Invoice (ID: ${editingInvoice?.id.substring(0,8)}...)` : 'Create New Invoice'}</h2>
+                         {/* Display API error specific to this modal */}
                          {apiError && <p className="api-error-message">{apiError}</p>}
                          <form onSubmit={isEditModalOpen ? handleEditInvoiceSubmit : handleCreateInvoiceSubmit}>
                             <div className="form-section">
