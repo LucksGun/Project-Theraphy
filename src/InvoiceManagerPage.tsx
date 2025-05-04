@@ -306,77 +306,44 @@ const InvoiceManagerPage: React.FC = () => {
 
             {/* --- Modals --- */}
             {(isCreateModalOpen || isEditModalOpen) && (
-                <div className="modal-overlay" onClick={closeModal}>
-                     <div className="modal-content wide-modal" onClick={(e) => e.stopPropagation()}>
-                         <h2>{isEditModalOpen ? `Edit Invoice (ID: ${editingInvoice?.id.substring(0,8)}...)` : 'Create New Invoice'}</h2>
-                         {apiError && <p className="api-error-message">{apiError}</p>}
-                         <form onSubmit={isEditModalOpen ? handleEditInvoiceSubmit : handleCreateInvoiceSubmit}>
-                            <div className="form-scroll-area">
-                                <div className="form-section">
-                                     <div className="form-group"> <label htmlFor="customerName">Customer Name:</label> <input type="text" id="customerName" name="customerName" value={baseFormData.customerName} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
-                                     <div className="form-group"> <label htmlFor="dueDate">Due Date:</label> <input type="date" id="dueDate" name="dueDate" value={baseFormData.dueDate} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
+                 <div className="modal-overlay" onClick={closeModal}>
+                 <div className="modal-content wide-modal" onClick={(e) => e.stopPropagation()}>
+                     <h2>{isEditModalOpen ? `Edit Invoice (ID: ${editingInvoice?.id.substring(0,8)}...)` : 'Create New Invoice'}</h2>
+                     {apiError && <p className="api-error-message">{apiError}</p>}
+                     <form onSubmit={isEditModalOpen ? handleEditInvoiceSubmit : handleCreateInvoiceSubmit}>
+           
+                        {/* --- THIS WRAPPER IS CRUCIAL for scrolling --- */}
+                        <div className="form-scroll-area">
+           
+                            <div className="form-section"> {/* Customer/Date Section */}
+                                 <div className="form-group"> <label htmlFor="customerName">Customer Name:</label> <input type="text" id="customerName" name="customerName" value={baseFormData.customerName} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
+                                 <div className="form-group"> <label htmlFor="dueDate">Due Date:</label> <input type="date" id="dueDate" name="dueDate" value={baseFormData.dueDate} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
+                             </div>
+           
+                             <div className="form-section line-items-section"> {/* Line Items Section */}
+                                 <h3>Line Items</h3>
+                                 <div className="line-item-row line-item-header">
+                                     <label className="line-item-description-label">Description</label>
+                                     <label className="line-item-amount-label">Amount ($)</label>
+                                     <div className="line-item-action-label">Action</div>
                                  </div>
-                                 // --- Start Replace ---
- <div className="form-section line-items-section">
-     <h3>Line Items</h3>
-     {/* --- Line Item Header --- */}
-     <div className="line-item-row line-item-header">
-         <label className="line-item-description-label">Description</label>
-         <label className="line-item-amount-label">Amount ($)</label>
-         <div className="line-item-action-label">Action</div> {/* Placeholder for alignment */}
-     </div>
-
-     {/* --- Mapped Line Items --- */}
-     <div className="line-items-container"> {/* Added container for items */}
-         {formLineItems.map((item, index) => (
-             <div key={item.id} className="line-item-row">
-                 <input
-                     type="text"
-                     placeholder="Service/Product Description"
-                     value={item.description}
-                     onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
-                     required
-                     className="line-item-description"
-                     disabled={isSubmitting}
-                 />
-                 <input
-                     type="number"
-                     placeholder="0.00"
-                     value={item.amount}
-                     onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)}
-                     required
-                     min="0" // Allow 0, adjust if min should be > 0
-                     step="0.01"
-                     className="line-item-amount"
-                     disabled={isSubmitting}
-                 />
-                 <div className="line-item-action"> {/* Wrapper for button */}
-                     {formLineItems.length > 1 && (
-                         <button
-                            type="button"
-                            onClick={() => removeLineItem(index)}
-                            className="remove-line-item-btn"
-                            disabled={isSubmitting}
-                            title="Remove Item"
-                         >
-                             🗑️
-                         </button>
-                     )}
-                 </div>
-             </div>
-         ))}
-     </div>
-
-     <button type="button" onClick={addLineItem} className="add-line-item-btn" disabled={isSubmitting}>
-         + Add Line Item
-     </button>
-
-     <div className="form-total">
-         <strong>Total: ${formTotalAmount.toFixed(2)}</strong>
-     </div>
- </div>
- // --- End Replace ---
-                             </div> {/* --- *** END SCROLL WRAPPER *** --- */}
+                                 <div className="line-items-container">
+                                     {formLineItems.map((item, index) => (
+                                         <div key={item.id} className="line-item-row">
+                                             <input type="text" placeholder="Description" value={item.description} onChange={(e) => handleLineItemChange(index, 'description', e.target.value)} required className="line-item-description" disabled={isSubmitting} />
+                                             <input type="number" placeholder="Amount" value={item.amount} onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)} required min="0" step="0.01" className="line-item-amount" disabled={isSubmitting} />
+                                             <div className="line-item-action">
+                                                {formLineItems.length > 1 && ( <button type="button" onClick={() => removeLineItem(index)} className="remove-line-item-btn" disabled={isSubmitting} title="Remove Item"> 🗑️ </button> )}
+                                             </div>
+                                         </div>
+                                     ))}
+                                 </div>
+                                 <button type="button" onClick={addLineItem} className="add-line-item-btn" disabled={isSubmitting}> + Add Line Item </button>
+                                 <div className="form-total"> <strong>Total: ${formTotalAmount.toFixed(2)}</strong> </div>
+                             </div>
+           
+                         </div>
+                             {/* --- *** END SCROLL WRAPPER *** --- */}
                              <div className="modal-actions">
                                  <button type="submit" className={`action-button ${isEditModalOpen ? 'edit-button' : 'create-button'}`} disabled={isSubmitting}>
                                      {isSubmitting ? 'Saving...' : (isEditModalOpen ? 'Save Changes' : 'Create Invoice')}
