@@ -230,12 +230,12 @@ const InvoiceManagerPage: React.FC = () => {
                 <body>
                     <div class="container">
                         <div class="header">
-                            <div class="logo">Your Company Name</div> {/* Or <img src="your_logo_url" alt="Logo" style="max-height: 50px;"/> */}
+                            <div class="logo">Project Theraphy</div> 
                             <div class="company-details">
-                                <p>Your Street Address</p>
-                                <p>Your City, Postal Code</p>
-                                <p>Your Phone</p>
-                                <p>Your Email</p>
+                                <p>01 Sanambin Road</p>
+                                <p>Nai Mueng, Phitsanulok 65000</p>
+                                <p>088-555-1946</p>
+                                <p>thammalucka67@nu.ac.th</p>
                             </div>
                         </div>
 
@@ -243,11 +243,10 @@ const InvoiceManagerPage: React.FC = () => {
                             <div class="bill-to">
                                 <strong>Bill To:</strong><br>
                                 ${invoice.customerName}
-                                {/* Add customer address here if available */}
                             </div>
                             <div class="invoice-meta">
                                 <p><strong>Invoice #:</strong> ${invoice.id}</p>
-                                <p><strong>Date Issued:</strong> ${new Date().toLocaleDateString()}</p> {/* Use current date */}
+                                <p><strong>Date Issued:</strong> ${new Date().toLocaleDateString()}</p> 
                                 <p><strong>Due Date:</strong> ${invoice.dueDate}</p>
                                 <p><strong>Status:</strong> ${invoice.status}</p>
                             </div>
@@ -262,10 +261,8 @@ const InvoiceManagerPage: React.FC = () => {
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>Service/Product Description (Update as needed)</td>
                                     <td class="text-right">$${invoice.amount.toFixed(2)}</td>
                                 </tr>
-                                {/* Add more rows here if invoices have multiple items */}
                                 <tr class="total-row">
                                     <td class="text-right"><strong>Total Due:</strong></td>
                                     <td class="text-right"><strong>$${invoice.amount.toFixed(2)}</strong></td>
@@ -276,21 +273,19 @@ const InvoiceManagerPage: React.FC = () => {
                         <div class="payment-info">
                            <h3>Payment Information</h3>
                            <p>Please make payment to the following account:</p>
-                           <p>Bank Name: [Your Bank Name]</p>
-                           <p>Account Name: [Your Account Name]</p>
-                           <p>Account Number: [Your Account Number]</p>
+                           <p>Bank Name: Kasikorn Bank</p>
+                           <p>Account Name: ธรรมลักษณ์ อริยธรรมนิตย์</p>
+                           <p>Account Number: 153-2-86554-5</p>
                            <p>Reference: Invoice ${invoice.id.substring(0, 8)}</p>
-                           {/* Or provide a payment link */}
-                           {/* <p>Pay online: <a href="your_payment_link">your_payment_link</a></p> */}
                         </div>
 
                         <div class="qr-code-section">
                             <div class="notes">
-                                Thank you for your business!
+                                Pay before due date, If there is anyquestion regarding the innovice please let Thammalucks know!
                             </div>
                             <div class="qr-code-container">
-                                <div id="qr-code-target"></div> {/* Placeholder for QR code */}
-                                <p>${invoice.id}</p> {/* Show ID below QR */}
+                                <div id="qr-code-target"></div> 
+                                <p>${invoice.id}</p> 
                             </div>
                         </div>
 
