@@ -1,4 +1,4 @@
-/* src/InvoiceManagerPage.css - Improved Mobile Scroll */
+/* src/InvoiceManagerPage.css - Fix List Height & Scrolling */
 
 /* --- Base Variables --- */
 :root {
@@ -58,19 +58,29 @@
 .invoice-manager-container {
     padding: 25px 35px;
     background-color: var(--container-bg);
-    min-height: calc(100vh - 1px); /* Ensure it takes full viewport height */
+    min-height: calc(100vh - 1px); /* Ensure it tries to fill viewport height */
     box-sizing: border-box;
-    display: flex; /* Use flexbox for layout */
+    display: flex; /* Use flexbox for overall layout */
     flex-direction: column; /* Stack children vertically */
 }
-.invoice-manager-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 15px; flex-shrink: 0; /* Prevent header from shrinking */ }
+.invoice-manager-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; /* Reduced margin */
+    padding-bottom: 15px; border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap; gap: 15px;
+    flex-shrink: 0; /* Prevent header from shrinking */
+}
 .invoice-manager-header h1 { margin: 0; font-size: 1.8em; color: var(--text-primary); font-weight: 600; }
 .logout-button { width: auto; margin-top: 0; padding: 8px 16px; font-size: 0.9em; background-color: var(--button-secondary-bg); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 5px; cursor: pointer; transition: background-color 0.2s ease; }
 .logout-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); }
 .logout-button:disabled { opacity: 0.65; cursor: not-allowed; }
 
 /* Action Buttons (Create, Edit Status) */
-.invoice-actions { margin-bottom: 25px; display: flex; gap: 10px; flex-wrap: wrap; flex-shrink: 0; /* Prevent buttons from shrinking */ }
+.invoice-actions {
+    margin-bottom: 20px; /* Reduced margin */
+    display: flex; gap: 10px; flex-wrap: wrap;
+    flex-shrink: 0; /* Prevent buttons from shrinking */
+}
 .action-button { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background-color 0.2s ease; }
 .action-button:disabled { opacity: 0.65; cursor: not-allowed; }
 .action-button.create-button { background-color: var(--button-success-bg); color: var(--button-light-text); }
@@ -79,24 +89,26 @@
 .action-button.status-button:hover:not(:disabled) { background-color: var(--button-warning-hover-bg); }
 
 /* Status Messages (Loading, Error, Success) */
-.status-messages { min-height: 30px; margin: 15px 0; font-size: 0.9em; flex-shrink: 0; /* Prevent messages from shrinking */ }
+.status-messages {
+    min-height: 30px; margin: 0 0 15px 0; /* Adjusted margin */
+    font-size: 0.9em;
+    flex-shrink: 0; /* Prevent messages from shrinking */
+}
 .loading-message { color: var(--text-secondary); font-style: italic; }
 .api-error-message { color: var(--error-text); background-color: var(--error-bg); border: 1px solid var(--error-border); padding: 10px 15px; border-radius: 4px; }
 .api-success-message { color: var(--success-text); background-color: var(--success-bg); border: 1px solid var(--success-border); padding: 10px 15px; border-radius: 4px; }
 
 /* --- Invoice List Table (Scrollable) --- */
 .invoice-list {
-    margin-top: 20px;
+    margin-top: 10px; /* Reduced margin */
     border: 1px solid var(--border-color);
     border-radius: 6px;
     background-color: #ffffff;
-    /* --- ADJUSTED HEIGHT/SCROLL --- */
-    flex-grow: 1; /* Allow list to take available space */
-    overflow-y: auto; /* Add vertical scrollbar WHEN needed */
+    /* --- CORE SCROLL LOGIC --- */
+    flex-grow: 1; /* Allow this div to take up remaining vertical space */
+    overflow-y: auto; /* Add vertical scrollbar ONLY if content exceeds available space */
+    min-height: 150px; /* Optional: Ensure it has at least some height even if empty */
     -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
-    /* Remove fixed max-height or use a more reliable calc */
-    /* max-height: 65vh; */
-    /* max-height: calc(100vh - 280px); */ /* Example calc, adjust 280px as needed */
     position: relative; /* Needed for sticky header */
 }
 .invoice-list h2 {
@@ -108,8 +120,7 @@
 }
 .invoice-list table { width: 100%; border-collapse: collapse; }
 .invoice-list th {
-    position: sticky;
-    top: 55px; /* Adjust based on H2 height+padding if H2 is sticky */
+    position: sticky; top: 55px; /* Adjust based on H2 height+padding */
     background-color: #f8f9fa; z-index: 1;
     padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color);
     font-weight: 600; color: var(--text-secondary); white-space: nowrap;
@@ -194,7 +205,7 @@
     .invoice-manager-container { padding: 15px 20px; }
     .invoice-manager-header h1 { font-size: 1.5em; }
     .invoice-list th, .invoice-list td { padding: 10px 8px; font-size: 0.85em; }
-    .invoice-list td:first-child { max-width: none; } /* Allow ID cell to take more space */
+    .invoice-list td:first-child { max-width: none; }
     .invoice-list .table-button { padding: 4px 8px; font-size: 0.8em; margin-right: 3px; }
     .modal-content { padding: 20px; max-height: 90vh; }
     .modal-content.wide-modal { max-width: 95%; }
@@ -207,7 +218,7 @@
     .invoice-manager-container { padding: 10px 15px; }
     .invoice-manager-header h1 { font-size: 1.3em; }
     .invoice-list th, .invoice-list td { font-size: 0.8em; padding: 8px 5px;}
-    .invoice-list td:first-child { font-size: 0.85em; } /* Adjust ID font size if needed */
+    .invoice-list td:first-child { font-size: 0.85em; }
     .modal-content h2 { font-size: 1.3em; }
     .modal-actions { flex-direction: column; gap: 8px; }
     .modal-actions button { width: 100%; }
