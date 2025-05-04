@@ -1,4 +1,4 @@
-/* src/InvoiceManagerPage.css - Fix Line Item Overflow */
+/* src/InvoiceManagerPage.css - Fix Line Item Alignment */
 
 /* --- Base Variables --- */
 :root {
@@ -78,7 +78,7 @@
 .api-success-message { color: var(--success-text); background-color: var(--success-bg); border: 1px solid var(--success-border); padding: 10px 15px; border-radius: 4px; }
 
 /* --- Invoice List Table (Scrollable) --- */
-.invoice-list { margin-top: 10px; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff; flex-grow: 1; overflow-y: auto; height: 0; /* Let flex-grow determine height */ -webkit-overflow-scrolling: touch; position: relative; }
+.invoice-list { margin-top: 10px; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff; flex-grow: 1; overflow-y: auto; height: 0; -webkit-overflow-scrolling: touch; position: relative; }
 .invoice-list h2 { font-size: 1.4em; margin-bottom: 0; color: var(--text-primary); font-weight: 600; padding: 15px 15px 10px 15px; position: sticky; top: 0; background-color: white; z-index: 2; border-bottom: 1px solid var(--border-color); }
 .invoice-list table { width: 100%; border-collapse: collapse; }
 .invoice-list th { position: sticky; top: 55px; background-color: #f8f9fa; z-index: 1; padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
@@ -133,15 +133,59 @@
 
 /* --- UPDATED Line Item Styling --- */
 .line-items-section { border: 1px solid var(--border-color); padding: 15px; border-radius: 5px; background-color: #fdfdfd; margin-top: 15px; }
-.line-item-header { display: flex; gap: 10px; margin-bottom: 8px; /* Increased gap */ padding: 0 5px; font-size: 0.85em; color: var(--text-secondary); font-weight: 500; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; /* Increased padding */ }
-.line-item-description-label { flex-grow: 1; min-width: 0; /* Allow shrinking */ }
-.line-item-amount-label { width: 100px; /* Reduced width */ flex-shrink: 0; text-align: right; padding-right: 5px; /* Add padding */ }
-.line-item-action-label { width: 35px; /* Reduced width */ flex-shrink: 0; text-align: center; }
-
-.line-item-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; /* Reduced gap */ }
-.line-item-description { flex-grow: 1; min-width: 0; /* Allow shrinking */ } /* Added min-width */
-.line-item-amount { width: 100px; /* Reduced width */ flex-shrink: 0; text-align: right; }
-.line-item-action { width: 35px; /* Reduced width */ flex-shrink: 0; text-align: center; }
+/* --- Header Row --- */
+.line-item-header {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 0 5px 8px 5px; /* Match row padding + bottom padding */
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border-color);
+}
+.line-item-description-label {
+    flex-grow: 1; /* Take up remaining space */
+    min-width: 0; /* Allow shrinking */
+    padding-left: 12px; /* Align with input padding */
+}
+.line-item-amount-label {
+    width: 100px; /* Fixed width - MUST match input */
+    flex-shrink: 0;
+    text-align: right;
+    padding-right: 12px; /* Align with input padding */
+}
+.line-item-action-label {
+    width: 35px; /* Fixed width - MUST match button container */
+    flex-shrink: 0;
+    text-align: center;
+}
+/* --- Container for Mapped Items --- */
+.line-items-container {
+     max-height: 250px; 
+     overflow-y: auto; 
+}
+/* --- Input Row --- */
+.line-item-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.line-item-description {
+    flex-grow: 1; /* Take remaining space */
+    min-width: 0; /* Allow shrinking */
+}
+.line-item-amount {
+    width: 100px; /* Fixed width - MUST match label */
+    flex-shrink: 0;
+    text-align: right;
+}
+.line-item-action {
+    width: 35px; /* Fixed width - MUST match label */
+    flex-shrink: 0;
+    text-align: center;
+}
 .remove-line-item-btn { background: none; border: none; color: var(--button-danger-bg); cursor: pointer; font-size: 1.1em; padding: 0; line-height: 1; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; }
 .remove-line-item-btn:hover:not(:disabled) { color: #a0232f; background-color: #f8d7da; }
 .remove-line-item-btn:disabled { color: #aaa; cursor: not-allowed; }
@@ -171,9 +215,9 @@
     .invoice-list .table-button { padding: 4px 8px; font-size: 0.8em; margin-right: 3px; }
     .modal-content { padding: 20px; max-height: 90vh; }
     .modal-content.wide-modal { max-width: 95%; }
-    .line-item-row { flex-wrap: wrap; } /* Allow wrapping on smaller screens if needed */
-    .line-item-description { width: calc(100% - 145px); /* Adjust based on new amount/action width */ min-width: 100px; /* Ensure it doesn't get too small */ }
-    .line-item-amount { width: 100px; /* Adjust if needed */ }
+    .line-item-row { flex-wrap: wrap; }
+    .line-item-description { width: calc(100% - 145px); min-width: 100px; }
+    .line-item-amount { width: 100px; }
     .line-item-action { width: 35px; }
 }
 
@@ -185,8 +229,8 @@
     .modal-content h2 { font-size: 1.3em; }
     .modal-actions { flex-direction: column; gap: 8px; }
     .modal-actions button { width: 100%; }
-    .line-item-amount-label { width: 80px; } /* Smaller amount label */
-    .line-item-amount { width: 80px; } /* Smaller amount input */
-    .line-item-description { width: calc(100% - 125px); } /* Adjust description width */
+    .line-item-amount-label { width: 80px; }
+    .line-item-amount { width: 80px; }
+    .line-item-description { width: calc(100% - 125px); }
 }
 
