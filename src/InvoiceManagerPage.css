@@ -235,6 +235,124 @@
 .status-popup .form-group { margin-bottom: 20px; }
 .popup-actions { margin-top: 25px; text-align: right; border: none; padding: 0; }
 
+/* --- Add these styles to InvoiceManagerPage.css --- */
+
+.line-items-section h3 {
+    margin-bottom: 10px; /* Reduce space after h3 */
+}
+
+/* Header row for line items */
+.line-item-header {
+    display: flex;
+    gap: 10px; /* Match row gap */
+    margin-bottom: 5px; /* Space below header */
+    padding: 0 5px; /* Align with input padding */
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+.line-item-description-label {
+    flex-grow: 1; /* Take up most space */
+}
+
+.line-item-amount-label {
+    width: 120px; /* Match input width */
+    flex-shrink: 0;
+    text-align: right;
+}
+
+.line-item-action-label {
+    width: 40px; /* Approximate width of delete button area */
+    flex-shrink: 0;
+    text-align: center;
+}
+
+/* Container for the actual items */
+.line-items-container {
+    /* Can add max-height and overflow-y here if needed */
+    /* max-height: 200px; */
+    /* overflow-y: auto; */
+    padding-right: 5px; /* Space for scrollbar if needed */
+}
+
+
+/* Existing line item row styles */
+.line-item-row {
+    display: flex;
+    gap: 10px;
+    align-items: center; /* Vertically align items */
+    margin-bottom: 10px;
+}
+
+.line-item-description {
+    flex-grow: 1; /* Description takes remaining space */
+}
+
+.line-item-amount {
+    width: 120px; /* Fixed width for amount */
+    flex-shrink: 0; /* Prevent amount input from shrinking */
+    text-align: right;
+}
+
+.line-item-action {
+    width: 40px; /* Fixed width for action button */
+    flex-shrink: 0;
+    text-align: center; /* Center the button */
+}
+
+
+.remove-line-item-btn {
+    background: none;
+    border: none;
+    color: var(--button-danger-bg);
+    cursor: pointer;
+    font-size: 1.1em; /* Make icon slightly larger */
+    padding: 0;
+    line-height: 1;
+    width: 30px; /* Ensure button has width */
+    height: 30px; /* Ensure button has height */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+.remove-line-item-btn:hover:not(:disabled) {
+    color: #a0232f;
+    background-color: #f8d7da; /* Add subtle background on hover */
+}
+.remove-line-item-btn:disabled {
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+
+.add-line-item-btn {
+    margin-top: 10px; /* Adjusted margin */
+    margin-bottom: 15px;
+    padding: 6px 12px;
+    font-size: 0.85em;
+    background-color: var(--button-secondary-bg);
+    border: 1px solid var(--input-border-color);
+    color: var(--text-primary);
+    border-radius: 4px;
+    cursor: pointer;
+}
+.add-line-item-btn:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); }
+
+.form-total {
+    text-align: right;
+    margin-top: 15px;
+    font-size: 1.1em;
+    font-weight: bold;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* --- End Added Styles --- */
+
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
