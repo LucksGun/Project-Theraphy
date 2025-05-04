@@ -1,4 +1,4 @@
-/* src/InvoiceManagerPage.css - Fix List Height & Scrolling */
+/* src/InvoiceManagerPage.css - Fix List Height & Scrolling - Attempt 2 */
 
 /* --- Base Variables --- */
 :root {
@@ -58,14 +58,16 @@
 .invoice-manager-container {
     padding: 25px 35px;
     background-color: var(--container-bg);
-    min-height: calc(100vh - 1px); /* Ensure it tries to fill viewport height */
+    min-height: 100vh; /* Fallback min-height */
+    height: 100vh; /* Explicit height */
     box-sizing: border-box;
-    display: flex; /* Use flexbox for overall layout */
-    flex-direction: column; /* Stack children vertically */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevent body scroll if possible */
 }
 .invoice-manager-header {
     display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 20px; /* Reduced margin */
+    margin-bottom: 20px;
     padding-bottom: 15px; border-bottom: 1px solid var(--border-color);
     flex-wrap: wrap; gap: 15px;
     flex-shrink: 0; /* Prevent header from shrinking */
@@ -77,7 +79,7 @@
 
 /* Action Buttons (Create, Edit Status) */
 .invoice-actions {
-    margin-bottom: 20px; /* Reduced margin */
+    margin-bottom: 20px;
     display: flex; gap: 10px; flex-wrap: wrap;
     flex-shrink: 0; /* Prevent buttons from shrinking */
 }
@@ -90,7 +92,7 @@
 
 /* Status Messages (Loading, Error, Success) */
 .status-messages {
-    min-height: 30px; margin: 0 0 15px 0; /* Adjusted margin */
+    min-height: 30px; margin: 0 0 15px 0;
     font-size: 0.9em;
     flex-shrink: 0; /* Prevent messages from shrinking */
 }
@@ -100,14 +102,15 @@
 
 /* --- Invoice List Table (Scrollable) --- */
 .invoice-list {
-    margin-top: 10px; /* Reduced margin */
+    margin-top: 10px;
     border: 1px solid var(--border-color);
     border-radius: 6px;
     background-color: #ffffff;
     /* --- CORE SCROLL LOGIC --- */
     flex-grow: 1; /* Allow this div to take up remaining vertical space */
-    overflow-y: auto; /* Add vertical scrollbar ONLY if content exceeds available space */
-    min-height: 150px; /* Optional: Ensure it has at least some height even if empty */
+    overflow-y: auto; /* Add vertical scrollbar WHEN needed */
+    /* min-height: 150px; */ /* REMOVED min-height */
+    height: 0; /* ADDED height: 0; to potentially help flex-grow calculation */
     -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
     position: relative; /* Needed for sticky header */
 }
