@@ -1,4 +1,4 @@
-// src/InvoiceManagerPage.tsx (Full Code with Line Items, Print, Copy, Scroll, Refetch, Payment Details)
+// src/InvoiceManagerPage.tsx (Print Receipt for Paid Invoices)
 import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -11,41 +11,24 @@ const INVOICE_ACCESS_PASSWORD = '1234';
 // --- Helper: Format Date for Input ---
 const formatDateForInput = (isoDateString: string): string => {
     try {
-        // Check if the string is already in YYYY-MM-DD format
-        if (isoDateString && /^\d{4}-\d{2}-\d{2}$/.test(isoDateString)) {
-            return isoDateString;
-        }
-        // Otherwise, try to parse and format
+        if (isoDateString && /^\d{4}-\d{2}-\d{2}$/.test(isoDateString)) { return isoDateString; }
         const date = new Date(isoDateString);
-        if (isNaN(date.getTime())) { // Check if date is valid
-             console.warn("Invalid date string received:", isoDateString);
-             return ''; // Return empty for invalid date
-        }
+        if (isNaN(date.getTime())) { console.warn("Invalid date string:", isoDateString); return ''; }
         return date.toISOString().split('T')[0];
-    } catch (e) {
-        console.error("Error formatting date:", isoDateString, e);
-        return ''; // Return empty on error
-    }
+    } catch (e) { console.error("Error formatting date:", isoDateString, e); return ''; }
 };
 
-
 // --- Data Structures ---
-interface LineItem {
-    id: string; // Temporary ID for React key
-    description: string;
-    amount: number;
-}
-
+interface LineItem { id: string; description: string; amount: number; }
 interface Invoice {
     id: string;
     customerName: string;
-    dueDate: string; // Storing as YYYY-MM-DD
+    dueDate: string;
     status: 'Pending' | 'Paid' | 'Overdue';
     lineItems: LineItem[];
     paymentMethod?: 'cash' | 'bank' | null; // Optional
     paymentReference?: string | null;      // Optional
 }
-
 type InvoiceBaseFormData = Omit<Invoice, 'id' | 'status' | 'lineItems' | 'paymentMethod' | 'paymentReference'>;
 
 
@@ -56,14 +39,14 @@ const InvoiceManagerPage: React.FC = () => {
     const [enteredPassword, setEnteredPassword] = useState<string>('');
     const [authError, setAuthError] = useState<string | null>(null);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
-    const [isLoading, setIsLoading] = useState<boolean>(false); // General loading for fetch
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Specific loading for form submits
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [apiError, setApiError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null); // For success feedback
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
     const [isStatusPopupOpen, setIsStatusPopupOpen] = useState<boolean>(false);
-    const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null); // Holds the full invoice being edited
+    const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
     const initialBaseFormData: InvoiceBaseFormData = { customerName: '', dueDate: '' };
     const [baseFormData, setBaseFormData] = useState<InvoiceBaseFormData>(initialBaseFormData);
     const [formLineItems, setFormLineItems] = useState<LineItem[]>([]);
@@ -92,13 +75,10 @@ const InvoiceManagerPage: React.FC = () => {
             if (response && !response.ok && !errorMsg.startsWith('API Error')) { errorMsg = `API Error: ${response.status} ${response.statusText}. ${errorMsg}`; }
             setApiError(errorMsg || 'An unknown error occurred while fetching invoices.'); setInvoices([]);
         } finally { setIsLoading(false); }
-    }, []); // No dependencies needed here
+    }, []);
 
-    // Effect to fetch data when authentication changes
     useEffect(() => { if (isAuthenticated) { fetchInvoices(); } else { setInvoices([]); } }, [isAuthenticated, fetchInvoices]);
-
-    // Effect to clear success message after a delay
-     useEffect(() => { let timer: NodeJS.Timeout | null = null; if (successMessage) { timer = setTimeout(() => setSuccessMessage(null), 3500); } return () => { if (timer) clearTimeout(timer); }; }, [successMessage]);
+    useEffect(() => { let timer: NodeJS.Timeout | null = null; if (successMessage) { timer = setTimeout(() => setSuccessMessage(null), 3500); } return () => { if (timer) clearTimeout(timer); }; }, [successMessage]);
 
     // --- Password Handlers ---
     const handlePasswordChange = (event: ChangeEvent<HTMLInputElement>) => { setEnteredPassword(event.target.value); setAuthError(null); };
@@ -181,24 +161,56 @@ const InvoiceManagerPage: React.FC = () => {
           finally { setIsSubmitting(false); if (isAuthenticated) fetchInvoices(); }
      }, [statusPopupInvoiceId, statusPopupNewStatus, statusPopupPaymentMethod, statusPopupPaymentReference, fetchInvoices, isAuthenticated]);
 
-    // --- Print Invoice Handler ---
-    const handlePrintInvoice = useCallback((invoice: Invoice) => {
+    // --- UPDATED Print Receipt Handler ---
+    const handlePrintReceipt = useCallback((invoice: Invoice) => {
+        // Ensure it's actually paid before printing a receipt
+        if (invoice.status !== 'Paid') {
+            alert("Cannot print receipt for non-paid invoice.");
+            return;
+        }
+
         const printWindow = window.open('', '_blank', 'height=800,width=800');
         if (!printWindow) { alert("Could not open print window. Check popup blockers."); return; }
         const totalAmount = calculateTotal(invoice.lineItems);
         let itemRowsHtml = '';
         invoice.lineItems.forEach(item => { itemRowsHtml += `<tr><td>${item.description || '(No description)'}</td><td class="text-right">$${(item.amount || 0).toFixed(2)}</td></tr>`; });
+
+        // --- Receipt Specific Content ---
+        let paymentDetailsHtml = '<p>Payment Method: Not specified</p>';
+        if (invoice.paymentMethod === 'cash') {
+            paymentDetailsHtml = '<p>Payment Method: Cash</p>';
+        } else if (invoice.paymentMethod === 'bank') {
+            paymentDetailsHtml = `<p>Payment Method: Bank Transfer</p><p>Reference: ${invoice.paymentReference || 'N/A'}</p>`;
+        }
+
         const printContent = `
-            <html> <head> <title>Invoice ${invoice.id}</title> <style> body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; font-size: 12px; color: #333; } .container { max-width: 750px; margin: 20px auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.05); } .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;} .header .logo { font-size: 1.5em; font-weight: bold; color: #555; } .header .company-details p { margin: 2px 0; font-size: 0.9em; text-align: right; color: #555; } .invoice-info { display: flex; justify-content: space-between; margin-bottom: 30px; } .invoice-info .bill-to p { margin: 2px 0; } .invoice-info .invoice-meta p { margin: 2px 0; text-align: right; } .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; } .invoice-table th, .invoice-table td { border: 1px solid #eee; padding: 8px; text-align: left; } .invoice-table th { background-color: #f8f9fa; font-weight: bold; } .invoice-table .total-row td { font-weight: bold; border-top: 2px solid #aaa; } .invoice-table .text-right { text-align: right; } .payment-info { margin-top: 30px; padding-top: 15px; border-top: 1px solid #eee; font-size: 0.9em; color: #555; } .payment-info h3 { margin-bottom: 10px; font-size: 1.1em; } .qr-code-section { display: flex; align-items: center; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;} .qr-code-container { text-align: center; } .qr-code-container p { font-size: 0.8em; margin-top: 5px; word-break: break-all; max-width: 150px; } .notes { margin-top: 20px; font-size: 0.85em; color: #777; } @media print { body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .container { border: none; box-shadow: none; margin: 0; max-width: 100%; padding: 10px; } .no-print { display: none; } } </style> </head>
+            <html> <head> <title>Receipt for Invoice ${invoice.id}</title> <style> body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; font-size: 12px; color: #333; } .container { max-width: 750px; margin: 20px auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.05); } .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;} .header .logo { font-size: 1.5em; font-weight: bold; color: #555; } .header .company-details p { margin: 2px 0; font-size: 0.9em; text-align: right; color: #555; } .receipt-info { display: flex; justify-content: space-between; margin-bottom: 30px; } .receipt-info .bill-to p { margin: 2px 0; } .receipt-info .receipt-meta p { margin: 2px 0; text-align: right; } .receipt-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; } .receipt-table th, .receipt-table td { border: 1px solid #eee; padding: 8px; text-align: left; } .receipt-table th { background-color: #f8f9fa; font-weight: bold; } .receipt-table .total-row td { font-weight: bold; border-top: 2px solid #aaa; } .receipt-table .text-right { text-align: right; } .payment-details { margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; font-size: 0.9em; } .payment-details h3 { margin-bottom: 5px; font-size: 1.1em; } .qr-code-section { display: flex; align-items: center; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;} .qr-code-container { text-align: center; } .qr-code-container p { font-size: 0.8em; margin-top: 5px; word-break: break-all; max-width: 150px; } .notes { margin-top: 20px; font-size: 0.85em; color: #777; } @media print { body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .container { border: none; box-shadow: none; margin: 0; max-width: 100%; padding: 10px; } .no-print { display: none; } } </style> </head>
             <body>
                 <div class="container">
                     <div class="header"> <div class="logo">Project Theraphy</div> <div class="company-details"> <p>01 Sanambin Road</p> <p>Nai Mueng, Phitsanulok 65000</p> <p>088-555-1946</p> <p>thammalucka67@nu.ac.th</p> </div> </div>
-                    <div class="invoice-info"> <div class="bill-to"> <strong>Bill To:</strong><br> ${invoice.customerName} </div> <div class="invoice-meta"> <p><strong>Invoice #:</strong> ${invoice.id}</p> <p><strong>Date Issued:</strong> ${new Date().toLocaleDateString()}</p> <p><strong>Due Date:</strong> ${invoice.dueDate}</p> <p><strong>Status:</strong> ${invoice.status}</p> </div> </div>
-                    <table class="invoice-table"> <thead> <tr> <th>Description</th> <th class="text-right">Amount</th> </tr> </thead> <tbody> ${itemRowsHtml} <tr class="total-row"> <td class="text-right"><strong>Total Due:</strong></td> <td class="text-right"><strong>$${totalAmount.toFixed(2)}</strong></td> </tr> </tbody> </table>
-                    <div class="payment-info"> <h3>Payment Information</h3> <p>Please make payment to the following account:</p> <p>Bank Name: Kasikorn Bank</p> <p>Account Name: ธรรมลักษณ์ อริยธรรมนิตย์</p> <p>Account Number: 153-2-86554-5</p> <p>Reference: Invoice ${invoice.id.substring(0, 8)}</p> </div>
-                    <div class="qr-code-section"> <div class="notes"> Pay before due date, If there is any question regarding the innovice please let Thammalucks know! </div> <div class="qr-code-container"> <div id="qr-code-target"></div> <p>${invoice.id}</p> </div> </div>
+                    <h2>Payment Receipt</h2>
+                    <div class="receipt-info">
+                        <div class="bill-to"> <strong>Received From:</strong><br> ${invoice.customerName} </div>
+                        <div class="receipt-meta">
+                            <p><strong>Original Invoice #:</strong> ${invoice.id}</p>
+                            <p><strong>Payment Date:</strong> ${new Date().toLocaleDateString()}</p> {/* Use current date as payment date */}
+                            <p><strong>Status:</strong> ${invoice.status}</p>
+                         </div>
+                    </div>
+                    <table class="receipt-table">
+                        <thead> <tr> <th>Description</th> <th class="text-right">Amount</th> </tr> </thead>
+                        <tbody> ${itemRowsHtml} <tr class="total-row"> <td class="text-right"><strong>Total Paid:</strong></td> <td class="text-right"><strong>$${totalAmount.toFixed(2)}</strong></td> </tr> </tbody>
+                    </table>
+                    <div class="payment-details">
+                       <h3>Payment Details</h3>
+                       ${paymentDetailsHtml} {/* Insert payment method details */}
+                    </div>
+                    <div class="qr-code-section">
+                        <div class="notes"> Thank you for your payment! </div>
+                        <div class="qr-code-container"> <div id="qr-code-target"></div> <p>${invoice.id}</p> </div>
+                    </div>
                 </div>
-                <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 10px; right: 10px; padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px;">Print Invoice</button>
+                <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 10px; right: 10px; padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px;">Print Receipt</button>
             </body> </html>
         `;
         printWindow.document.write(printContent);
@@ -209,7 +221,7 @@ const InvoiceManagerPage: React.FC = () => {
             root.render( <React.StrictMode> <QRCodeCanvas value={invoice.id} size={100} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={true} /> </React.StrictMode> );
             setTimeout(() => { printWindow.focus(); printWindow.print(); }, 300);
         } else { console.error("Could not find QR target."); printWindow.print(); }
-    }, []);
+    }, []); // Empty dependency array as it only depends on the invoice passed in
 
     // --- Modal Open/Close Handlers ---
     const openCreateModal = () => { setBaseFormData(initialBaseFormData); setFormLineItems([{ id: `temp-${Date.now()}`, description: '', amount: 0 }]); setIsCreateModalOpen(true); setApiError(null); setSuccessMessage(null); };
@@ -238,47 +250,30 @@ const InvoiceManagerPage: React.FC = () => {
     // --- Render Invoice Manager UI ---
     return (
         <div className="invoice-manager-container">
-            <div className="invoice-manager-header">
-                <h1>Invoice Management</h1>
-                <button onClick={() => setIsAuthenticated(false)} className="logout-button" disabled={isSubmitting}> Logout </button>
-            </div>
-            <div className="invoice-actions">
-                 <button onClick={openCreateModal} className="action-button create-button" disabled={isSubmitting}> + Create New Invoice </button>
-                 <button onClick={openStatusPopup} className="action-button status-button" disabled={isSubmitting}> Edit Invoice Status by ID </button>
-            </div>
-             <div className="status-messages">
-                 {isLoading && <p className="loading-message">Loading invoices...</p>}
-                 {apiError && !isLoading && !successMessage && <p className="api-error-message"> Error: {apiError} </p> }
-                 {successMessage && <p className="api-success-message"> {successMessage} </p> }
-             </div>
+            <div className="invoice-manager-header"> <h1>Invoice Management</h1> <button onClick={() => setIsAuthenticated(false)} className="logout-button" disabled={isSubmitting}> Logout </button> </div>
+            <div className="invoice-actions"> <button onClick={openCreateModal} className="action-button create-button" disabled={isSubmitting}> + Create New Invoice </button> <button onClick={openStatusPopup} className="action-button status-button" disabled={isSubmitting}> Edit Invoice Status by ID </button> </div>
+            <div className="status-messages"> {isLoading && <p className="loading-message">Loading invoices...</p>} {apiError && !isLoading && !successMessage && <p className="api-error-message"> Error: {apiError} </p> } {successMessage && <p className="api-success-message"> {successMessage} </p> } </div>
             {!isLoading && (
                 <div className="invoice-list">
                     <h2>Invoices</h2>
                     {invoices.length === 0 && !apiError ? ( <p>No invoices found. Create one!</p> ) : invoices.length > 0 ? (
                         <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th> <th>Customer</th> <th>Total Amount</th>
-                                    <th>Due Date</th> <th>Status</th> <th>Actions</th>
-                                </tr>
-                            </thead>
+                            <thead> <tr> <th>ID</th> <th>Customer</th> <th>Total Amount</th> <th>Due Date</th> <th>Status</th> <th>Actions</th> </tr> </thead>
                             <tbody>
                                 {invoices.map(invoice => {
                                     const rowTotal = calculateTotal(invoice.lineItems);
                                     return (
                                         <tr key={invoice.id}>
-                                            <td style={{ display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '200px' }}>
-                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexGrow: 1 }} title={invoice.id}> {invoice.id} </span>
-                                                <button onClick={() => handleCopyId(invoice.id)} className="copy-id-button" title="Copy ID" disabled={isSubmitting}> 📋 </button>
-                                            </td>
-                                            <td>{invoice.customerName}</td>
-                                            <td>${rowTotal.toFixed(2)}</td>
-                                            <td>{invoice.dueDate}</td>
+                                            <td style={{ display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '200px' }}> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexGrow: 1 }} title={invoice.id}> {invoice.id} </span> <button onClick={() => handleCopyId(invoice.id)} className="copy-id-button" title="Copy ID" disabled={isSubmitting}> 📋 </button> </td>
+                                            <td>{invoice.customerName}</td> <td>${rowTotal.toFixed(2)}</td> <td>{invoice.dueDate}</td>
                                             <td> <span className={`status-badge status-${invoice.status.toLowerCase()}`}> {invoice.status} </span> </td>
                                             <td>
                                                 <button onClick={() => openEditModal(invoice)} className="table-button edit" disabled={isSubmitting}>Edit</button>
                                                 <button onClick={() => handleDeleteInvoice(invoice.id)} className="table-button delete" disabled={isSubmitting}>Delete</button>
-                                                <button onClick={() => handlePrintInvoice(invoice)} className="table-button print" style={{backgroundColor: '#0dcaf0', color: 'white'}} disabled={isSubmitting}>Print</button>
+                                                {/* --- Conditionally render Print Receipt button --- */}
+                                                {invoice.status === 'Paid' && (
+                                                    <button onClick={() => handlePrintReceipt(invoice)} className="table-button print-receipt" style={{backgroundColor: '#6f42c1', color: 'white'}} disabled={isSubmitting}>Receipt</button>
+                                                )}
                                             </td>
                                         </tr>
                                     );
@@ -297,30 +292,10 @@ const InvoiceManagerPage: React.FC = () => {
                          {apiError && <p className="api-error-message">{apiError}</p>}
                          <form onSubmit={isEditModalOpen ? handleEditInvoiceSubmit : handleCreateInvoiceSubmit}>
                             <div className="form-scroll-area">
-                                <div className="form-section">
-                                     <div className="form-group"> <label htmlFor="customerName">Customer Name:</label> <input type="text" id="customerName" name="customerName" value={baseFormData.customerName} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
-                                     <div className="form-group"> <label htmlFor="dueDate">Due Date:</label> <input type="date" id="dueDate" name="dueDate" value={baseFormData.dueDate} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div>
-                                 </div>
-                                 <div className="form-section line-items-section">
-                                     <h3>Line Items</h3>
-                                     <div className="line-item-row line-item-header"> <label className="line-item-description-label">Description</label> <label className="line-item-amount-label">Amount ($)</label> <div className="line-item-action-label">Action</div> </div>
-                                     <div className="line-items-container">
-                                         {formLineItems.map((item, index) => (
-                                             <div key={item.id} className="line-item-row">
-                                                 <input type="text" placeholder="Description" value={item.description} onChange={(e) => handleLineItemChange(index, 'description', e.target.value)} required className="line-item-description" disabled={isSubmitting} />
-                                                 <input type="number" placeholder="Amount" value={item.amount} onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)} required min="0" step="0.01" className="line-item-amount" disabled={isSubmitting} />
-                                                 <div className="line-item-action"> {formLineItems.length > 1 && ( <button type="button" onClick={() => removeLineItem(index)} className="remove-line-item-btn" disabled={isSubmitting} title="Remove Item"> 🗑️ </button> )} </div>
-                                             </div>
-                                         ))}
-                                     </div>
-                                     <button type="button" onClick={addLineItem} className="add-line-item-btn" disabled={isSubmitting}> + Add Line Item </button>
-                                     <div className="form-total"> <strong>Total: ${formTotalAmount.toFixed(2)}</strong> </div>
-                                 </div>
+                                <div className="form-section"> <div className="form-group"> <label htmlFor="customerName">Customer Name:</label> <input type="text" id="customerName" name="customerName" value={baseFormData.customerName} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div> <div className="form-group"> <label htmlFor="dueDate">Due Date:</label> <input type="date" id="dueDate" name="dueDate" value={baseFormData.dueDate} onChange={handleBaseFormChange} required disabled={isSubmitting} /> </div> </div>
+                                 <div className="form-section line-items-section"> <h3>Line Items</h3> <div className="line-item-row line-item-header"> <label className="line-item-description-label">Description</label> <label className="line-item-amount-label">Amount ($)</label> <div className="line-item-action-label">Action</div> </div> <div className="line-items-container"> {formLineItems.map((item, index) => ( <div key={item.id} className="line-item-row"> <input type="text" placeholder="Description" value={item.description} onChange={(e) => handleLineItemChange(index, 'description', e.target.value)} required className="line-item-description" disabled={isSubmitting} /> <input type="number" placeholder="Amount" value={item.amount} onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)} required min="0" step="0.01" className="line-item-amount" disabled={isSubmitting} /> <div className="line-item-action"> {formLineItems.length > 1 && ( <button type="button" onClick={() => removeLineItem(index)} className="remove-line-item-btn" disabled={isSubmitting} title="Remove Item"> 🗑️ </button> )} </div> </div> ))} </div> <button type="button" onClick={addLineItem} className="add-line-item-btn" disabled={isSubmitting}> + Add Line Item </button> <div className="form-total"> <strong>Total: ${formTotalAmount.toFixed(2)}</strong> </div> </div>
                              </div>
-                             <div className="modal-actions">
-                                 <button type="submit" className={`action-button ${isEditModalOpen ? 'edit-button' : 'create-button'}`} disabled={isSubmitting}> {isSubmitting ? 'Saving...' : (isEditModalOpen ? 'Save Changes' : 'Create Invoice')} </button>
-                                 <button type="button" onClick={closeModal} className="cancel-button" disabled={isSubmitting}>Cancel</button>
-                             </div>
+                             <div className="modal-actions"> <button type="submit" className={`action-button ${isEditModalOpen ? 'edit-button' : 'create-button'}`} disabled={isSubmitting}> {isSubmitting ? 'Saving...' : (isEditModalOpen ? 'Save Changes' : 'Create Invoice')} </button> <button type="button" onClick={closeModal} className="cancel-button" disabled={isSubmitting}>Cancel</button> </div>
                          </form>
                      </div>
                 </div>
@@ -333,17 +308,9 @@ const InvoiceManagerPage: React.FC = () => {
                          <form onSubmit={handleUpdateStatusSubmit}>
                              <div className="form-group"> <label htmlFor="status-invoice-id">Invoice ID:</label> <input type="text" id="status-invoice-id" value={statusPopupInvoiceId} onChange={(e) => setStatusPopupInvoiceId(e.target.value)} placeholder="Enter full ID to edit" required disabled={isSubmitting}/> </div>
                              <div className="form-group"> <label htmlFor="status-new-status">New Status:</label> <select id="status-new-status" value={statusPopupNewStatus} onChange={(e) => { setStatusPopupNewStatus(e.target.value as Invoice['status']); setStatusPopupPaymentMethod(''); setStatusPopupPaymentReference(''); }} required disabled={isSubmitting}> <option value="Pending">Pending</option> <option value="Paid">Paid</option> <option value="Overdue">Overdue</option> </select> </div>
-                             {statusPopupNewStatus === 'Paid' && (
-                                 <div className="payment-details-section">
-                                     <div className="form-group"> <label htmlFor="status-payment-method">Payment Method:</label> <select id="status-payment-method" value={statusPopupPaymentMethod} onChange={(e) => setStatusPopupPaymentMethod(e.target.value as 'cash' | 'bank' | '')} required disabled={isSubmitting} > <option value="" disabled>-- Select Method --</option> <option value="cash">Cash</option> <option value="bank">Bank Transfer</option> </select> </div>
-                                     {statusPopupPaymentMethod === 'bank' && ( <div className="form-group"> <label htmlFor="status-payment-ref">Reference No:</label> <input type="text" id="status-payment-ref" value={statusPopupPaymentReference} onChange={(e) => setStatusPopupPaymentReference(e.target.value)} placeholder="Enter bank reference" required disabled={isSubmitting} /> </div> )}
-                                 </div>
-                             )}
+                             {statusPopupNewStatus === 'Paid' && ( <div className="payment-details-section"> <div className="form-group"> <label htmlFor="status-payment-method">Payment Method:</label> <select id="status-payment-method" value={statusPopupPaymentMethod} onChange={(e) => setStatusPopupPaymentMethod(e.target.value as 'cash' | 'bank' | '')} required disabled={isSubmitting} > <option value="" disabled>-- Select Method --</option> <option value="cash">Cash</option> <option value="bank">Bank Transfer</option> </select> </div> {statusPopupPaymentMethod === 'bank' && ( <div className="form-group"> <label htmlFor="status-payment-ref">Reference No:</label> <input type="text" id="status-payment-ref" value={statusPopupPaymentReference} onChange={(e) => setStatusPopupPaymentReference(e.target.value)} placeholder="Enter bank reference" required disabled={isSubmitting} /> </div> )} </div> )}
                              {statusPopupNewStatus === 'Overdue' && ( <p className="overdue-notice">Note: Marking as Overdue will add a $10.00 fee line item.</p> )}
-                             <div className="popup-actions">
-                                 <button type="submit" className="action-button status-button" disabled={isSubmitting}> {isSubmitting ? 'Updating...' : 'Update Status'} </button>
-                                 <button type="button" onClick={closeModal} className="cancel-button" disabled={isSubmitting}>Cancel</button>
-                             </div>
+                             <div className="popup-actions"> <button type="submit" className="action-button status-button" disabled={isSubmitting}> {isSubmitting ? 'Updating...' : 'Update Status'} </button> <button type="button" onClick={closeModal} className="cancel-button" disabled={isSubmitting}>Cancel</button> </div>
                          </form>
                      </div>
                  </div>
