@@ -258,7 +258,7 @@ const InvoiceManagerPage: React.FC = () => {
                     ${invoice.customerName || 'N/A'}
                 </div>
                 <div class="receipt-data">
-                    <p><strong>Receipt #:</strong> ${invoice.id}</p> {/* FULL INVOICE ID */}
+                    <p><strong>Receipt #:</strong> ${invoice.id}</p>
                     <p><strong>Payment Date:</strong> ${new Date().toLocaleDateString()}</p>
                     <p><strong>Status:</strong> <strong style="color: #198754;">${invoice.status}</strong></p>
                 </div>
@@ -290,7 +290,7 @@ const InvoiceManagerPage: React.FC = () => {
                 </div>
                 <div class="qr-code-wrapper">
                     <div id="${qrTargetId}"></div>
-                    <p class="qr-code-id-text">${invoice.id}</p> {/* FULL INVOICE ID below QR */}
+                    <p class="qr-code-id-text">${invoice.id}</p> 
                 </div>
             </div>
         `;
