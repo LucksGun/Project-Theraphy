@@ -193,7 +193,7 @@ const InvoiceManagerPage: React.FC = () => {
     }, [calculateTotal]);
 
     const handlePrintReceipt = useCallback((invoice: Invoice) => {
-        const printWindow = window.open('', '_blank', 'height=650,width=900'); 
+        const printWindow = window.open('', '_blank', 'height=650,width=900');
         if (!printWindow) {
             alert("Could not open print window. Check popup blockers.");
             return;
@@ -214,7 +214,7 @@ const InvoiceManagerPage: React.FC = () => {
         const receiptSectionHtml = (type: 'ORIGINAL' | 'COPY', qrTargetId: string) => `
             <div class="receipt-section">
                 <div class="receipt-header-title">
-                    <h1 style="text-align: center; margin-bottom: 3px; color: #198754; font-size: 1.5em;">PAYMENT RECEIPT</h1>
+                    <h1 style="text-align: center; margin-bottom: 2px; color: #198754; font-size: 1.4em;">PAYMENT RECEIPT</h1> {/* Slightly smaller H1 */}
                     <p class="receipt-copy-type">${type}</p>
                 </div>
                 <div class="header">
@@ -250,17 +250,20 @@ const InvoiceManagerPage: React.FC = () => {
                         </tr>
                     </tbody>
                 </table>
-                <div class="payment-details-box">
-                    <h3>Payment Details</h3>
-                    ${paymentDetailsHtml}
-                </div>
-                <div class="qr-code-section">
-                    <div class="notes">
-                        Thank you for your payment!
+                {/* Footer-like content moved into a dedicated div for better flex control */}
+                <div class="receipt-footer">
+                    <div class="payment-details-box">
+                        <h3>Payment Details</h3>
+                        ${paymentDetailsHtml}
                     </div>
-                    <div class="qr-code-container">
-                        <div id="${qrTargetId}"></div>
-                        <p style="font-size: 0.6em; max-width: 70px;">${invoice.id}</p>
+                    <div class="qr-code-section">
+                        <div class="notes">
+                            Thank you for your payment!
+                        </div>
+                        <div class="qr-code-container">
+                            <div id="${qrTargetId}"></div>
+                            <p style="font-size: 0.55em; max-width: 60px; margin-top: 1px;">${invoice.id}</p> {/* Smaller font, smaller max-width */}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -273,97 +276,103 @@ const InvoiceManagerPage: React.FC = () => {
                 <style>
                     @page {
                         size: A4 landscape;
-                        margin: 8mm; 
+                        margin: 7mm; /* Slightly reduced page margin */
                     }
                     body {
                         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                         margin: 0;
                         padding: 0;
-                        font-size: 9px; 
+                        font-size: 8.5px; /* Further reduced base font for print */
                         color: #333;
                         background-color: #fff;
-                        width: 297mm; 
-                        height: 210mm; 
+                        width: 297mm;
+                        height: 210mm;
                         box-sizing: border-box;
                     }
                     .receipt-page-container {
                         display: flex;
                         flex-direction: row;
-                        justify-content: space-between; 
-                        align-items: flex-start; 
+                        justify-content: space-between;
+                        align-items: stretch; /* Make sections take full available height */
                         width: 100%;
                         height: 100%;
                         box-sizing: border-box;
-                        padding: 0; 
+                        padding: 0;
                     }
                     .receipt-section {
-                        width: calc(50% - 4mm); 
-                        height: calc(100% - 0mm); 
+                        width: calc(50% - 3.5mm); /* Adjusted for 7mm page margin, creating a small gap */
+                        height: 100%; /* Sections will stretch to page height minus margins */
                         box-sizing: border-box;
-                        padding: 6mm; 
+                        padding: 5mm; /* Padding inside each receipt section */
                         border: 1px solid #ccc;
                         overflow: hidden; 
                         display: flex;
-                        flex-direction: column;
+                        flex-direction: column; /* Key for internal stacking */
                     }
-                    .receipt-header-title { text-align: center; margin-bottom: 10px; flex-shrink: 0;}
-                    .receipt-copy-type { font-size: 0.85em; color: #888; margin-top: -8px; font-style: italic; }
+                    .receipt-header-title { 
+                        text-align: center; margin-bottom: 8px; flex-shrink: 0;
+                    }
+                    .receipt-copy-type { font-size: 0.8em; color: #888; margin-top: -7px; font-style: italic; }
 
                     .header {
                         display: flex; justify-content: space-between; align-items: flex-start;
-                        margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee;
-                        flex-shrink: 0;
+                        margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eee;
+                        flex-shrink: 0; /* Prevent shrinking */
                     }
-                    .header .logo { font-size: 1.1em; font-weight: bold; color: #555; }
+                    .header .logo { font-size: 1em; font-weight: bold; color: #555; }
                     .header .company-details { text-align: right; }
-                    .header .company-details p { margin: 1px 0; font-size: 0.75em; color: #555; }
+                    .header .company-details p { margin: 0.5px 0; font-size: 0.7em; color: #555; }
 
                     .receipt-info {
                         display: flex; justify-content: space-between;
-                        margin-bottom: 10px; font-size: 0.8em;
-                        flex-shrink: 0;
+                        margin-bottom: 8px; font-size: 0.75em;
+                        flex-shrink: 0; /* Prevent shrinking */
                     }
                     .receipt-info .bill-to, .receipt-info .receipt-meta { width: 48%; }
-                    .receipt-info .bill-to p, .receipt-info .receipt-meta p { margin: 1px 0; }
+                    .receipt-info .bill-to p, .receipt-info .receipt-meta p { margin: 0.5px 0; }
                     .receipt-info .receipt-meta p { text-align: right; }
 
                     .receipt-table {
-                        width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 0.8em;
-                        flex-grow: 1; 
-                        overflow: auto; 
+                        width: 100%; border-collapse: collapse; 
+                        font-size: 0.75em;
+                        flex-grow: 1; /* This is crucial: table takes up remaining space */
+                        overflow: auto; /* Add scroll *if* content is too long, but goal is to fit */
+                        margin-bottom: 8px; /* Space before footer */
+                        min-height: 0; /* Allow table to shrink if needed with other content */
                     }
-                    .receipt-table th, .receipt-table td { border: 1px solid #eee; padding: 4px; text-align: left; }
+                    .receipt-table th, .receipt-table td { border: 1px solid #eee; padding: 3px; text-align: left; }
                     .receipt-table th { background-color: #f8f9fa; font-weight: bold; }
-                    .receipt-table .total-row td { font-weight: bold; border-top: 2px solid #aaa; }
+                    .receipt-table .total-row td { font-weight: bold; border-top: 1px solid #aaa; } /* thinner border */
                     .receipt-table .text-right { text-align: right; }
-
-                    .payment-details-box { 
-                        margin-top: auto; 
-                        padding: 8px; border: 1px dashed #ccc; background-color: #f9f9f9;
-                        font-size: 0.85em;  flex-shrink: 0;
+                    
+                    .receipt-footer { /* New wrapper for bottom content */
+                        flex-shrink: 0; /* Prevent this footer area from shrinking */
+                        margin-top: auto; /* Push to bottom if table doesn't fill all space */
                     }
-                    .payment-details-box h3 { margin-top: 0; margin-bottom: 5px; font-size: 0.9em; }
+
+                    .payment-details-box {
+                        padding: 6px; border: 1px dashed #ccc; background-color: #f9f9f9;
+                        font-size: 0.8em; 
+                        margin-bottom: 6px; /* Space before QR section */
+                    }
+                    .payment-details-box h3 { margin-top: 0; margin-bottom: 4px; font-size: 0.85em; }
 
                     .qr-code-section {
                         display: flex; align-items: flex-end; justify-content: space-between;
-                        margin-top: 10px; padding-top: 8px; border-top: 1px solid #eee;
-                        flex-shrink: 0;
+                        padding-top: 6px; border-top: 1px solid #eee;
                     }
                     .qr-code-container { text-align: center; }
-                    .qr-code-container p { font-size: 0.7em; margin-top: 2px; word-break: break-all; max-width: 80px; }
-                    .notes { font-size: 0.75em; color: #777; max-width: 65%; }
+                     /* QR Code size adjusted in JS */
+                    .qr-code-container p { font-size: 0.65em; margin-top: 1px; word-break: break-all; max-width: 70px; }
+                    .notes { font-size: 0.7em; color: #777; max-width: 60%; margin-right: 5px;}
 
                     @media print {
                         body {
                             -webkit-print-color-adjust: exact;
                             print-color-adjust: exact;
                         }
-                        .receipt-page-container {
-                            border: none; box-shadow: none;
-                        }
-                        .receipt-section {
-                           page-break-inside: avoid; 
-                        }
+                        .receipt-page-container { border: none; box-shadow: none; }
+                        .receipt-section { page-break-inside: avoid; }
                         .no-print { display: none; }
                     }
                 </style>
@@ -386,7 +395,8 @@ const InvoiceManagerPage: React.FC = () => {
                 const root = createRoot(qrTarget);
                 root.render(
                     <React.StrictMode>
-                        <QRCodeCanvas value={invoiceId} size={60} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={false} />
+                        {/* QR Code size reduced */}
+                        <QRCodeCanvas value={invoiceId} size={50} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={false} />
                     </React.StrictMode>
                 );
             } else {
@@ -400,7 +410,7 @@ const InvoiceManagerPage: React.FC = () => {
         setTimeout(() => {
             printWindow.focus();
             printWindow.print();
-        }, 500); 
+        }, 600); // Slightly increased for rendering
     }, [calculateTotal]);
 
     const handlePrintPaymentVoucher = useCallback((voucher: PaymentVoucher) => {
