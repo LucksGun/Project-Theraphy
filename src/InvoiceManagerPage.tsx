@@ -172,12 +172,276 @@ const InvoiceManagerPage: React.FC = () => {
 
     // --- Print Handlers ---
     const handlePrintInvoice = useCallback((invoice: Invoice) => {
-        const printWindow = window.open('', '_blank', 'height=800,width=800');
+        const printWindow = window.open('', '_blank', 'height=842,width=595'); // A4 Portrait
         if (!printWindow) { alert("Could not open print window. Check popup blockers."); return; }
+    
         const totalAmount = calculateTotal(invoice.lineItems);
         let itemRowsHtml = '';
-        invoice.lineItems.forEach(item => { itemRowsHtml += `<tr><td>${item.description || '(No description)'}</td><td class="text-right">$${(item.amount || 0).toFixed(2)}</td></tr>`; });
-        const printContent = `<html> <head> <title>Invoice ${invoice.id}</title> <style> body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; font-size: 12px; color: #333; } .container { max-width: 750px; margin: 20px auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.05); } .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;} .header .logo { font-size: 1.5em; font-weight: bold; color: #555; } .header .company-details p { margin: 2px 0; font-size: 0.9em; text-align: right; color: #555; } .invoice-info { display: flex; justify-content: space-between; margin-bottom: 30px; } .invoice-info .bill-to p { margin: 2px 0; } .invoice-info .invoice-meta p { margin: 2px 0; text-align: right; } .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; } .invoice-table th, .invoice-table td { border: 1px solid #eee; padding: 8px; text-align: left; } .invoice-table th { background-color: #f8f9fa; font-weight: bold; } .invoice-table .total-row td { font-weight: bold; border-top: 2px solid #aaa; } .invoice-table .text-right { text-align: right; } .payment-info { margin-top: 30px; padding-top: 15px; border-top: 1px solid #eee; font-size: 0.9em; color: #555; } .payment-info h3 { margin-bottom: 10px; font-size: 1.1em; } .qr-code-section { display: flex; align-items: center; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;} .qr-code-container { text-align: center; } .qr-code-container p { font-size: 0.8em; margin-top: 5px; word-break: break-all; max-width: 150px; } .notes { margin-top: 20px; font-size: 0.85em; color: #777; } @media print { body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .container { border: none; box-shadow: none; margin: 0; max-width: 100%; padding: 10px; } .no-print { display: none; } } </style> </head> <body> <div class="container"> <h1 style="text-align: center; margin-bottom: 20px; color: #333;">INVOICE</h1> <div class="header"> <div class="logo">Project Theraphy</div> <div class="company-details"> <p>01 Sanambin Road</p> <p>Nai Mueng, Phitsanulok 65000</p> <p>088-555-1946</p> <p>thammalucka67@nu.ac.th</p> </div> </div> <div class="invoice-info"> <div class="bill-to"> <strong>Bill To:</strong><br> ${invoice.customerName} </div> <div class="invoice-meta"> <p><strong>Invoice #:</strong> ${invoice.id}</p> <p><strong>Date Issued:</strong> ${new Date().toLocaleDateString()}</p> <p><strong>Due Date:</strong> ${invoice.dueDate}</p> <p><strong>Status:</strong> ${invoice.status}</p> </div> </div> <table class="invoice-table"> <thead> <tr> <th>Description</th> <th class="text-right">Amount</th> </tr> </thead> <tbody> ${itemRowsHtml} <tr class="total-row"> <td class="text-right"><strong>Total Due:</strong></td> <td class="text-right"><strong>$${totalAmount.toFixed(2)}</strong></td> </tr> </tbody> </table> <div class="payment-info"> <h3>Payment Information</h3> <p>Please make payment to the following account:</p> <p>Bank Name: Kasikorn Bank</p> <p>Account Name: ธรรมลักษณ์ อริยธรรมนิตย์</p> <p>Account Number: 153-2-86554-5</p> <p>Reference: Invoice ${invoice.id.substring(0, 8)}</p> </div> <div class="qr-code-section"> <div class="notes"> Pay before due date, If there is any question regarding the innovice please let Thammalucks know! </div> <div class="qr-code-container"> <div id="qr-code-target-invoice"></div> <p>${invoice.id}</p> </div> </div> </div> <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 10px; right: 10px; padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px;">Print Invoice</button> </body> </html>`;
+    
+        if (invoice.lineItems && invoice.lineItems.length > 0) {
+            invoice.lineItems.forEach(item => {
+                const description = item.description || '(No description provided)';
+                const amount = (item.amount || 0).toFixed(2);
+                // Added class for description text if you want to style it specifically later
+                itemRowsHtml += `<tr><td class="item-description">${description}</td><td class="text-right monetary-value">$${amount}</td></tr>`;
+            });
+        } else {
+            itemRowsHtml = `<tr><td colspan="2" style="text-align:center; padding: 25px; font-style:italic; color:#777;">No line items for this invoice.</td></tr>`;
+        }
+    
+        // Ensure dueDate is formatted, default to 'N/A' if not present or invalid
+        const formattedDueDate = invoice.dueDate ? (formatDateForInput(invoice.dueDate) || 'N/A') : 'N/A';
+        const currentDate = new Date().toLocaleDateString(); // For "Date Issued"
+    
+        const printContent = `
+            <html>
+            <head>
+                <title>Invoice ${invoice.id}</title>
+                <style>
+                    @page {
+                        size: A4 portrait;
+                        margin: 12mm; /* Standard A4 portrait margins */
+                    }
+                    body {
+                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        font-size: 10pt;
+                        color: #333;
+                        line-height: 1.6; /* Improved readability */
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    .invoice-container { /* Overall wrapper */
+                        width: 100%;
+                        max-width: 186mm; /* A4 width (210mm) - 2*12mm margins */
+                        min-height: calc(297mm - 24mm); /* A4 height - margins */
+                        margin: 0 auto;
+                        padding: 10mm; /* Inner padding for the content block */
+                        border: 1px solid #dcdcdc; /* Softer border */
+                        background-color: #ffffff;
+                        box-sizing: border-box;
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    .invoice-main-title {
+                        text-align: center;
+                        font-size: 2.2em;
+                        font-weight: 300; /* Lighter weight for modern feel */
+                        color: #007bff; /* Accent color for INVOICE */
+                        margin-bottom: 25px;
+                        letter-spacing: 1px;
+                        text-transform: uppercase;
+                    }
+                    .invoice-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        margin-bottom: 30px;
+                        padding-bottom: 20px;
+                        border-bottom: 2px solid #007bff; /* Accent color */
+                    }
+                    .invoice-header .logo-title {
+                        font-size: 1.8em;
+                        font-weight: bold;
+                        color: #0056b3; /* Darker blue for company name */
+                    }
+                    .invoice-header .company-details p {
+                        margin: 2px 0;
+                        font-size: 0.85em;
+                        text-align: right;
+                        color: #444;
+                    }
+                    .invoice-meta-details { /* Bill To & Invoice Data section */
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 30px;
+                        font-size: 0.9em;
+                    }
+                    .invoice-meta-details .bill-to,
+                    .invoice-meta-details .invoice-data {
+                        width: 48%;
+                    }
+                    .invoice-meta-details strong {
+                        font-weight: 600; /* Bolder labels */
+                        color: #000;
+                    }
+                    .invoice-meta-details p {
+                        margin: 3px 0;
+                    }
+                     .invoice-meta-details .invoice-data p {
+                        text-align: right;
+                    }
+    
+                    .invoice-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 30px;
+                        font-size: 0.95em;
+                    }
+                    .invoice-table th,
+                    .invoice-table td {
+                        border: 1px solid #ddd; /* Lighter borders */
+                        padding: 10px 12px; /* Good padding */
+                        text-align: left;
+                        vertical-align: top;
+                    }
+                    .invoice-table th {
+                        background-color: #f0f4f8; /* Light blue-gray header */
+                        font-weight: 600;
+                        color: #222;
+                        border-bottom: 2px solid #007bff; /* Accent color */
+                    }
+                    .invoice-table td.item-description {
+                        /* font-size: 1.05em; /* Optionally make description text slightly larger */
+                        line-height: 1.4;
+                    }
+                    .invoice-table .text-right {
+                        text-align: right;
+                    }
+                    .invoice-table .monetary-value { /* Class for amounts for potential specific styling */
+                        /* white-space: nowrap; */
+                    }
+                    .invoice-table .total-row td {
+                        font-weight: bold;
+                        font-size: 1.2em; /* Prominent total */
+                        color: #000;
+                        border-top: 2px solid #007bff;
+                        background-color: #f0f4f8;
+                    }
+                    .invoice-table .total-row td:first-child { /* "Total Due:" label */
+                        text-align: right;
+                        padding-right: 15px;
+                    }
+    
+                    .payment-info-section {
+                        margin-top: 30px;
+                        padding: 15px; /* Boxed payment info */
+                        border: 1px solid #e0e0e0;
+                        border-radius: 4px;
+                        background-color: #f9f9f9;
+                        font-size: 0.9em;
+                        color: #444;
+                    }
+                    .payment-info-section h3 {
+                        margin-top: 0;
+                        margin-bottom: 12px;
+                        font-size: 1.15em;
+                        color: #0056b3;
+                        font-weight: 600;
+                        border-bottom: 1px dashed #007bff;
+                        padding-bottom: 6px;
+                    }
+                     .payment-info-section p {
+                        margin: 5px 0;
+                    }
+    
+                    .additional-notes-qr {
+                        margin-top: auto; /* Push to bottom of flex container */
+                        padding-top: 20px;
+                        border-top: 1px solid #ccc;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-end; 
+                    }
+                    .additional-notes-qr .notes-content {
+                        font-size: 0.85em;
+                        color: #555;
+                        max-width: 68%;
+                        line-height: 1.4;
+                    }
+                    .additional-notes-qr .qr-code-wrapper {
+                        text-align: center;
+                        flex-shrink: 0;
+                    }
+                    .additional-notes-qr .qr-code-wrapper p { /* For the ID below QR */
+                        font-size: 0.7em;
+                        margin-top: 4px;
+                        word-break: break-all;
+                        max-width: 120px; 
+                        color: #666;
+                    }
+    
+                    @media print {
+                        body {
+                            /* font-size: 9.5pt; /* Can adjust if needed */
+                        }
+                        .invoice-container {
+                            border: none; /* No border for actual print */
+                            box-shadow: none; /* No shadow for actual print */
+                            margin: 0; /* Body uses @page margins */
+                            padding: 0; 
+                            max-width: 100%;
+                        }
+                        .no-print {
+                            display: none;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="invoice-container">
+                    <h1 class="invoice-main-title">INVOICE</h1>
+                    <div class="invoice-header">
+                        <div class="logo-title">Project Theraphy</div>
+                        <div class="company-details">
+                            <p>01 Sanambin Road</p>
+                            <p>Nai Mueng, Phitsanulok 65000</p>
+                            <p>Tel: 088-555-1946</p>
+                            <p>Email: thammalucka67@nu.ac.th</p>
+                        </div>
+                    </div>
+                    <div class="invoice-meta-details">
+                        <div class="bill-to">
+                            <strong>Bill To:</strong><br>
+                            ${invoice.customerName || 'N/A'}
+                        </div>
+                        <div class="invoice-data">
+                            <p><strong>Invoice #:</strong> ${invoice.id}</p> {/* Full ID */}
+                            <p><strong>Date Issued:</strong> ${currentDate}</p>
+                            <p><strong>Due Date:</strong> ${formattedDueDate}</p>
+                            <p><strong>Status:</strong> ${invoice.status}</p>
+                        </div>
+                    </div>
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th class="text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemRowsHtml}
+                            <tr class="total-row">
+                                <td class="text-right"><strong>Total Due:</strong></td>
+                                <td class="text-right monetary-value"><strong>$${totalAmount.toFixed(2)}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="payment-info-section">
+                        <h3>Payment Information</h3>
+                        <p>Please make payment to the following account:</p>
+                        <p><strong>Bank Name:</strong> Kasikorn Bank</p>
+                        <p><strong>Account Name:</strong> ธรรมลักษณ์ อริยธรรมนิตย์</p>
+                        <p><strong>Account Number:</strong> 153-2-86554-5</p>
+                        <p><strong>Payment Reference:</strong> Invoice ${invoice.id.substring(0, 12)}</p> {/* Display more of the ID as reference */}
+                    </div>
+                    <div class="additional-notes-qr">
+                        <div class="notes-content">
+                            <strong>Terms & Conditions:</strong><br>
+                            Payment is due by the specified due date. Late payments may incur additional charges. 
+                            Please include the invoice number as a reference for your payment.
+                            Thank you for your business!
+                        </div>
+                        <div class="qr-code-wrapper">
+                            <div id="qr-code-target-invoice"></div>
+                            <p>${invoice.id}</p> {/* Full ID below QR */}
+                        </div>
+                    </div>
+                </div>
+                <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 15px; right: 15px; padding: 12px 20px; font-size: 1em; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px;">Print Invoice</button>
+            </body>
+            </html>`;
         printWindow.document.write(printContent);
         printWindow.document.close();
         const qrTargetInvoice = printWindow.document.getElementById('qr-code-target-invoice');
@@ -185,12 +449,12 @@ const InvoiceManagerPage: React.FC = () => {
             const root = createRoot(qrTargetInvoice);
             root.render(
                 <React.StrictMode>
-                    <QRCodeCanvas value={invoice.id} size={100} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={true} />
+                    <QRCodeCanvas value={invoice.id} size={90} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={true} /> {/* Adjusted QR size */}
                 </React.StrictMode>
             );
             setTimeout(() => { printWindow.focus(); printWindow.print(); }, 300);
         } else { console.error("Could not find QR target for invoice."); printWindow.print(); }
-    }, [calculateTotal]);
+    }, [calculateTotal, formatDateForInput]); // Added formatDateForInput to dependencies
 
     
     const handlePrintReceipt = useCallback((invoice: Invoice) => {
