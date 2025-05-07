@@ -531,7 +531,7 @@ const InvoiceManagerPage: React.FC = () => {
                 <div class="receipt-data">
                     <p><strong>Receipt #:</strong> ${invoice.id}</p>
                     <p><strong>Payment Date:</strong> ${new Date().toLocaleDateString()}</p>
-                    <p><strong>Status:</strong> <strong style="color: ${accentColorPrimary};">${invoice.status}</strong></p> {/* Use primary green for Paid status */ }
+                    <p><strong>Status:</strong> <strong style="color: ${accentColorPrimary};">${invoice.status}</strong></p> 
                 </div>
             </div>
     
