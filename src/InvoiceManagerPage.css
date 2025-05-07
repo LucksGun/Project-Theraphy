@@ -1,8 +1,7 @@
-/* src/InvoiceManagerPage.css - Fix Line Item Squeeze - Flex Basis */
+/* src/InvoiceManagerPage.css - Full Code with Invoice & Voucher Styles */
 
-/* --- Base Variables --- */
+/* --- Base Variables (Consider defining these globally if not already) --- */
 :root {
-    /* ... keep existing variables ... */
     --container-bg: #ffffff;
     --border-color: #dee2e6;
     --text-primary: #212529;
@@ -22,6 +21,9 @@
     --button-info-bg: #0dcaf0;
     --button-info-hover-bg: #31d2f2;
     --button-light-text: #fff;
+    --button-receipt-bg: #6f42c1; /* Example purple for receipt button */
+    --button-receipt-hover-bg: #5a32a3;
+    --button-receipt-text: #fff;
     --input-border-color: #ced4da;
     --input-focus-border-color: #86b7fe;
     --input-focus-shadow: rgba(13, 110, 253, 0.25);
@@ -40,11 +42,10 @@
 }
 
 /* --- Password Prompt Styles --- */
-/* ... keep existing styles ... */
 .invoice-manager-password-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f0f2f5; padding: 20px; box-sizing: border-box; }
 .invoice-manager-password-box { background-color: var(--container-bg); padding: 30px 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center; max-width: 400px; width: 100%; }
 .invoice-manager-password-box h2 { margin-top: 0; margin-bottom: 25px; color: var(--text-primary); font-size: 1.5em; }
-.form-group { margin-bottom: 15px; text-align: left; }
+.invoice-manager-password-box .form-group { margin-bottom: 15px; text-align: left; } /* Re-added form-group for consistency */
 .invoice-manager-password-box label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--text-secondary); font-size: 0.9em;}
 .invoice-manager-password-box input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid var(--input-border-color); border-radius: 4px; box-sizing: border-box; font-size: 1em; }
 .invoice-manager-password-box input[type="password"]:focus { border-color: var(--input-focus-border-color); outline: 0; box-shadow: 0 0 0 0.25rem var(--input-focus-shadow); }
@@ -70,6 +71,11 @@
 .action-button.create-button:hover:not(:disabled) { background-color: var(--button-success-hover-bg); }
 .action-button.status-button { background-color: var(--button-warning-bg); color: var(--button-warning-text); }
 .action-button.status-button:hover:not(:disabled) { background-color: var(--button-warning-hover-bg); }
+.action-button.payment-voucher-button { background-color: #6f42c1; color: white; } /* Example purple */
+.action-button.payment-voucher-button:hover:not(:disabled) { background-color: #5a32a3; }
+.action-button.receive-voucher-button { background-color: #20c997; color: white; } /* Example teal */
+.action-button.receive-voucher-button:hover:not(:disabled) { background-color: #1baa80; }
+
 
 /* Status Messages (Loading, Error, Success) */
 .status-messages { min-height: 30px; margin: 0 0 15px 0; font-size: 0.9em; flex-shrink: 0; }
@@ -77,16 +83,18 @@
 .api-error-message { color: var(--error-text); background-color: var(--error-bg); border: 1px solid var(--error-border); padding: 10px 15px; border-radius: 4px; }
 .api-success-message { color: var(--success-text); background-color: var(--success-bg); border: 1px solid var(--success-border); padding: 10px 15px; border-radius: 4px; }
 
-/* --- Invoice List Table (Scrollable) --- */
-.invoice-list { margin-top: 10px; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff; flex-grow: 1; overflow-y: auto; height: 0; -webkit-overflow-scrolling: touch; position: relative; }
-.invoice-list h2 { font-size: 1.4em; margin-bottom: 0; color: var(--text-primary); font-weight: 600; padding: 15px 15px 10px 15px; position: sticky; top: 0; background-color: white; z-index: 2; border-bottom: 1px solid var(--border-color); }
-.invoice-list table { width: 100%; border-collapse: collapse; }
-.invoice-list th { position: sticky; top: 55px; background-color: #f8f9fa; z-index: 1; padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
-.invoice-list td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.9em; vertical-align: middle; }
-.invoice-list tr:last-child td { border-bottom: none; }
-.invoice-list tbody tr:hover { background-color: #f8f9fa; }
-.invoice-list td:first-child { display: flex; align-items: center; gap: 8px; }
-.invoice-list td:first-child span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-grow: 1; font-family: monospace; font-size: 0.95em;}
+/* --- Invoice & Voucher List Table (Scrollable) --- */
+.invoice-list, .voucher-list { margin-top: 10px; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff; flex-grow: 1; overflow-y: auto; height: 0; -webkit-overflow-scrolling: touch; position: relative; margin-bottom: 20px; /* Space between lists */ }
+.invoice-list:last-of-type, .voucher-list:last-of-type { margin-bottom: 0; } /* Remove margin from last list */
+
+.invoice-list h2, .voucher-list h2 { font-size: 1.4em; margin-bottom: 0; color: var(--text-primary); font-weight: 600; padding: 15px 15px 10px 15px; position: sticky; top: 0; background-color: white; z-index: 2; border-bottom: 1px solid var(--border-color); }
+.invoice-list table, .voucher-list table { width: 100%; border-collapse: collapse; }
+.invoice-list th, .voucher-list th { position: sticky; top: 55px; background-color: #f8f9fa; z-index: 1; padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+.invoice-list td, .voucher-list td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.9em; vertical-align: middle; }
+.invoice-list tr:last-child td, .voucher-list tr:last-child td { border-bottom: none; }
+.invoice-list tbody tr:hover, .voucher-list tbody tr:hover { background-color: #f8f9fa; }
+.invoice-list td:first-child, .voucher-list td:first-child { display: flex; align-items: center; gap: 8px; } /* For ID and copy button */
+.invoice-list td:first-child span, .voucher-list td:first-child span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-grow: 1; font-family: monospace; font-size: 0.95em;}
 
 /* Copy ID Button Style */
 .copy-id-button { background: none; border: none; cursor: pointer; padding: 0 3px; font-size: 1em; color: var(--text-secondary); line-height: 1; flex-shrink: 0; opacity: 0.6; transition: opacity 0.2s ease; }
@@ -100,19 +108,21 @@
 .status-overdue { background-color: var(--status-overdue-bg); color: var(--status-overdue-text); }
 
 /* Table Action Buttons */
-.invoice-list .table-button { padding: 5px 10px; font-size: 0.85em; margin-right: 5px; border-radius: 4px; cursor: pointer; border: 1px solid transparent; transition: background-color 0.2s ease; }
-.invoice-list .table-button:last-child { margin-right: 0; }
-.invoice-list .table-button:disabled { opacity: 0.65; cursor: not-allowed; }
+.invoice-list .table-button, .voucher-list .table-button { padding: 5px 10px; font-size: 0.85em; margin-right: 5px; border-radius: 4px; cursor: pointer; border: 1px solid transparent; transition: background-color 0.2s ease; white-space: nowrap; }
+.invoice-list .table-button:last-child, .voucher-list .table-button:last-child { margin-right: 0; }
+.invoice-list .table-button:disabled, .voucher-list .table-button:disabled { opacity: 0.65; cursor: not-allowed; }
 .invoice-list .table-button.edit { background-color: var(--button-secondary-bg); border-color: var(--input-border-color); color: var(--text-secondary); }
 .invoice-list .table-button.edit:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); }
 .invoice-list .table-button.delete { background-color: #fff0f1; border-color: var(--error-border); color: var(--error-text); }
 .invoice-list .table-button.delete:hover:not(:disabled) { background-color: var(--error-bg); }
-.invoice-list .table-button.print { background-color: var(--button-info-bg); border-color: #6ff0ff; color: var(--button-light-text); }
-.invoice-list .table-button.print:hover:not(:disabled) { background-color: var(--button-info-hover-bg); }
+.invoice-list .table-button.print-invoice { background-color: var(--button-info-bg); border-color: #6ff0ff; color: var(--button-light-text); }
+.invoice-list .table-button.print-invoice:hover:not(:disabled) { background-color: var(--button-info-hover-bg); }
+.invoice-list .table-button.print-receipt, .voucher-list .table-button.print-receipt { background-color: var(--button-receipt-bg); border-color: var(--button-receipt-border); color: var(--button-receipt-text); }
+.invoice-list .table-button.print-receipt:hover:not(:disabled), .voucher-list .table-button.print-receipt:hover:not(:disabled) { background-color: var(--button-receipt-hover-bg); }
+.invoice-list .table-button.print-receipt:disabled { background-color: var(--button-secondary-bg); border-color: var(--border-color); color: var(--text-secondary); opacity: 0.5; }
 
 
 /* --- Modal Styles --- */
-/* ... keep existing modal styles ... */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
 .modal-content { background-color: var(--container-bg); padding: 25px 30px; border-radius: 8px; min-width: 300px; max-width: 650px; width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); position: relative; display: flex; flex-direction: column; max-height: 85vh; }
 .modal-content.wide-modal { max-width: 750px; }
@@ -120,9 +130,10 @@
 .modal-content form { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
 .modal-content .form-group { margin-bottom: 15px; }
 .modal-content label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.9em; color: var(--text-secondary); }
-.modal-content input[type="text"], .modal-content input[type="number"], .modal-content input[type="date"], .modal-content select { width: 100%; padding: 9px 12px; border: 1px solid var(--input-border-color); border-radius: 4px; box-sizing: border-box; font-size: 0.95em; }
-.modal-content input:focus, .modal-content select:focus { border-color: var(--input-focus-border-color); outline: 0; box-shadow: 0 0 0 0.2rem var(--input-focus-shadow); }
-.modal-content input:disabled, .modal-content select:disabled, .modal-content button:disabled { background-color: #e9ecef; opacity: 0.7; cursor: not-allowed; }
+.modal-content input[type="text"], .modal-content input[type="number"], .modal-content input[type="date"], .modal-content select, .modal-content textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--input-border-color); border-radius: 4px; box-sizing: border-box; font-size: 0.95em; }
+.modal-content textarea { min-height: 80px; resize: vertical; }
+.modal-content input:focus, .modal-content select:focus, .modal-content textarea:focus { border-color: var(--input-focus-border-color); outline: 0; box-shadow: 0 0 0 0.2rem var(--input-focus-shadow); }
+.modal-content input:disabled, .modal-content select:disabled, .modal-content textarea:disabled, .modal-content button:disabled { background-color: #e9ecef; opacity: 0.7; cursor: not-allowed; }
 .form-scroll-area { overflow-y: auto; flex-grow: 1; padding: 5px 5px 15px 5px; margin-bottom: 15px; scrollbar-width: thin; scrollbar-color: #ccc #f0f0f0; }
 .form-scroll-area::-webkit-scrollbar { width: 8px; }
 .form-scroll-area::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
@@ -131,102 +142,60 @@
 .form-section { margin-bottom: 20px; }
 .form-section h3 { font-size: 1.1em; margin-bottom: 10px; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px; color: var(--text-primary); }
 
-/* --- UPDATED Line Item Styling --- */
+/* Line Item Styling */
 .line-items-section { border: 1px solid var(--border-color); padding: 15px; border-radius: 5px; background-color: #fdfdfd; margin-top: 15px; }
-/* --- Header Row --- */
-.line-item-header {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 8px;
-    padding: 0 5px 8px 5px;
-    font-size: 0.85em;
-    color: var(--text-secondary);
-    font-weight: 500;
-    border-bottom: 1px solid var(--border-color);
-}
-.line-item-description-label {
-    flex: 1; /* Let it grow and shrink */
-    min-width: 0; /* Allow shrinking */
-    padding-left: 12px;
-}
-.line-item-amount-label {
-    width: 90px; /* Fixed width */
-    flex-shrink: 0; /* Don't shrink */
-    text-align: right;
-    padding-right: 12px;
-}
-.line-item-action-label {
-    width: 40px; /* Fixed width */
-    flex-shrink: 0; /* Don't shrink */
-    text-align: center;
-}
-/* --- Container for Mapped Items --- */
-/* .line-items-container { } */ /* Removed empty ruleset */
-
-/* --- Input Row --- */
-.line-item-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 8px;
-}
-.line-item-description {
-    flex: 1; /* Let it grow and shrink */
-    min-width: 0; /* Allow shrinking below content size */
-    box-sizing: border-box;
-}
-.line-item-amount {
-    width: 90px; /* Fixed width - MUST match label */
-    flex-shrink: 0; /* Prevent shrinking */
-    text-align: right;
-    box-sizing: border-box;
-}
-.line-item-action {
-    width: 40px; /* Fixed width - MUST match label */
-    flex-shrink: 0; /* Prevent shrinking */
-    text-align: center;
-}
+.line-item-header { display: flex; gap: 10px; margin-bottom: 8px; padding: 0 5px 8px 5px; font-size: 0.85em; color: var(--text-secondary); font-weight: 500; border-bottom: 1px solid var(--border-color); }
+.line-item-description-label { flex: 1; min-width: 0; padding-left: 12px; }
+.line-item-amount-label { width: 90px; flex-shrink: 0; text-align: right; padding-right: 12px; }
+.line-item-action-label { width: 40px; flex-shrink: 0; text-align: center; }
+.line-item-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+.line-item-description { flex: 1; min-width: 0; box-sizing: border-box; }
+.line-item-amount { width: 90px; flex-shrink: 0; text-align: right; box-sizing: border-box; }
+.line-item-action { width: 40px; flex-shrink: 0; text-align: center; }
 .remove-line-item-btn { background: none; border: none; color: var(--button-danger-bg); cursor: pointer; font-size: 1.1em; padding: 0; line-height: 1; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; }
 .remove-line-item-btn:hover:not(:disabled) { color: #a0232f; background-color: #f8d7da; }
 .remove-line-item-btn:disabled { color: #aaa; cursor: not-allowed; }
 .add-line-item-btn { margin-top: 10px; margin-bottom: 15px; padding: 6px 12px; font-size: 0.85em; background-color: var(--button-secondary-bg); border: 1px solid var(--input-border-color); color: var(--text-primary); border-radius: 4px; cursor: pointer; }
 .add-line-item-btn:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); }
 .form-total { text-align: right; margin-top: 15px; font-size: 1.1em; font-weight: bold; padding-top: 10px; border-top: 1px solid var(--border-color); }
-/* --- End Line Item Styling --- */
 
+/* Modal Actions (Buttons at the bottom) */
 .modal-actions { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; }
 .modal-actions .action-button { padding: 8px 18px; font-weight: 500; }
 .modal-actions .cancel-button { background-color: var(--button-secondary-bg); color: var(--text-primary); border: 1px solid var(--input-border-color); }
 .modal-actions .cancel-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); }
 .modal-actions .edit-button { background-color: var(--button-info-bg); color: var(--button-light-text); }
 .modal-actions .edit-button:hover:not(:disabled) { background-color: var(--button-info-hover-bg); }
+
+/* Status Popup Specific Styles */
 .status-popup { max-width: 450px; }
 .status-popup .form-group { margin-bottom: 20px; }
 .popup-actions { margin-top: 25px; text-align: right; border: none; padding: 0; }
 .popup-actions .cancel-button { background-color: #6c757d; color: white; } /* Darker cancel */
+.payment-details-section { margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--border-color); }
+.overdue-notice { font-size: 0.85em; color: var(--error-text); margin-top: 10px; font-style: italic; }
 
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
     .invoice-manager-container { padding: 15px 20px; }
     .invoice-manager-header h1 { font-size: 1.5em; }
-    .invoice-list th, .invoice-list td { padding: 10px 8px; font-size: 0.85em; }
-    .invoice-list td:first-child { max-width: none; }
-    .invoice-list .table-button { padding: 4px 8px; font-size: 0.8em; margin-right: 3px; }
+    .invoice-list th, .invoice-list td, .voucher-list th, .voucher-list td { padding: 10px 8px; font-size: 0.85em; }
+    .invoice-list td:first-child, .voucher-list td:first-child { max-width: none; }
+    .invoice-list .table-button, .voucher-list .table-button { padding: 4px 8px; font-size: 0.8em; margin-right: 3px; }
     .modal-content { padding: 20px; max-height: 90vh; }
     .modal-content.wide-modal { max-width: 95%; }
-    .line-item-description { /* Adjust width if needed */ min-width: 80px; }
-    .line-item-amount-label { width: 90px; }
+    .line-item-row { flex-wrap: wrap; } /* Consider if wrapping is desired on small screens */
+    .line-item-description { /* width: calc(100% - 90px - 40px - 20px); */ min-width: 80px; }
     .line-item-amount { width: 90px; }
-    .line-item-action-label { width: 40px; }
     .line-item-action { width: 40px; }
 }
 
 @media (max-width: 500px) {
     .invoice-manager-container { padding: 10px 15px; }
     .invoice-manager-header h1 { font-size: 1.3em; }
-    .invoice-list th, .invoice-list td { font-size: 0.8em; padding: 8px 5px;}
-    .invoice-list td:first-child { font-size: 0.85em; }
+    .invoice-list th, .invoice-list td, .voucher-list th, .voucher-list td { font-size: 0.8em; padding: 8px 5px;}
+    .invoice-list td:first-child, .voucher-list td:first-child { font-size: 0.85em; }
     .modal-content h2 { font-size: 1.3em; }
     .modal-actions { flex-direction: column; gap: 8px; }
     .modal-actions button { width: 100%; }
@@ -234,5 +203,6 @@
     .line-item-amount { width: 80px; }
     .line-item-action-label { width: 30px; }
     .line-item-action { width: 30px; }
+    .line-item-description {  width: calc(100% - 80px - 30px - 20px);  }
 }
 
