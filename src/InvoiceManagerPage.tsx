@@ -199,29 +199,31 @@ const InvoiceManagerPage: React.FC = () => {
             return;
         }
         const totalAmount = calculateTotal(invoice.lineItems);
-        let itemRowsHtml = '';
+        let itemRowsHtml = ''; // This will now be a string of flex rows
 
-        // --- CONFIGURABLE SECTION ---
-        // These will be used by CSS classes now
-        // const descriptionColWidthCss = "60%"; // For CSS class
-        // const amountColWidthCss = "40%";     // For CSS class
+        // --- CONFIGURABLE SECTION for Flexbox "Table" ---
+        const descriptionFlexBasis = "60%"; // e.g., "flex: 0 0 60%;" or "flex-basis: 60%;"
+        const amountFlexBasis = "40%";     // e.g., "flex: 0 0 40%;" or "flex-basis: 40%;"
 
-        // Debug background colors (set to 'transparent' or remove when done)
-        const descBgColorForDebug = "transparent"; // "lightblue"
-        const amountBgColorForDebug = "transparent"; // "lightpink"
+        // Debug background colors
+        const descBgColor = "transparent"; // "lightblue"
+        const amountBgColor = "transparent"; // "lightpink"
+
+        const cellPadding = "2px 4px"; // Padding for "cells"
         // --- END CONFIGURABLE SECTION ---
 
         const lineItemsToPrint = invoice.lineItems.length > 0
             ? invoice.lineItems
-            : [{ id: 'placeholder-item', description: 'A very long description string to test how the wrapping and ellipsis features are actually working in practice.', amount: 12345.67 }];
+            : [{ id: 'placeholder-item', description: 'No items listed in this receipt.', amount: 0 }];
 
         lineItemsToPrint.forEach(item => {
             const descriptionText = item.description || (item.id === 'placeholder-item' ? item.description : 'N/A');
-            // Add classes to TDs, background color for debug still inline
-            itemRowsHtml += `<tr>
-                                <td class="receipt-col-description" style="background-color: ${descBgColorForDebug} !important;">${descriptionText}</td>
-                                <td class="receipt-col-amount" style="background-color: ${amountBgColorForDebug} !important;">$${(item.amount || 0).toFixed(2)}</td>
-                             </tr>`;
+            itemRowsHtml += `
+                <div class="flex-table-row">
+                    <div class="flex-table-cell col-desc" style="flex-basis: ${descriptionFlexBasis}; background-color: ${descBgColor}; padding: ${cellPadding};">${descriptionText}</div>
+                    <div class="flex-table-cell col-amount" style="flex-basis: ${amountFlexBasis}; background-color: ${amountBgColor}; padding: ${cellPadding};">$${(item.amount || 0).toFixed(2)}</div>
+                </div>
+            `;
         });
         const formattedTotalAmount = totalAmount.toFixed(2);
 
@@ -234,8 +236,8 @@ const InvoiceManagerPage: React.FC = () => {
 
         const receiptSectionHtml = (type: 'ORIGINAL' | 'COPY', qrTargetId: string) => `
             <div class="receipt-section">
-                {/* ... (header, receipt-info remains the same) ... */}
-                 <div class="receipt-header-title">
+                {/* ... (receipt-header-title, header, receipt-info remain the same) ... */}
+                <div class="receipt-header-title">
                     <h1 style="text-align: center; margin-bottom: 3px; color: #198754; font-size: 1.3em;">PAYMENT RECEIPT</h1>
                     <p class="receipt-copy-type">${type}</p>
                 </div>
@@ -257,23 +259,23 @@ const InvoiceManagerPage: React.FC = () => {
                         <p><strong>Status:</strong> <strong style="color: #198754;">${invoice.status}</strong></p>
                     </div>
                 </div>
-                <table class="receipt-table-edge-test">
-                    <thead>
-                        <tr>
-                            {/* Add classes to THs, background color for debug still inline */}
-                            <th class="receipt-col-description-th" style="background-color: ${descBgColorForDebug} !important;">Description</th>
-                            <th class="receipt-col-amount-th" style="background-color: ${amountBgColorForDebug} !important;">Amount Paid</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+
+                {/* Flexbox "Table" Structure */}
+                <div class="flex-table">
+                    <div class="flex-table-header flex-table-row">
+                        <div class="flex-table-cell col-desc-header" style="flex-basis: ${descriptionFlexBasis}; background-color: ${descBgColor}; padding: ${cellPadding};">Description</div>
+                        <div class="flex-table-cell col-amount-header" style="flex-basis: ${amountFlexBasis}; background-color: ${amountBgColor}; padding: ${cellPadding};">Amount Paid</div>
+                    </div>
+                    <div class="flex-table-body">
                         ${itemRowsHtml}
-                        <tr class="total-row">
-                             {/* Add classes to Total Row TDs, background color for debug still inline */}
-                            <td class="receipt-col-description receipt-total-label" style="background-color: ${descBgColorForDebug} !important;">Total Paid:</td>
-                            <td class="receipt-col-amount receipt-total-value" style="background-color: ${amountBgColorForDebug} !important;">$${formattedTotalAmount}</td>
-                        </tr>
-                    </tbody>
-                </table>
+                    </div>
+                    <div class="flex-table-footer flex-table-row">
+                        <div class="flex-table-cell col-desc-footer" style="flex-basis: ${descriptionFlexBasis}; background-color: ${descBgColor}; padding: ${cellPadding};">Total Paid:</div>
+                        <div class="flex-table-cell col-amount-footer" style="flex-basis: ${amountFlexBasis}; background-color: ${amountBgColor}; padding: ${cellPadding};">$${formattedTotalAmount}</div>
+                    </div>
+                </div>
+                {/* End Flexbox "Table" Structure */}
+
                 {/* ... (receipt-footer remains the same) ... */}
                 <div class="receipt-footer">
                     <div class="payment-details-box">
@@ -296,7 +298,7 @@ const InvoiceManagerPage: React.FC = () => {
         const printContent = `
             <html>
             <head>
-                <title>Receipt ${invoice.id} - Edge Test</title>
+                <title>Receipt ${invoice.id} - Flex Table</title>
                 <style>
                     @page {
                         size: A4 landscape;
@@ -317,7 +319,7 @@ const InvoiceManagerPage: React.FC = () => {
                         width: calc(50% - 3mm); height: 100%; box-sizing: border-box;
                         padding: 4mm; border: 1px solid #777;
                         display: flex; flex-direction: column;
-                        overflow: hidden !important; /* Still force hidden on the overall section */
+                        overflow: hidden !important; 
                     }
                     /* Minimal styling for other elements */
                     .receipt-header-title { text-align: center; margin-bottom: 5px; flex-shrink: 0; font-size: 1.2em;}
@@ -334,66 +336,69 @@ const InvoiceManagerPage: React.FC = () => {
                     .notes { max-width: 60%; font-size: 0.85em; color: #333; }
                     .qr-code-container p { font-size: 0.7em; color: #444; }
 
-                    /* === TABLE STYLES FOR EDGE TEST === */
-                    .receipt-table-edge-test {
-                        width: 100% !important;
-                        table-layout: fixed !important; 
-                        border-collapse: collapse !important; /* Important for fixed layout to work well with borders */
-                        border-spacing: 0 !important;
-                        flex-grow: 1; 
-                        min-height: 0; 
-                        /* overflow: hidden !important; /* Let cell overflow handle it */
-                        /* border: 1px solid blue !important; /* For table boundary debug */
+                    /* === FLEXBOX "TABLE" STYLES === */
+                    .flex-table {
+                        width: 100%;
+                        display: flex;
+                        flex-direction: column; /* Stack header, body, footer */
+                        border: 1px solid #ccc; /* Outer border for the "table" */
+                        flex-grow: 1; /* Allow it to take vertical space */
+                        min-height: 0; /* Allow shrinking if needed */
+                        font-size: 0.95em; /* Relative to receipt-section font size */
+                        margin-bottom: 6px; /* Space before main footer */
+                    }
+                    .flex-table-row {
+                        display: flex;
+                        flex-direction: row;
+                        width: 100%;
+                        border-bottom: 1px solid #eee; /* Separator for rows */
+                    }
+                    .flex-table-row:last-child {
+                        border-bottom: none;
+                    }
+                    .flex-table-header {
+                        font-weight: bold;
+                        background-color: #f8f9fa;
+                    }
+                    .flex-table-footer {
+                        font-weight: bold;
+                        border-top: 1.5px solid #333; /* Separator for footer total */
+                    }
+                    .flex-table-cell {
+                        box-sizing: border-box;
+                        /* Padding is applied inline via JS variable 'cellPadding' */
+                        /* flex-grow, flex-shrink, flex-basis are set inline */
+                        overflow: hidden; /* Default, can be overridden by inline style if needed */
+                        text-overflow: ellipsis; /* Default */
+                    }
+                    .flex-table-cell.col-desc,
+                    .flex-table-cell.col-desc-header,
+                    .flex-table-cell.col-desc-footer {
+                        /* flex-basis is set inline */
+                        word-break: break-all; /* For description content */
+                        white-space: normal;   /* Allow wrapping */
+                    }
+                     .flex-table-cell.col-desc-footer { /* Total Paid: label */
+                        text-align: right;
+                        padding-right: 6px !important; /* Space before amount */
                     }
 
-                    .receipt-table-edge-test th,
-                    .receipt-table-edge-test td {
-                        display: table-cell !important; /* Be absolutely sure it's a table cell */
-                        border: 1px solid #ccc !important; 
-                        padding: 2px 3px !important; 
-                        vertical-align: top !important;
-                        /* word-wrap: break-word; /* General fallback */
-                        /* overflow: hidden; /* Default overflow for cells */
-                        /* text-overflow: ellipsis; /* Default ellipsis */
+                    .flex-table-cell.col-amount,
+                    .flex-table-cell.col-amount-header,
+                    .flex-table-cell.col-amount-footer {
+                        /* flex-basis is set inline */
+                        text-align: right;
+                        white-space: nowrap; /* Prevent amount from wrapping */
                     }
-
-                    /* Column Widths via CSS Classes */
-                    .receipt-table-edge-test .receipt-col-description-th,
-                    .receipt-table-edge-test .receipt-col-description {
-                        width: 60% !important; /* ADJUST THIS PERCENTAGE */
-                        max-width: 60% !important; /* Ensure it doesn't exceed */
-                        white-space: normal !important; /* Allow wrapping */
-                        word-break: break-all !important; /* Aggressive breaking */
-                        overflow: hidden !important; /* Crucial: hide overflow */
-                        text-overflow: ellipsis !important; /* Show ... if clipped */
+                    .flex-table-body { /* Container for item rows */
+                        flex-grow: 1; /* Allow body to take remaining vertical space */
+                        overflow-y: auto; /* Add scroll if too many items, though ideally it fits */
+                        min-height: 3em; /* Give it some minimum height */
                     }
-
-                    .receipt-table-edge-test .receipt-col-amount-th,
-                    .receipt-table-edge-test .receipt-col-amount {
-                        width: 40% !important; /* ADJUST THIS PERCENTAGE */
-                        max-width: 40% !important; /* Ensure it doesn't exceed */
-                        text-align: right !important;
-                        white-space: nowrap !important; /* Prevent amount from wrapping */
-                        overflow: visible; /* Amount should ideally not overflow, but don't hide if it does due to font */
-                    }
-                    
-                    /* Total Row Specifics */
-                    .receipt-table-edge-test .total-row .receipt-total-label {
-                        text-align: right !important;
-                        font-weight: bold !important;
-                        padding-right: 5px !important;
-                    }
-                    .receipt-table-edge-test .total-row .receipt-total-value {
-                        text-align: right !important;
-                        font-weight: bold !important;
-                    }
-                     .receipt-table-edge-test .total-row td {
-                        border-top: 1.5px solid #000 !important;
-                    }
-
 
                     @media print {
                         .no-print { display: none; }
+                        .flex-table-body { overflow-y: visible; } /* Try to avoid scrollbars in print */
                     }
                 </style>
             </head>
@@ -426,10 +431,7 @@ const InvoiceManagerPage: React.FC = () => {
 
         setTimeout(() => {
             printWindow.focus();
-            // Comment out for inspection:
-            // printWindow.print();
-            // console.log("Edge Test Print window ready for inspection.");
-            printWindow.print(); // Re-enable for quick testing
+            printWindow.print();
         }, 900);
     }, [calculateTotal]);
 
