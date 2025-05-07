@@ -539,8 +539,9 @@ const InvoiceManagerPage: React.FC = () => {
     }, [calculateTotal, formatDateForInput]); // Added formatDateForInput to dependencies
 
     const handlePrintPaymentVoucher = useCallback((voucher: PaymentVoucher) => {
-        const printWindow = window.open('', '_blank', 'height=800,width=800'); // Window size, not print size
-        if (!printWindow) { alert("Could not open print window."); return; }
+        const printWindow = window.open('', '_blank', 'height=842,width=595'); // A4 Portrait
+        if (!printWindow) { alert("Could not open print window. Check popup blockers."); return; }
+    
         const printContent = `
             <html>
             <head>
@@ -548,177 +549,243 @@ const InvoiceManagerPage: React.FC = () => {
                 <style>
                     @page {
                         size: A4 portrait;
-                        margin: 10mm; /* Standard A4 margins, adjust as needed */
+                        margin: 12mm; 
                     }
                     body {
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                        margin: 0; /* Body margin should be 0, @page handles print margins */
+                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        margin: 0;
                         padding: 0;
-                        font-size: 10pt; /* Base font size for voucher */
+                        font-size: 10pt;
                         color: #333;
+                        line-height: 1.6;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
                     .voucher-container {
-                        /* A4 width is 210mm. With 10mm margins each side, usable is 190mm.
-                           Let's make the container slightly less to be safe, or ensure content within fits 190mm.
-                           If content is still cut off, reduce this further (e.g., to 185mm or 180mm)
-                           AND ensure @page margins allow for it.
-                        */
-                        width: 100%; /* Let it fill the @page area minus margins */
-                        max-width: 190mm; /* Theoretical max based on 10mm margins */
-                        min-height: 120mm; /* Keep a min height if desired */
-                        margin: 0 auto; /* Center on screen, print margins handled by @page */
-                        padding: 0; /* Padding was 8mm, now relying more on @page margins and internal spacing */
-                        /* border: 1px solid #ccc; /* Optional for screen debugging, remove for cleaner print if not desired */
-                        /* box-shadow: 0 0 5px rgba(0,0,0,0.1); /* Screen only */
-                        position: relative;
+                        width: 100%;
+                        max-width: 186mm; /* A4 width - 2*12mm margins */
+                        min-height: calc(297mm - 24mm); /* A4 height - margins, ensures content tries to fill */
+                        margin: 0 auto;
+                        padding: 10mm; 
+                        border: 1px solid #dcdcdc;
+                        background-color: #ffffff;
                         box-sizing: border-box;
+                        display: flex;
+                        flex-direction: column; /* Key for footer later */
                     }
-                    .header {
-                        text-align: center;
-                        margin-bottom: 15px; /* Reduced margin */
-                    }
-                    .header .logo {
-                        font-size: 1.4em; /* Slightly reduced */
-                        font-weight: bold;
-                        color: #333;
-                        margin-bottom: 4px;
-                    }
-                    .header .company-details p {
-                        margin: 1px 0;
-                        font-size: 0.75em; /* Slightly reduced */
-                        color: #555;
-                    }
-                    .voucher-title {
-                        font-size: 1.6em; /* Slightly reduced */
-                        font-weight: bold;
+                    .voucher-main-title-wrapper {
                         text-align: center;
                         margin-bottom: 20px;
-                        padding-bottom: 4px;
-                        border-bottom: 2px solid #333;
+                        border-bottom: 2px solid #007bff; /* Blue accent, consistent with invoice example */
+                        padding-bottom: 10px;
                     }
-                    .voucher-meta {
+                    .voucher-main-title {
+                        font-size: 2em; 
+                        font-weight: 300; 
+                        color: #007bff; 
+                        margin: 0 0 2px 0;
+                        letter-spacing: 0.5px;
+                        text-transform: uppercase;
+                    }
+                    .voucher-main-subtitle { /* For the "(Payment Voucher)" text */
+                        font-size: 1em;
+                        color: #555;
+                        font-style: italic;
+                        margin-top: 0;
+                    }
+    
+                    .voucher-header {
                         display: flex;
                         justify-content: space-between;
-                        margin-bottom: 15px; /* Reduced margin */
-                        font-size: 0.85em; /* Slightly reduced */
-                        padding: 0 5mm; /* Add some padding if container padding was removed */
+                        align-items: flex-start;
+                        margin-bottom: 25px;
+                        padding-bottom: 15px;
+                        /* border-bottom: 1px solid #eee; /* Optional subtle border */
                     }
-                     .voucher-meta div { /* Ensure these don't cause overflow */
-                        white-space: nowrap; /* Prevent wrapping that might make it taller if too narrow */
-                    }
-                    .details {
-                        padding: 0 5mm; /* Add some padding if container padding was removed */
-                    }
-                    .details table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-bottom: 15px; /* Reduced margin */
-                    }
-                    .details th, .details td {
-                        padding: 7px 0; /* Reduced padding */
-                        text-align: left;
-                        vertical-align: top;
-                        font-size: 0.9em; /* Slightly reduced */
-                    }
-                    .details th {
-                        width: 130px; /* Slightly reduced */
-                        font-weight: 600;
-                        color: #555;
-                        padding-right: 5px; /* Add some space */
-                    }
-                    .details td {
-                        border-bottom: 1px dotted #ccc;
-                    }
-                    .details tr:last-child td {
-                        border-bottom: none;
-                    }
-                    .amount-section {
-                        margin-top: 20px; /* Reduced margin */
-                        padding-top: 10px; /* Reduced padding */
-                        border-top: 1px solid #eee;
-                        padding: 0 5mm; /* Add some padding */
-                    }
-                    .amount-section .total-amount {
-                        font-size: 1.1em; /* Slightly reduced */
+                    .voucher-header .logo-title {
+                        font-size: 1.6em;
                         font-weight: bold;
-                        text-align: right;
+                        color: #0056b3; 
                     }
-                    .signatures {
+                    .voucher-header .company-details p {
+                        margin: 2px 0;
+                        font-size: 0.85em;
+                        text-align: right;
+                        color: #444;
+                    }
+    
+                    .voucher-meta-info {
                         display: flex;
-                        justify-content: space-between; /* This might need to be space-around or widths adjusted */
-                        margin-top: 40px; /* Reduced margin */
-                        padding-top: 15px;
-                        border-top: 1px solid #eee;
-                        font-size: 0.85em; /* Slightly reduced */
-                        padding: 0 5mm; /* Add some padding */
+                        justify-content: space-between;
+                        margin-bottom: 25px;
+                        font-size: 0.9em;
+                        padding: 10px;
+                        background-color: #f8f9fa; /* Light background for this block */
+                        border-radius: 4px;
+                        border: 1px solid #e9ecef;
                     }
-                    .signatures div {
-                        width: 30%; /* Ensure this doesn't cause overflow with padding/margins */
-                        text-align: center;
-                        min-width: 0; /* for flex shrinking */
+                    .voucher-meta-info strong {
+                        font-weight: 600;
+                        color: #000;
                     }
-                    .signatures div p {
-                        margin-top: 30px; /* Reduced */
-                        border-top: 1px solid #888;
-                        padding-top: 4px;
+                    .voucher-meta-info p {
+                        margin: 3px 0;
                     }
-                    .qr-code-print {
+    
+                    .voucher-details-section {
+                        font-size: 0.95em;
+                        margin-bottom: 30px; /* Space before amount */
+                        flex-grow: 1; /* Allow this section to take up space */
+                    }
+                    .voucher-details-section h3 {
+                        font-size: 1.2em;
+                        color: #0056b3;
+                        margin-top: 0;
+                        margin-bottom: 15px;
+                        border-bottom: 1px dashed #007bff;
+                        padding-bottom: 8px;
+                        font-weight: 600;
+                    }
+                    .voucher-details-section dl { /* Using a definition list for details */
+                        margin: 0;
+                    }
+                    .voucher-details-section dt {
+                        font-weight: 600;
+                        color: #333;
+                        width: 150px; /* Adjust width of labels */
+                        float: left;
+                        clear: left;
+                        margin-bottom: 8px;
+                    }
+                    .voucher-details-section dd {
+                        margin-left: 160px; /* Should be > dt width */
+                        margin-bottom: 8px;
+                        padding-bottom: 8px; /* Space below value */
+                        border-bottom: 1px dotted #eee; /* Dotted line below each item */
+                        color: #555;
+                    }
+                     .voucher-details-section dd:last-of-type {
+                        border-bottom: none; /* No border for the last item */
+                    }
+    
+    
+                    .voucher-amount-section {
+                        margin-top: 20px; /* Space above amount */
+                        padding: 15px;
                         text-align: right;
-                        margin-top: 15px; /* Reduced */
-                        padding-right: 5mm; /* Align with other padded content */
+                        border-top: 2px solid #007bff;
+                        border-bottom: 2px solid #007bff;
+                        background-color: #f0f4f8; /* Light blueish gray to highlight */
                     }
-                    .qr-code-print div { /* The div containing QRCodeCanvas */
-                        display: inline-block; /* To allow text-align:right to work on its parent */
+                    .voucher-amount-section .total-amount-label {
+                        font-size: 1em;
+                        font-weight: 600;
+                        color: #333;
+                        margin-right: 10px;
                     }
-                    .qr-code-print p {
-                        font-size: 0.65em; /* Reduced */
-                        margin-top: 1px;
-                        color: #777;
+                    .voucher-amount-section .total-amount-value {
+                        font-size: 1.5em; /* Prominent amount */
+                        font-weight: bold;
+                        color: #0056b3;
                     }
+                    
+                    .voucher-footer-notes-qr {
+                        margin-top: auto; /* Pushes this to the bottom of the flex column */
+                        padding-top: 20px;
+                        border-top: 1px solid #ccc;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-end; 
+                        font-size: 0.85em;
+                        color: #555;
+                    }
+                     .voucher-footer-notes-qr .notes-content {
+                        max-width: 70%;
+                     }
+                    .voucher-footer-notes-qr .qr-code-wrapper {
+                        text-align: center;
+                    }
+                    .voucher-footer-notes-qr .qr-code-wrapper p {
+                        font-size: 0.75em;
+                        margin-top: 3px;
+                        word-break: break-all;
+                        max-width: 120px;
+                    }
+    
                     @media print {
-                        /* .voucher-container border and shadow are implicitly removed as they are not here */
-                        .no-print { display: none; }
+                        body {
+                            /* font-size: 9.5pt; */
+                        }
+                        .voucher-container {
+                            border: none;
+                            box-shadow: none;
+                            margin: 0;
+                            padding: 0; /* Rely on @page margins */
+                            max-width: 100%;
+                            min-height: calc(297mm - 24mm - 1px); /* Ensure it doesn't cause overflow with border */
+                        }
+                        .no-print {
+                            display: none;
+                        }
                     }
                 </style>
             </head>
             <body>
                 <div class="voucher-container">
-                    <div class="header">
-                        <div class="logo">Project Theraphy</div>
+                    <div class="voucher-main-title-wrapper">
+                        <h1 class="voucher-main-title">Payment Voucher</h1>
+                        <p class="voucher-main-subtitle">(ใบสำคัญจ่าย)</p>
+                    </div>
+    
+                    <div class="voucher-header">
+                        <div class="logo-title">Project Theraphy</div>
                         <div class="company-details">
                             <p>01 Sanambin Road, Nai Mueng, Phitsanulok 65000</p>
                             <p>Tel: 088-555-1946 | Email: thammalucka67@nu.ac.th</p>
                         </div>
                     </div>
-                    <div class="voucher-title">ใบสำคัญจ่าย (Payment Voucher)</div>
-                    <div class="voucher-meta">
-                        <div><strong>Voucher No.:</strong> ${voucher.id}</div>
-                        <div><strong>Date:</strong> ${voucher.voucherDate}</div>
+    
+                    <div class="voucher-meta-info">
+                        <p><strong>Voucher No.:</strong> ${voucher.id}</p>
+                        <p><strong>Date:</strong> ${formatDateForInput(voucher.voucherDate) || voucher.voucherDate}</p>
                     </div>
-                    <div class="details">
-                        <table>
-                            <tr><th>Pay To (จ่ายให้):</th><td>${voucher.payeeName}</td></tr>
-                            <tr><th>Description (รายการ):</th><td>${voucher.description}</td></tr>
-                            <tr><th>Payment Method:</th><td>${voucher.paymentMethod || 'N/A'}</td></tr>
-                            ${voucher.referenceNo ? `<tr><th>Reference:</th><td>${voucher.referenceNo}</td></tr>` : ''}
-                        </table>
+    
+                    <div class="voucher-details-section">
+                        <h3>Voucher Details</h3>
+                        <dl>
+                            <dt>Pay To (จ่ายให้):</dt>
+                            <dd>${voucher.payeeName || 'N/A'}</dd>
+    
+                            <dt>Description (รายการ):</dt>
+                            <dd>${voucher.description || 'N/A'}</dd>
+    
+                            <dt>Payment Method:</dt>
+                            <dd>${voucher.paymentMethod || 'N/A'}</dd>
+    
+                            ${voucher.referenceNo ? `
+                            <dt>Reference No.:</dt>
+                            <dd>${voucher.referenceNo}</dd>`
+                            : ''}
+                        </dl>
                     </div>
-                    <div class="amount-section">
-                        <p class="total-amount">Amount (จำนวนเงิน): $${voucher.amount.toFixed(2)}</p>
+                    
+                    <div class="voucher-amount-section">
+                        <span class="total-amount-label">Amount (จำนวนเงิน):</span>
+                        <span class="total-amount-value">$${voucher.amount.toFixed(2)}</span>
                     </div>
-                    <div class="signatures">
-                        <div><p>Approved By (ผู้อนุมัติ)</p></div>
-                        <div><p>Paid By (ผู้จ่ายเงิน)</p></div>
-                        <div><p>Received By (ผู้รับเงิน)</p></div>
+    
+                    <div class="voucher-footer-notes-qr">
+                        <div class="notes-content">
+                            This voucher confirms the payment described above.
+                        </div>
+                        <div class="qr-code-wrapper">
+                            <div id="qr-pv-${voucher.id}"></div>
+                            <p>${voucher.id}</p>
+                        </div>
                     </div>
-                    <div class="qr-code-print">
-                        <div id="qr-pv-${voucher.id}"></div>
-                        <p>${voucher.id}</p>
-                    </div>
+    
                 </div>
-                <button class="no-print" onclick="window.print()" style="position:fixed; bottom:10px; right:10px; padding:8px 15px;">Print</button>
+                <button class="no-print" onclick="window.print()" style="position:fixed; bottom:10px; right:10px; padding:10px 15px; cursor:pointer; background-color:#007bff; color:white; border:none; border-radius: 5px;">Print Voucher</button>
             </body>
             </html>`;
         printWindow.document.write(printContent);
@@ -726,14 +793,13 @@ const InvoiceManagerPage: React.FC = () => {
         const qrTarget = printWindow.document.getElementById(`qr-pv-${voucher.id}`);
         if (qrTarget) {
             const root = createRoot(qrTarget);
-            // QR code size might also need adjustment if it's part of the overflow
-            root.render(<QRCodeCanvas value={voucher.id} size={70} level="M" />); // Slightly smaller QR
+            root.render(<QRCodeCanvas value={voucher.id} size={80} level="M" />); // Adjusted QR size
         }
         setTimeout(() => {
             printWindow.focus();
             printWindow.print();
         }, 300);
-    }, []);
+    }, [calculateTotal, formatDateForInput]); // Added formatDateForInput if voucherDate might need it
 
     const handlePrintReceiveVoucher = useCallback((voucher: ReceiveVoucher) => {
         const printWindow = window.open('', '_blank', 'height=800,width=800');
