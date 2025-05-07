@@ -182,16 +182,19 @@ const InvoiceManagerPage: React.FC = () => {
             invoice.lineItems.forEach(item => {
                 const description = item.description || '(No description provided)';
                 const amount = (item.amount || 0).toFixed(2);
-                // Added class for description text if you want to style it specifically later
                 itemRowsHtml += `<tr><td class="item-description">${description}</td><td class="text-right monetary-value">$${amount}</td></tr>`;
             });
         } else {
             itemRowsHtml = `<tr><td colspan="2" style="text-align:center; padding: 25px; font-style:italic; color:#777;">No line items for this invoice.</td></tr>`;
         }
     
-        // Ensure dueDate is formatted, default to 'N/A' if not present or invalid
         const formattedDueDate = invoice.dueDate ? (formatDateForInput(invoice.dueDate) || 'N/A') : 'N/A';
-        const currentDate = new Date().toLocaleDateString(); // For "Date Issued"
+        const currentDate = new Date().toLocaleDateString();
+    
+        // Define Orange-Red Accent Colors
+        const accentColorPrimary = "#FF4500"; // OrangeRed
+        const accentColorSecondary = "#FF6347"; // Tomato (a lighter orange-red)
+        const accentBgColor = "#FFF0E6"; // Very light orange for backgrounds
     
         const printContent = `
             <html>
@@ -200,7 +203,7 @@ const InvoiceManagerPage: React.FC = () => {
                 <style>
                     @page {
                         size: A4 portrait;
-                        margin: 12mm; /* Standard A4 portrait margins */
+                        margin: 12mm;
                     }
                     body {
                         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -208,17 +211,17 @@ const InvoiceManagerPage: React.FC = () => {
                         padding: 0;
                         font-size: 10pt;
                         color: #333;
-                        line-height: 1.6; /* Improved readability */
+                        line-height: 1.6;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
-                    .invoice-container { /* Overall wrapper */
+                    .invoice-container {
                         width: 100%;
-                        max-width: 186mm; /* A4 width (210mm) - 2*12mm margins */
-                        min-height: calc(297mm - 24mm); /* A4 height - margins */
+                        max-width: 186mm;
+                        min-height: calc(297mm - 24mm);
                         margin: 0 auto;
-                        padding: 10mm; /* Inner padding for the content block */
-                        border: 1px solid #dcdcdc; /* Softer border */
+                        padding: 10mm;
+                        border: 1px solid #FF7F50; /* Coral border, a lighter orange-red */
                         background-color: #ffffff;
                         box-sizing: border-box;
                         display: flex;
@@ -227,8 +230,8 @@ const InvoiceManagerPage: React.FC = () => {
                     .invoice-main-title {
                         text-align: center;
                         font-size: 2.2em;
-                        font-weight: 300; /* Lighter weight for modern feel */
-                        color: #007bff; /* Accent color for INVOICE */
+                        font-weight: 300;
+                        color: ${accentColorPrimary}; /* OrangeRed title */
                         margin-bottom: 25px;
                         letter-spacing: 1px;
                         text-transform: uppercase;
@@ -239,12 +242,12 @@ const InvoiceManagerPage: React.FC = () => {
                         align-items: flex-start;
                         margin-bottom: 30px;
                         padding-bottom: 20px;
-                        border-bottom: 2px solid #007bff; /* Accent color */
+                        border-bottom: 2px solid ${accentColorPrimary}; /* OrangeRed border */
                     }
                     .invoice-header .logo-title {
                         font-size: 1.8em;
                         font-weight: bold;
-                        color: #0056b3; /* Darker blue for company name */
+                        color: ${accentColorSecondary}; /* Tomato for company name */
                     }
                     .invoice-header .company-details p {
                         margin: 2px 0;
@@ -252,7 +255,7 @@ const InvoiceManagerPage: React.FC = () => {
                         text-align: right;
                         color: #444;
                     }
-                    .invoice-meta-details { /* Bill To & Invoice Data section */
+                    .invoice-meta-details {
                         display: flex;
                         justify-content: space-between;
                         margin-bottom: 30px;
@@ -263,7 +266,7 @@ const InvoiceManagerPage: React.FC = () => {
                         width: 48%;
                     }
                     .invoice-meta-details strong {
-                        font-weight: 600; /* Bolder labels */
+                        font-weight: 600;
                         color: #000;
                     }
                     .invoice-meta-details p {
@@ -281,45 +284,44 @@ const InvoiceManagerPage: React.FC = () => {
                     }
                     .invoice-table th,
                     .invoice-table td {
-                        border: 1px solid #ddd; /* Lighter borders */
-                        padding: 10px 12px; /* Good padding */
+                        border: 1px solid #FFDAC1; /* Light orange-red border for cells */
+                        padding: 10px 12px;
                         text-align: left;
                         vertical-align: top;
                     }
                     .invoice-table th {
-                        background-color: #f0f4f8; /* Light blue-gray header */
+                        background-color: ${accentBgColor}; /* Very light orange header */
                         font-weight: 600;
-                        color: #222;
-                        border-bottom: 2px solid #007bff; /* Accent color */
+                        color: ${accentColorSecondary}; /* Tomato for header text */
+                        border-bottom: 2px solid ${accentColorPrimary}; /* OrangeRed border */
                     }
                     .invoice-table td.item-description {
-                        /* font-size: 1.05em; /* Optionally make description text slightly larger */
                         line-height: 1.4;
                     }
                     .invoice-table .text-right {
                         text-align: right;
                     }
-                    .invoice-table .monetary-value { /* Class for amounts for potential specific styling */
-                        /* white-space: nowrap; */
+                    .invoice-table .monetary-value {
+                        /* Potentially a slightly bolder font or different color if needed */
                     }
                     .invoice-table .total-row td {
                         font-weight: bold;
-                        font-size: 1.2em; /* Prominent total */
+                        font-size: 1.2em;
                         color: #000;
-                        border-top: 2px solid #007bff;
-                        background-color: #f0f4f8;
+                        border-top: 2px solid ${accentColorPrimary}; /* OrangeRed border */
+                        background-color: ${accentBgColor}; /* Match header bg */
                     }
-                    .invoice-table .total-row td:first-child { /* "Total Due:" label */
+                    .invoice-table .total-row td:first-child {
                         text-align: right;
                         padding-right: 15px;
                     }
     
                     .payment-info-section {
                         margin-top: 30px;
-                        padding: 15px; /* Boxed payment info */
-                        border: 1px solid #e0e0e0;
+                        padding: 15px;
+                        border: 1px solid #FFBDAA; /* Lighter orange-red border */
                         border-radius: 4px;
-                        background-color: #f9f9f9;
+                        background-color: #FFF5F0; /* Even lighter orange background */
                         font-size: 0.9em;
                         color: #444;
                     }
@@ -327,9 +329,9 @@ const InvoiceManagerPage: React.FC = () => {
                         margin-top: 0;
                         margin-bottom: 12px;
                         font-size: 1.15em;
-                        color: #0056b3;
+                        color: ${accentColorSecondary}; /* Tomato for heading */
                         font-weight: 600;
-                        border-bottom: 1px dashed #007bff;
+                        border-bottom: 1px dashed ${accentColorPrimary};
                         padding-bottom: 6px;
                     }
                      .payment-info-section p {
@@ -337,9 +339,9 @@ const InvoiceManagerPage: React.FC = () => {
                     }
     
                     .additional-notes-qr {
-                        margin-top: auto; /* Push to bottom of flex container */
+                        margin-top: auto;
                         padding-top: 20px;
-                        border-top: 1px solid #ccc;
+                        border-top: 1px solid #FFBDAA; /* Lighter orange-red */
                         display: flex;
                         justify-content: space-between;
                         align-items: flex-end; 
@@ -354,7 +356,7 @@ const InvoiceManagerPage: React.FC = () => {
                         text-align: center;
                         flex-shrink: 0;
                     }
-                    .additional-notes-qr .qr-code-wrapper p { /* For the ID below QR */
+                    .additional-notes-qr .qr-code-wrapper p {
                         font-size: 0.7em;
                         margin-top: 4px;
                         word-break: break-all;
@@ -363,13 +365,11 @@ const InvoiceManagerPage: React.FC = () => {
                     }
     
                     @media print {
-                        body {
-                            /* font-size: 9.5pt; /* Can adjust if needed */
-                        }
+                        body { }
                         .invoice-container {
-                            border: none; /* No border for actual print */
-                            box-shadow: none; /* No shadow for actual print */
-                            margin: 0; /* Body uses @page margins */
+                            border: none;
+                            box-shadow: none;
+                            margin: 0; 
                             padding: 0; 
                             max-width: 100%;
                         }
@@ -397,7 +397,7 @@ const InvoiceManagerPage: React.FC = () => {
                             ${invoice.customerName || 'N/A'}
                         </div>
                         <div class="invoice-data">
-                            <p><strong>Invoice #:</strong> ${invoice.id}</p> {/* Full ID */}
+                            <p><strong>Invoice #:</strong> ${invoice.id}</p>
                             <p><strong>Date Issued:</strong> ${currentDate}</p>
                             <p><strong>Due Date:</strong> ${formattedDueDate}</p>
                             <p><strong>Status:</strong> ${invoice.status}</p>
@@ -424,7 +424,7 @@ const InvoiceManagerPage: React.FC = () => {
                         <p><strong>Bank Name:</strong> Kasikorn Bank</p>
                         <p><strong>Account Name:</strong> ธรรมลักษณ์ อริยธรรมนิตย์</p>
                         <p><strong>Account Number:</strong> 153-2-86554-5</p>
-                        <p><strong>Payment Reference:</strong> Invoice ${invoice.id.substring(0, 12)}</p> {/* Display more of the ID as reference */}
+                        <p><strong>Payment Reference:</strong> Invoice ${invoice.id.substring(0, 12)}</p>
                     </div>
                     <div class="additional-notes-qr">
                         <div class="notes-content">
@@ -435,11 +435,11 @@ const InvoiceManagerPage: React.FC = () => {
                         </div>
                         <div class="qr-code-wrapper">
                             <div id="qr-code-target-invoice"></div>
-                            <p>${invoice.id}</p> {/* Full ID below QR */}
+                            <p>${invoice.id}</p>
                         </div>
                     </div>
                 </div>
-                <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 15px; right: 15px; padding: 12px 20px; font-size: 1em; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px;">Print Invoice</button>
+                <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 15px; right: 15px; padding: 12px 20px; font-size: 1em; cursor: pointer; background-color: ${accentColorPrimary}; color: white; border: none; border-radius: 5px;">Print Invoice</button>
             </body>
             </html>`;
         printWindow.document.write(printContent);
@@ -449,12 +449,12 @@ const InvoiceManagerPage: React.FC = () => {
             const root = createRoot(qrTargetInvoice);
             root.render(
                 <React.StrictMode>
-                    <QRCodeCanvas value={invoice.id} size={90} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={true} /> {/* Adjusted QR size */}
+                    <QRCodeCanvas value={invoice.id} size={90} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={true} />
                 </React.StrictMode>
             );
             setTimeout(() => { printWindow.focus(); printWindow.print(); }, 300);
         } else { console.error("Could not find QR target for invoice."); printWindow.print(); }
-    }, [calculateTotal, formatDateForInput]); // Added formatDateForInput to dependencies
+    }, [calculateTotal, formatDateForInput]);
 
     
     const handlePrintReceipt = useCallback((invoice: Invoice) => {
