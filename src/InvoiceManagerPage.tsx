@@ -202,27 +202,25 @@ const InvoiceManagerPage: React.FC = () => {
         let itemRowsHtml = '';
 
         // --- CONFIGURABLE SECTION ---
-        // 1. Adjust desired column width percentages here
-        const descriptionColWidth = "60%"; // e.g., "55%"
-        const amountColWidth = "40%";     // e.g., "45%"
+        // These will be used by CSS classes now
+        // const descriptionColWidthCss = "60%"; // For CSS class
+        // const amountColWidthCss = "40%";     // For CSS class
 
-        // 2. Debug background colors (set to 'transparent' when satisfied with widths)
-        const descBgColor = "transparent"; // "lightblue" for debugging
-        const amountBgColor = "transparent"; // "lightpink" for debugging
-
-        // 3. Cell padding for table items
-        const cellPadding = "2px 4px"; // e.g., "3px 5px" for more space
+        // Debug background colors (set to 'transparent' or remove when done)
+        const descBgColorForDebug = "transparent"; // "lightblue"
+        const amountBgColorForDebug = "transparent"; // "lightpink"
         // --- END CONFIGURABLE SECTION ---
 
         const lineItemsToPrint = invoice.lineItems.length > 0
             ? invoice.lineItems
-            : [{ id: 'placeholder-item', description: '(No items to display)', amount: 0 }];
+            : [{ id: 'placeholder-item', description: 'A very long description string to test how the wrapping and ellipsis features are actually working in practice.', amount: 12345.67 }];
 
         lineItemsToPrint.forEach(item => {
             const descriptionText = item.description || (item.id === 'placeholder-item' ? item.description : 'N/A');
+            // Add classes to TDs, background color for debug still inline
             itemRowsHtml += `<tr>
-                                <td style="width: ${descriptionColWidth} !important; max-width: ${descriptionColWidth} !important; overflow: hidden !important; text-overflow: ellipsis !important; background-color: ${descBgColor} !important; word-break: break-all !important; white-space: normal !important; vertical-align: top !important; padding: ${cellPadding} !important;">${descriptionText}</td>
-                                <td style="width: ${amountColWidth} !important; max-width: ${amountColWidth} !important; text-align: right !important; background-color: ${amountBgColor} !important; white-space: nowrap !important; vertical-align: top !important; padding: ${cellPadding} !important;">$${(item.amount || 0).toFixed(2)}</td>
+                                <td class="receipt-col-description" style="background-color: ${descBgColorForDebug} !important;">${descriptionText}</td>
+                                <td class="receipt-col-amount" style="background-color: ${amountBgColorForDebug} !important;">$${(item.amount || 0).toFixed(2)}</td>
                              </tr>`;
         });
         const formattedTotalAmount = totalAmount.toFixed(2);
@@ -236,8 +234,9 @@ const InvoiceManagerPage: React.FC = () => {
 
         const receiptSectionHtml = (type: 'ORIGINAL' | 'COPY', qrTargetId: string) => `
             <div class="receipt-section">
-                <div class="receipt-header-title">
-                    <h1 style="text-align: center; margin-bottom: 3px; color: #198754; font-size: 1.35em;">PAYMENT RECEIPT</h1>
+                {/* ... (header, receipt-info remains the same) ... */}
+                 <div class="receipt-header-title">
+                    <h1 style="text-align: center; margin-bottom: 3px; color: #198754; font-size: 1.3em;">PAYMENT RECEIPT</h1>
                     <p class="receipt-copy-type">${type}</p>
                 </div>
                 <div class="header">
@@ -258,22 +257,24 @@ const InvoiceManagerPage: React.FC = () => {
                         <p><strong>Status:</strong> <strong style="color: #198754;">${invoice.status}</strong></p>
                     </div>
                 </div>
-
-                <table class="receipt-table-final">
+                <table class="receipt-table-edge-test">
                     <thead>
                         <tr>
-                            <th style="width: ${descriptionColWidth} !important; background-color: ${descBgColor} !important; text-align: left !important; white-space: nowrap !important; vertical-align: top !important; padding: ${cellPadding} !important; font-weight: bold !important;">Description</th>
-                            <th style="width: ${amountColWidth} !important; background-color: ${amountBgColor} !important; text-align: right !important; white-space: nowrap !important; vertical-align: top !important; padding: ${cellPadding} !important; font-weight: bold !important;">Amount Paid</th>
+                            {/* Add classes to THs, background color for debug still inline */}
+                            <th class="receipt-col-description-th" style="background-color: ${descBgColorForDebug} !important;">Description</th>
+                            <th class="receipt-col-amount-th" style="background-color: ${amountBgColorForDebug} !important;">Amount Paid</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${itemRowsHtml}
                         <tr class="total-row">
-                            <td style="width: ${descriptionColWidth} !important; text-align: right !important; font-weight: bold !important; background-color: ${descBgColor} !important; vertical-align: top !important; padding: ${cellPadding} !important; padding-right: 6px !important;">Total Paid:</td>
-                            <td style="width: ${amountColWidth} !important; text-align: right !important; font-weight: bold !important; background-color: ${amountBgColor} !important; vertical-align: top !important; padding: ${cellPadding} !important;">$${formattedTotalAmount}</td>
+                             {/* Add classes to Total Row TDs, background color for debug still inline */}
+                            <td class="receipt-col-description receipt-total-label" style="background-color: ${descBgColorForDebug} !important;">Total Paid:</td>
+                            <td class="receipt-col-amount receipt-total-value" style="background-color: ${amountBgColorForDebug} !important;">$${formattedTotalAmount}</td>
                         </tr>
                     </tbody>
                 </table>
+                {/* ... (receipt-footer remains the same) ... */}
                 <div class="receipt-footer">
                     <div class="payment-details-box">
                         <h3>Payment Details</h3>
@@ -295,15 +296,15 @@ const InvoiceManagerPage: React.FC = () => {
         const printContent = `
             <html>
             <head>
-                <title>Receipt ${invoice.id}</title>
+                <title>Receipt ${invoice.id} - Edge Test</title>
                 <style>
                     @page {
                         size: A4 landscape;
-                        margin: 6mm; /* Page margins */
+                        margin: 6mm;
                     }
                     body {
                         font-family: 'Arial', sans-serif; 
-                        margin: 0; padding: 0; font-size: 8pt; /* Base font size */
+                        margin: 0; padding: 0; font-size: 8pt;
                         color: #000; background-color: #fff; width: 297mm; height: 210mm;
                         box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact;
                     }
@@ -313,58 +314,83 @@ const InvoiceManagerPage: React.FC = () => {
                         box-sizing: border-box; padding: 0;
                     }
                     .receipt-section {
-                        width: calc(50% - 3mm); /* Each receipt copy container */
-                        height: 100%; box-sizing: border-box;
-                        padding: 4mm; /* Inner padding for the receipt content */
-                        border: 1px solid #888; /* A less stark border */
+                        width: calc(50% - 3mm); height: 100%; box-sizing: border-box;
+                        padding: 4mm; border: 1px solid #777;
                         display: flex; flex-direction: column;
-                        overflow: hidden !important; /* Important to clip content within section */
+                        overflow: hidden !important; /* Still force hidden on the overall section */
                     }
-                    .receipt-header-title { text-align: center; margin-bottom: 6px; flex-shrink: 0; font-size: 1.1em; } /* Relative to 8pt */
-                    .receipt-copy-type { font-size: 0.8em; color: #555; margin-top: -6px; font-style: italic; }
-                    
-                    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #ddd; flex-shrink: 0; font-size: 0.9em;}
-                    .header .logo { font-weight: bold; font-size: 1.1em; }
+                    /* Minimal styling for other elements */
+                    .receipt-header-title { text-align: center; margin-bottom: 5px; flex-shrink: 0; font-size: 1.2em;}
+                    .receipt-copy-type { font-size: 0.75em; color: #555; margin-top: -5px; font-style: italic;}
+                    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; padding-bottom: 3px; border-bottom: 1px solid #eee; flex-shrink: 0; font-size: 0.9em;}
+                    .header .logo { font-weight: bold; font-size: 1em; }
                     .header .company-details { text-align: right;}
-                    .header .company-details p { margin: 0.5px 0; font-size: 0.9em;}
-                    
-                    .receipt-info { display: flex; justify-content: space-between; margin-bottom: 6px; flex-shrink: 0; font-size: 0.9em;}
-                    .receipt-info .bill-to, .receipt-info .receipt-meta { width: 48%; }
-                    .receipt-info .bill-to p, .receipt-info .receipt-meta p { margin: 0.5px 0; }
-                    .receipt-info .receipt-meta p { text-align: right; }
+                    .header .company-details p { margin: 0.5px 0; font-size: 0.85em;}
+                    .receipt-info { display: flex; justify-content: space-between; margin-bottom: 5px; flex-shrink: 0; font-size: 0.9em;}
+                    .receipt-footer { flex-shrink: 0; margin-top: auto; font-size: 0.9em; }
+                    .payment-details-box { padding: 3px; border: 1px dashed #ccc; margin-bottom: 3px; background-color: #fafafa;}
+                    .payment-details-box h3 { margin:0 0 2px 0; font-size: 0.9em;}
+                    .qr-code-section { display: flex; align-items: flex-end; justify-content: space-between; padding-top: 3px; border-top: 1px solid #eee;}
+                    .notes { max-width: 60%; font-size: 0.85em; color: #333; }
+                    .qr-code-container p { font-size: 0.7em; color: #444; }
 
-                    .receipt-table-final {
+                    /* === TABLE STYLES FOR EDGE TEST === */
+                    .receipt-table-edge-test {
                         width: 100% !important;
-                        table-layout: fixed !important; /* This is key */
-                        border-collapse: collapse; /* Use collapse for cleaner borders */
-                        border-spacing: 0;
+                        table-layout: fixed !important; 
+                        border-collapse: collapse !important; /* Important for fixed layout to work well with borders */
+                        border-spacing: 0 !important;
                         flex-grow: 1; 
                         min-height: 0; 
-                        overflow: hidden; /* Table itself hides overflow if any cell content tries to break out */
-                        font-size: 0.95em; /* Table text slightly larger relative to body's 8pt */
+                        /* overflow: hidden !important; /* Let cell overflow handle it */
+                        /* border: 1px solid blue !important; /* For table boundary debug */
                     }
 
-                    .receipt-table-final th,
-                    .receipt-table-final td {
-                        border: 1px solid #ccc; /* Cell borders */
-                        /* Critical styles like width, overflow, text-align, padding, background-color
-                           are now primarily handled by INLINE styles on the <th> and <td> elements
-                           generated in the 'itemRowsHtml' and 'receiptSectionHtml' for precise control. */
-                        vertical-align: top; /* Keep this here */
+                    .receipt-table-edge-test th,
+                    .receipt-table-edge-test td {
+                        display: table-cell !important; /* Be absolutely sure it's a table cell */
+                        border: 1px solid #ccc !important; 
+                        padding: 2px 3px !important; 
+                        vertical-align: top !important;
+                        /* word-wrap: break-word; /* General fallback */
+                        /* overflow: hidden; /* Default overflow for cells */
+                        /* text-overflow: ellipsis; /* Default ellipsis */
                     }
-                     .receipt-table-final .total-row td {
-                        border-top: 1.5px solid #333 !important; /* More prominent total row border */
-                        font-weight: bold;
-                    }
-                    /* The inline styles for total row TDs will handle specific alignments and backgrounds */
 
-                    .receipt-footer { flex-shrink: 0; margin-top: auto; font-size: 0.9em; }
-                    .payment-details-box { padding: 4px; border: 1px dashed #bbb; margin-bottom: 4px; background-color: #f9f9f9;}
-                    .payment-details-box h3 { margin:0 0 3px 0; font-size: 0.95em;}
+                    /* Column Widths via CSS Classes */
+                    .receipt-table-edge-test .receipt-col-description-th,
+                    .receipt-table-edge-test .receipt-col-description {
+                        width: 60% !important; /* ADJUST THIS PERCENTAGE */
+                        max-width: 60% !important; /* Ensure it doesn't exceed */
+                        white-space: normal !important; /* Allow wrapping */
+                        word-break: break-all !important; /* Aggressive breaking */
+                        overflow: hidden !important; /* Crucial: hide overflow */
+                        text-overflow: ellipsis !important; /* Show ... if clipped */
+                    }
+
+                    .receipt-table-edge-test .receipt-col-amount-th,
+                    .receipt-table-edge-test .receipt-col-amount {
+                        width: 40% !important; /* ADJUST THIS PERCENTAGE */
+                        max-width: 40% !important; /* Ensure it doesn't exceed */
+                        text-align: right !important;
+                        white-space: nowrap !important; /* Prevent amount from wrapping */
+                        overflow: visible; /* Amount should ideally not overflow, but don't hide if it does due to font */
+                    }
                     
-                    .qr-code-section { display: flex; align-items: flex-end; justify-content: space-between; padding-top: 4px; border-top: 1px solid #ddd;}
-                    .notes { max-width: 60%; font-size: 0.9em; color: #444; } /* Slightly larger notes */
-                    .qr-code-container p { font-size: 0.75em; color: #555; } /* Slightly larger QR caption */
+                    /* Total Row Specifics */
+                    .receipt-table-edge-test .total-row .receipt-total-label {
+                        text-align: right !important;
+                        font-weight: bold !important;
+                        padding-right: 5px !important;
+                    }
+                    .receipt-table-edge-test .total-row .receipt-total-value {
+                        text-align: right !important;
+                        font-weight: bold !important;
+                    }
+                     .receipt-table-edge-test .total-row td {
+                        border-top: 1.5px solid #000 !important;
+                    }
+
 
                     @media print {
                         .no-print { display: none; }
@@ -389,7 +415,7 @@ const InvoiceManagerPage: React.FC = () => {
                 const root = createRoot(qrTarget);
                 root.render(
                     <React.StrictMode>
-                        <QRCodeCanvas value={invoiceId} size={45} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={false} /> {/* Adjusted QR size */}
+                        <QRCodeCanvas value={invoiceId} size={40} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={false} />
                     </React.StrictMode>
                 );
             } else { console.error(`Could not find QR code target element: ${targetId}`); }
@@ -400,8 +426,11 @@ const InvoiceManagerPage: React.FC = () => {
 
         setTimeout(() => {
             printWindow.focus();
-            printWindow.print();
-        }, 800);
+            // Comment out for inspection:
+            // printWindow.print();
+            // console.log("Edge Test Print window ready for inspection.");
+            printWindow.print(); // Re-enable for quick testing
+        }, 900);
     }, [calculateTotal]);
 
     const handlePrintPaymentVoucher = useCallback((voucher: PaymentVoucher) => {
