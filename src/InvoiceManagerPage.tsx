@@ -467,8 +467,7 @@ const InvoiceManagerPage: React.FC = () => {
         let itemRowsHtml = '';
     
         // --- CONFIGURABLE SECTION for Flexbox "Table" (A4 Portrait) ---
-        // Printable width of A4 Portrait (210mm) with, say, 10mm margins each side is ~190mm (~718px).
-        // Adjust these fixed pixel widths.
+        // *** ADJUST THESE FIXED PIXEL WIDTHS for A4 Portrait (~718px printable width minus paddings) ***
         const descriptionFlexFixedWidth = "520px"; // EXAMPLE: (Adjust based on your content needs)
         const amountFlexFixedWidth = "150px";    // EXAMPLE: (Adjust based on your content needs)
                                                 // Current sum: 670px. Leaves ~48px for cell paddings/borders.
@@ -476,12 +475,12 @@ const InvoiceManagerPage: React.FC = () => {
         const cellPadding = "8px 10px"; // Padding for the "cells"
         const descriptionItemFontSize = "1.0em"; // Relative to cell font size (0.95em of 10pt body)
     
-        // Define Orange-Red Accent Colors (Matching Invoice/Voucher)
-        const accentColorPrimary = "#FF4500"; // OrangeRed
-        const accentColorSecondary = "#FF6347"; // Tomato
-        const accentBgColor = "#FFF0E6";      // Very light orange
-        const accentBorderColor = "#FFDAC1";  // Light orange-red border
-        const accentSubtleBgColor = "#FFF5F0"; // Even lighter orange background
+        // Define Green Accent Colors
+        const accentColorPrimary = "#198754"; // Darker Green (Bootstrap Success Dark)
+        const accentColorSecondary = "#20c997"; // Teal/Lighter Green (Bootstrap Info/Teal)
+        const accentBgColor = "#e9f5ee";      // Very Light Green background
+        const accentBorderColor = "#a3cfbb";  // Soft Green border
+        const accentSubtleBgColor = "#f0f9f4"; // Even lighter Green background
         // --- END CONFIGURABLE SECTION ---
     
         if (invoice.lineItems && invoice.lineItems.length > 0) {
@@ -497,7 +496,7 @@ const InvoiceManagerPage: React.FC = () => {
         } else {
             itemRowsHtml = `
                 <div class="flex-table-row">
-                    <div class="flex-table-cell no-items-message" style="flex-basis: 100%; padding: 20px; text-align: center; font-style: italic; color: #666;">No items were included in this receipt.</div>
+                    <div class="flex-table-cell no-items-message" style="flex-basis: 100%; padding: 15px; text-align: center; font-style: italic; color: #666;">No items were included in this receipt.</div>
                 </div>
             `;
         }
@@ -530,9 +529,9 @@ const InvoiceManagerPage: React.FC = () => {
                     ${invoice.customerName || 'N/A'}
                 </div>
                 <div class="receipt-data">
-                    <p><strong>Receipt #:</strong> ${invoice.id}</p> {/* Full ID */}
+                    <p><strong>Receipt #:</strong> ${invoice.id}</p>
                     <p><strong>Payment Date:</strong> ${new Date().toLocaleDateString()}</p>
-                    <p><strong>Status:</strong> <strong style="color: ${accentColorSecondary};">${invoice.status}</strong></p> {/* Use accent color for status */}
+                    <p><strong>Status:</strong> <strong style="color: ${accentColorPrimary};">${invoice.status}</strong></p> {/* Use primary green for Paid status */ }
                 </div>
             </div>
     
@@ -580,7 +579,7 @@ const InvoiceManagerPage: React.FC = () => {
                         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
                         margin: 0; padding: 0; font-size: 10pt;
                         color: #333; background-color: #fff;
-                        line-height: 1.5; /* Adjusted line height */
+                        line-height: 1.5;
                         box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact;
                     }
     
@@ -588,8 +587,8 @@ const InvoiceManagerPage: React.FC = () => {
                         width: 100%;
                         min-height: calc(297mm - 24mm);
                         box-sizing: border-box;
-                        padding: 10mm; /* Increased inner padding */
-                        border: 1px solid #FF7F50; /* Coral border */
+                        padding: 10mm;
+                        border: 1px solid ${accentBorderColor}; /* Soft Green border */
                         display: flex;
                         flex-direction: column;
                         overflow: hidden;
@@ -600,13 +599,13 @@ const InvoiceManagerPage: React.FC = () => {
                     .receipt-main-title-wrapper {
                         text-align: center;
                         margin-bottom: 20px;
-                        border-bottom: 2px solid ${accentColorPrimary}; /* OrangeRed */
+                        border-bottom: 2px solid ${accentColorPrimary}; /* Darker Green */
                         padding-bottom: 12px;
                     }
                     .receipt-main-title {
                         font-size: 2em;
                         font-weight: 300;
-                        color: ${accentColorPrimary}; /* OrangeRed */
+                        color: ${accentColorPrimary}; /* Darker Green */
                         margin: 0 0 3px 0;
                         letter-spacing: 0.5px;
                         text-transform: uppercase;
@@ -622,13 +621,13 @@ const InvoiceManagerPage: React.FC = () => {
                         align-items: flex-start;
                         margin-bottom: 25px;
                         padding-bottom: 15px;
-                        border-bottom: 1px solid #FFDAC1; /* Light orange border */
+                        border-bottom: 1px solid #d1e7dd; /* Lighter Green */
                         font-size: 0.9em;
                     }
                     .receipt-header .logo-title {
                         font-size: 1.6em;
                         font-weight: bold;
-                        color: ${accentColorSecondary}; /* Tomato */
+                        color: #146c43; /* Even darker green for logo */
                     }
                     .receipt-header .company-details p {
                         margin: 1.5px 0;
@@ -644,9 +643,7 @@ const InvoiceManagerPage: React.FC = () => {
                         font-size: 0.9em;
                     }
                     .receipt-meta-details .bill-to,
-                    .receipt-meta-details .receipt-data {
-                        width: 48%;
-                    }
+                    .receipt-meta-details .receipt-data { width: 48%; }
                     .receipt-meta-details strong { font-weight: 600; color: #000; }
                     .receipt-meta-details p { margin: 3px 0; }
                     .receipt-meta-details .receipt-data p { text-align: right; }
@@ -654,9 +651,9 @@ const InvoiceManagerPage: React.FC = () => {
                     .payment-details-section {
                         margin-top: 25px;
                         padding: 15px;
-                        border: 1px solid ${accentBorderColor}; /* Light orange-red border */
+                        border: 1px solid ${accentBorderColor}; /* Soft Green border */
                         border-radius: 4px;
-                        background-color: ${accentSubtleBgColor}; /* Even lighter orange */
+                        background-color: ${accentSubtleBgColor}; /* Very Light Green */
                         font-size: 0.9em;
                         color: #444;
                         flex-shrink: 0;
@@ -665,17 +662,17 @@ const InvoiceManagerPage: React.FC = () => {
                         margin-top: 0;
                         margin-bottom: 12px;
                         font-size: 1.1em;
-                        color: ${accentColorSecondary}; /* Tomato */
+                        color: ${accentColorPrimary}; /* Darker Green */
                         font-weight: 600;
-                        border-bottom: 1px dashed ${accentColorPrimary}; /* OrangeRed */
+                        border-bottom: 1px dashed ${accentColorSecondary}; /* Lighter Green */
                         padding-bottom: 6px;
                     }
                      .payment-details-section p { margin: 5px 0; }
     
                     .additional-notes-qr {
-                        margin-top: auto; /* Pushes to bottom */
+                        margin-top: auto;
                         padding-top: 15px;
-                        border-top: 1px solid ${accentBorderColor}; /* Light orange-red */
+                        border-top: 1px solid ${accentBorderColor}; /* Soft Green */
                         display: flex;
                         justify-content: space-between;
                         align-items: flex-end;
@@ -687,57 +684,39 @@ const InvoiceManagerPage: React.FC = () => {
                         max-width: 70%;
                         line-height: 1.4;
                     }
-                    .additional-notes-qr .qr-code-wrapper {
-                        text-align: center;
-                        flex-shrink: 0;
-                    }
+                    .additional-notes-qr .qr-code-wrapper { text-align: center; flex-shrink: 0; }
                     .additional-notes-qr .qr-code-wrapper .qr-code-id-text {
-                        font-size: 0.7em;
-                        margin-top: 3px;
-                        word-break: break-all;
-                        max-width: 120px;
-                        color: #666;
+                        font-size: 0.7em; margin-top: 3px; word-break: break-all; max-width: 120px; color: #666;
                     }
     
                     /* === FLEXBOX "TABLE" STYLES === */
                     .flex-table {
                         width: 100% !important;
-                        display: flex;
-                        flex-direction: column;
-                        border: 1px solid ${accentBorderColor}; /* Light orange-red */
-                        flex-grow: 1;
-                        min-height: 0;
-                        font-size: 0.95em;
-                        margin-bottom: 20px;
-                        border-radius: 3px; /* Slightly rounded table */
-                        overflow: hidden; /* Clip background colors */
+                        display: flex; flex-direction: column;
+                        border: 1px solid ${accentBorderColor}; /* Soft Green */
+                        flex-grow: 1; min-height: 0;
+                        font-size: 0.95em; margin-bottom: 20px;
+                        border-radius: 3px; overflow: hidden;
                     }
-                    .flex-table-row {
-                        display: flex;
-                        flex-direction: row;
-                        width: 100%;
-                        border-bottom: 1px solid ${accentBorderColor};
-                    }
+                    .flex-table-row { display: flex; flex-direction: row; width: 100%; border-bottom: 1px solid ${accentBorderColor}; }
                     .flex-table-row:last-child { border-bottom: none; }
-    
                     .flex-table-header {
-                        background-color: ${accentBgColor}; /* Light orange background */
-                        color: ${accentColorSecondary}; /* Tomato text */
-                        font-weight: 600; /* Done inline now */
-                        font-size: 1em; /* Header text size */
-                        border-bottom: 2px solid ${accentColorPrimary}; /* OrangeRed border */
+                        background-color: ${accentBgColor}; /* Very Light Green header */
+                        color: ${accentColorPrimary}; /* Darker Green text */
+                        font-weight: 600; /* Handled inline */
+                        font-size: 1em;
+                        border-bottom: 2px solid ${accentColorPrimary}; /* Darker Green border */
                     }
                     .flex-table-footer {
-                        border-top: 2px solid ${accentColorPrimary} !important; /* OrangeRed border */
-                        font-weight: bold; /* Done inline now */
+                        border-top: 2px solid ${accentColorPrimary} !important; /* Darker Green */
+                        font-weight: bold; /* Handled inline */
                         font-size: 1.1em;  /* Larger total */
                         background-color: ${accentBgColor}; /* Match header bg */
                     }
-    
                     .flex-table-cell {
                         box-sizing: border-box !important;
                         border-right: 1px solid ${accentBorderColor};
-                        vertical-align: top;
+                        vertical-align: top; /* Handled inline */
                         /* Critical styles (flex, padding, bg-color) are inline */
                     }
                     .flex-table-cell:last-child { border-right: none; }
@@ -746,22 +725,15 @@ const InvoiceManagerPage: React.FC = () => {
                         line-height: 1.4;
                         color: #222;
                     }
-                    .flex-table-cell.no-items-message {
-                        font-size: 1em;
-                        color: #777;
-                    }
-    
+                    .flex-table-cell.no-items-message { font-size: 1em; color: #777; }
                     .flex-table-body {
-                        flex-grow: 1;
-                        overflow-y: auto;
-                        min-height: 5em;
-                        background-color: #fff; /* Ensure white background for items */
+                        flex-grow: 1; overflow-y: auto; min-height: 5em; background-color: #fff;
                     }
     
                     @media print {
                         .no-print { display: none; }
                         .flex-table-body { overflow-y: visible !important; }
-                        .receipt-full-page-section { border: 1px solid #ccc; } /* Lighter border for print */
+                        .receipt-full-page-section { border-color: #ccc; } /* Lighter border for actual print */
                     }
                 </style>
             </head>
