@@ -200,21 +200,20 @@ const InvoiceManagerPage: React.FC = () => {
         }
         const totalAmount = calculateTotal(invoice.lineItems);
         let itemRowsHtml = '';
-        // Ensure line items always have a description, even if it's a placeholder, to maintain structure
+
         const lineItemsToPrint = invoice.lineItems.length > 0
             ? invoice.lineItems
-            : [{ id: 'placeholder', description: '(No items)', amount: 0 }];
+            : [{ id: 'placeholder-item', description: '(No items to display)', amount: 0 }];
 
         lineItemsToPrint.forEach(item => {
-            const descriptionText = item.description || (item.id === 'placeholder' ? item.description : '(No description)');
+            const descriptionText = item.description || (item.id === 'placeholder-item' ? item.description : '(No description)');
             itemRowsHtml += `<tr>
-                                <td class="col-description">${descriptionText}</td>
-                                <td class="col-amount text-right">$${(item.amount || 0).toFixed(2)}</td>
+                                <td class="col-description"><div>${descriptionText}</div></td> {/* Wrap content in a div */}
+                                <td class="col-amount text-right">${(item.amount || 0).toFixed(2)}</td>
                              </tr>`;
         });
-        if (invoice.lineItems.length === 0) { // If there were truly no items, ensure total reflects this
-             itemRowsHtml = `<tr><td class="col-description">(No items listed)</td><td class="col-amount text-right">$0.00</td></tr>`;
-        }
+        // Ensure the total amount formatting is consistent even if it's $0.00
+        const formattedTotalAmount = totalAmount.toFixed(2);
 
 
         let paymentDetailsHtml = '<p>Payment Method: Not Specified</p>';
@@ -249,17 +248,21 @@ const InvoiceManagerPage: React.FC = () => {
                     </div>
                 </div>
                 <table class="receipt-table">
+                    <colgroup> {/* Define column widths explicitly here */}
+                        <col class="col-description-colgroup">
+                        <col class="col-amount-colgroup">
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th class="col-description">Description</th>
-                            <th class="col-amount text-right">Amount Paid</th>
+                            <th class="col-description-th">Description</th>
+                            <th class="col-amount-th text-right">Amount Paid</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${itemRowsHtml}
                         <tr class="total-row">
-                            <td class="text-right"><strong>Total Paid:</strong></td> {/* This now correctly aligns with amount col */}
-                            <td class="text-right"><strong>$${totalAmount.toFixed(2)}</strong></td>
+                            <td class="text-right"><strong>Total Paid:</strong></td>
+                            <td class="text-right"><strong>$${formattedTotalAmount}</strong></td>
                         </tr>
                     </tbody>
                 </table>
@@ -293,7 +296,7 @@ const InvoiceManagerPage: React.FC = () => {
                     body {
                         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                         margin: 0; padding: 0; font-size: 8.5px; color: #333;
-                        background-color: #fff; width: 297mm; height: 210mm;
+                        background-color: #fff; width: 297mm; height: 210mm; /* Should be 203mm if 7mm margin */
                         box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact;
                     }
                     .receipt-page-container {
@@ -327,49 +330,65 @@ const InvoiceManagerPage: React.FC = () => {
                     .receipt-info .receipt-meta p { text-align: right; }
 
                     .receipt-table {
-                        width: 100%; border-collapse: collapse;
-                        font-size: 0.75em; flex-grow: 1; overflow: hidden; /* Changed from auto to hidden if content should be clipped */
-                        margin-bottom: 8px; min-height: 0; table-layout: fixed; /* Important for controlling column widths */
+                        width: 100%; border-collapse: collapse; /* collapse is fine with fixed layout */
+                        font-size: 0.75em; flex-grow: 1; 
+                        margin-bottom: 8px; min-height: 0; 
+                        table-layout: fixed !important; /* Add !important as a last resort */
+                        border-spacing: 0; /* Ensure no extra spacing */
                     }
+                    
+                    /* Using colgroup for more direct width control */
+                    .receipt-table col.col-description-colgroup { width: 65%; } /* Try 60% or 65% */
+                    .receipt-table col.col-amount-colgroup { width: 35%; }   /* Try 40% or 35% */
+
                     .receipt-table th, .receipt-table td {
-                        border: 1px solid #eee; padding: 3px 4px; /* Adjusted padding */
-                        vertical-align: top; /* Align content to top of cell */
+                        padding: 2px 3px; /* Further reduce padding */
+                        vertical-align: top;
+                        border: 1px solid #eee; /* Make sure borders are on cells, not table itself if using border-collapse */
+                        box-sizing: border-box; /* Ensure padding/border included in width */
+                        overflow: hidden; /* Clip content that's too long */
+                        text-overflow: ellipsis; /* Show ... for clipped text */
                     }
-                    .receipt-table th { background-color: #f8f9fa; font-weight: bold; text-align: left; }
+                    .receipt-table th { 
+                        background-color: #f8f9fa; font-weight: bold; text-align: left; 
+                        white-space: nowrap; /* Prevent header text from wrapping */
+                    }
                     .receipt-table .text-right { text-align: right; }
 
-                    /* Column specific widths */
-                    .receipt-table .col-description {
-                        width: 70%; /* Adjust percentage as needed */
-                        overflow-wrap: break-word; /* Break long words */
-                        word-break: break-all; /* More aggressive word breaking if needed */
+                    /* Specific styling for description data cells */
+                    .receipt-table td.col-description div { /* Apply overflow to the div inside td */
+                        width: 100%; /* Div takes full width of td */
+                        max-height: 3.6em; /* Example: Limit to about 3 lines, adjust line-height if needed */
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: normal; /* Allow wrapping */
+                        overflow-wrap: break-word;
+                        word-break: break-all;
+                        line-height: 1.2em; /* Adjust for font size */
                     }
-                    .receipt-table .col-amount {
-                        width: 30%; /* Adjust percentage as needed */
+                     .receipt-table td.col-amount {
+                        white-space: nowrap; /* Amount should not wrap */
                     }
 
+
                     .receipt-table .total-row td { font-weight: bold; border-top: 1px solid #aaa; }
-                    /* Adjust total row alignment: First td spans description, second aligns with amount */
-                    .receipt-table .total-row td:first-child {
-                        text-align: right;
-                        /* No specific width, it will take space from description or be empty if description is col-spanned */
-                    }
+                    .receipt-table .total-row td:first-child { text-align: right; }
 
 
                     .receipt-footer { flex-shrink: 0; margin-top: auto; }
                     .payment-details-box {
-                        padding: 6px; border: 1px dashed #ccc; background-color: #f9f9f9;
-                        font-size: 0.8em; margin-bottom: 6px;
+                        padding: 5px; border: 1px dashed #ccc; background-color: #f9f9f9;
+                        font-size: 0.75em; margin-bottom: 5px; /* Reduced font & margin */
                     }
-                    .payment-details-box h3 { margin-top: 0; margin-bottom: 4px; font-size: 0.85em; }
+                    .payment-details-box h3 { margin-top: 0; margin-bottom: 3px; font-size: 0.8em; }
 
                     .qr-code-section {
                         display: flex; align-items: flex-end; justify-content: space-between;
-                        padding-top: 6px; border-top: 1px solid #eee;
+                        padding-top: 5px; border-top: 1px solid #eee; /* Reduced padding */
                     }
                     .qr-code-container { text-align: center; }
-                    .qr-code-container p { font-size: 0.65em; margin-top: 1px; word-break: break-all; max-width: 70px; }
-                    .notes { font-size: 0.7em; color: #777; max-width: 60%; margin-right: 5px;}
+                    .qr-code-container p { font-size: 0.6em; margin-top: 1px; word-break: break-all; max-width: 65px; }
+                    .notes { font-size: 0.65em; color: #777; max-width: 55%; margin-right: 4px;} /* Reduced font & width */
 
                     @media print {
                         .receipt-page-container { border: none; box-shadow: none; }
@@ -396,7 +415,7 @@ const InvoiceManagerPage: React.FC = () => {
                 const root = createRoot(qrTarget);
                 root.render(
                     <React.StrictMode>
-                        <QRCodeCanvas value={invoiceId} size={50} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={false} />
+                        <QRCodeCanvas value={invoiceId} size={45} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={false} /> {/* Smaller QR */}
                     </React.StrictMode>
                 );
             } else {
@@ -410,7 +429,7 @@ const InvoiceManagerPage: React.FC = () => {
         setTimeout(() => {
             printWindow.focus();
             printWindow.print();
-        }, 600);
+        }, 700); // Slightly increased for rendering and style application
     }, [calculateTotal]);
 
     const handlePrintPaymentVoucher = useCallback((voucher: PaymentVoucher) => {
