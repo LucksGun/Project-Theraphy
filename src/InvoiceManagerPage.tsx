@@ -214,8 +214,8 @@ const InvoiceManagerPage: React.FC = () => {
                                                 // YOU MUST FINE-TUNE THESE PIXEL VALUES!
 
         // Debug background colors (set to 'transparent' when satisfied)
-        const descBgColor = "transparent"; // "lightblue"
-        const amountBgColor = "transparent"; // "lightpink"
+        const descBgColor = "lightblue"; // "lightblue"
+        const amountBgColor = "lightpink"; // "lightpink"
 
         const cellPadding = "2px 4px";
         // --- END CONFIGURABLE SECTION ---
