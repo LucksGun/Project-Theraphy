@@ -193,32 +193,39 @@ const InvoiceManagerPage: React.FC = () => {
     }, [calculateTotal]);
 
     const handlePrintReceipt = useCallback((invoice: Invoice) => {
-        const printWindow = window.open('', '_blank', 'height=650,width=900'); // Popup window size
+        const printWindow = window.open('', '_blank', 'height=650,width=900');
         if (!printWindow) {
             alert("Could not open print window. Check popup blockers.");
             return;
         }
         const totalAmount = calculateTotal(invoice.lineItems);
         let itemRowsHtml = '';
-    
-        // --- CONFIGURABLE SECTION for Flexbox "Table" - TEST A ---
-        const descriptionFlexFixedWidth = "250px"; // Example: A generous fixed width for description
-        const amountFlexFixedWidth = "80px";    // Example: A fixed width for amount
-    
-        // Debug background colors - KEEP THESE ACTIVE FOR THIS TEST
-        const descBgColor = "lightblue";
-        const amountBgColor = "lightpink";
-    
-        const cellPadding = "3px 5px"; // A bit more padding for clarity
+
+        // --- CONFIGURABLE SECTION for Flexbox "Table" ---
+        // *** ADJUST THESE FIXED PIXEL WIDTHS ***
+        // Consider that each receipt copy will be on roughly half an A4 landscape page.
+        // A4 landscape width is 297mm. Half is ~148mm.
+        // Minus page margins (e.g., 6mm each side for page = 12mm) -> 285mm printable.
+        // Minus section padding (e.g., 4mm each side for section = 8mm) ->
+        // Width of one receipt section container: (297mm / 2) - 3mm (gap) - (2 * 4mm padding) ~ 148.5 - 3 - 8 = ~137.5mm
+        // 137.5mm is roughly 520px. So your two column widths should sum to less than this.
+        const descriptionFlexFixedWidth = "380px"; // Example: (520px * 0.73) ~ 380px
+        const amountFlexFixedWidth = "120px";    // Example: (520px * 0.23) ~ 120px (sum = 500px, leaves 20px for internal padding/borders)
+                                                // YOU MUST FINE-TUNE THESE PIXEL VALUES!
+
+        // Debug background colors (set to 'transparent' when satisfied)
+        const descBgColor = "transparent"; // "lightblue"
+        const amountBgColor = "transparent"; // "lightpink"
+
+        const cellPadding = "2px 4px";
         // --- END CONFIGURABLE SECTION ---
-    
+
         const lineItemsToPrint = invoice.lineItems.length > 0
             ? invoice.lineItems
-            : [{ id: 'placeholder-item', description: 'This is a test item with a moderately long description to see how text behaves with wrapping and fixed widths.', amount: 1234.56 }];
-    
+            : [{ id: 'placeholder-item', description: '(No items to display)', amount: 0 }];
+
         lineItemsToPrint.forEach(item => {
             const descriptionText = item.description || (item.id === 'placeholder-item' ? item.description : 'N/A');
-            // Using flex shorthand: flex: <grow> <shrink> <basis>
             itemRowsHtml += `
                 <div class="flex-table-row">
                     <div class="flex-table-cell col-desc" style="flex: 0 1 ${descriptionFlexFixedWidth} !important; background-color: ${descBgColor}; padding: ${cellPadding}; overflow: hidden; text-overflow: ellipsis; word-break: break-word; white-space: normal;">${descriptionText}</div>
@@ -227,132 +234,132 @@ const InvoiceManagerPage: React.FC = () => {
             `;
         });
         const formattedTotalAmount = totalAmount.toFixed(2);
-    
+
         let paymentDetailsHtml = '<p>Payment Method: Not Specified</p>';
         if (invoice.paymentMethod === 'cash') {
             paymentDetailsHtml = '<p>Payment Method: Cash</p>';
         } else if (invoice.paymentMethod === 'bank') {
             paymentDetailsHtml = `<p>Payment Method: Bank Transfer</p><p>Reference: ${invoice.paymentReference || 'N/A'}</p>`;
         }
-    
-        // This function now generates the content for a single receipt section
-        const receiptSectionHtml = (qrTargetId: string) => `
-            {/* Header part of the receipt section */}
-            <div class="receipt-header-title">
-                <h1 style="text-align: center; margin-bottom: 3px; color: #198754; font-size: 1.4em;">PAYMENT RECEIPT</h1>
-                {/* <p class="receipt-copy-type">SINGLE TEST</p> Removed type for this simple test */}
-            </div>
-            <div class="header">
-                <div class="logo">Project Theraphy</div>
-                <div class="company-details">
-                    <p>01 Sanambin Road, Nai Mueng, Phitsanulok 65000</p>
-                    <p>088-555-1946 | thammalucka67@nu.ac.th</p>
+
+        const receiptSectionHtml = (type: 'ORIGINAL' | 'COPY', qrTargetId: string) => `
+            <div class="receipt-section"> {/* This is for ONE of the two receipt copies */}
+                <div class="receipt-header-title">
+                    <h1 style="text-align: center; margin-bottom: 3px; color: #198754; font-size: 1.3em;">PAYMENT RECEIPT</h1>
+                    <p class="receipt-copy-type">${type}</p>
                 </div>
-            </div>
-            <div class="receipt-info">
-                <div class="bill-to">
-                    <strong>Received From:</strong><br>
-                    ${invoice.customerName || 'N/A'}
-                </div>
-                <div class="receipt-meta">
-                    <p><strong>Receipt #:</strong> ${invoice.id.substring(0,12)}...</p>
-                    <p><strong>Payment Date:</strong> ${new Date().toLocaleDateString()}</p>
-                    <p><strong>Status:</strong> <strong style="color: #198754;">${invoice.status}</strong></p>
-                </div>
-            </div>
-    
-            {/* Flexbox "Table" Structure */}
-            <div class="flex-table">
-                <div class="flex-table-header flex-table-row">
-                    <div class="flex-table-cell col-desc-header" style="flex: 0 1 ${descriptionFlexFixedWidth} !important; background-color: ${descBgColor}; padding: ${cellPadding}; font-weight: bold;">Description</div>
-                    <div class="flex-table-cell col-amount-header" style="flex: 0 0 ${amountFlexFixedWidth} !important; background-color: ${amountBgColor}; padding: ${cellPadding}; text-align: right; font-weight: bold;">Amount Paid</div>
-                </div>
-                <div class="flex-table-body">
-                    ${itemRowsHtml}
-                </div>
-                <div class="flex-table-footer flex-table-row">
-                    <div class="flex-table-cell col-desc-footer" style="flex: 0 1 ${descriptionFlexFixedWidth} !important; background-color: ${descBgColor}; padding: ${cellPadding}; text-align: right; font-weight: bold; padding-right: 6px !important;">Total Paid:</div>
-                    <div class="flex-table-cell col-amount-footer" style="flex: 0 0 ${amountFlexFixedWidth} !important; background-color: ${amountBgColor}; padding: ${cellPadding}; text-align: right; font-weight: bold;">$${formattedTotalAmount}</div>
-                </div>
-            </div>
-            {/* End Flexbox "Table" Structure */}
-    
-            {/* Footer part of the receipt section */}
-            <div class="receipt-footer">
-                <div class="payment-details-box">
-                    <h3>Payment Details</h3>
-                    ${paymentDetailsHtml}
-                </div>
-                <div class="qr-code-section">
-                    <div class="notes">
-                        Thank you for your payment! This is a single section test.
+                <div class="header">
+                    <div class="logo">Project Theraphy</div>
+                    <div class="company-details">
+                        <p>01 Sanambin Road, Nai Mueng, Phitsanulok 65000</p>
+                        <p>088-555-1946 | thammalucka67@nu.ac.th</p>
                     </div>
-                    <div class="qr-code-container">
-                        <div id="${qrTargetId}"></div>
-                        <p style="font-size: 0.7em; max-width: 60px; margin-top: 2px;">${invoice.id}</p>
+                </div>
+                <div class="receipt-info">
+                    <div class="bill-to">
+                        <strong>Received From:</strong><br>
+                        ${invoice.customerName || 'N/A'}
+                    </div>
+                    <div class="receipt-meta">
+                        <p><strong>Receipt #:</strong> ${invoice.id.substring(0,12)}...</p>
+                        <p><strong>Payment Date:</strong> ${new Date().toLocaleDateString()}</p>
+                        <p><strong>Status:</strong> <strong style="color: #198754;">${invoice.status}</strong></p>
+                    </div>
+                </div>
+
+                <div class="flex-table">
+                    <div class="flex-table-header flex-table-row">
+                        <div class="flex-table-cell col-desc-header" style="flex: 0 1 ${descriptionFlexFixedWidth} !important; background-color: ${descBgColor}; padding: ${cellPadding}; font-weight: bold;">Description</div>
+                        <div class="flex-table-cell col-amount-header" style="flex: 0 0 ${amountFlexFixedWidth} !important; background-color: ${amountBgColor}; padding: ${cellPadding}; text-align: right; font-weight: bold;">Amount Paid</div>
+                    </div>
+                    <div class="flex-table-body">
+                        ${itemRowsHtml}
+                    </div>
+                    <div class="flex-table-footer flex-table-row">
+                        <div class="flex-table-cell col-desc-footer" style="flex: 0 1 ${descriptionFlexFixedWidth} !important; background-color: ${descBgColor}; padding: ${cellPadding}; text-align: right; font-weight: bold; padding-right: 6px !important;">Total Paid:</div>
+                        <div class="flex-table-cell col-amount-footer" style="flex: 0 0 ${amountFlexFixedWidth} !important; background-color: ${amountBgColor}; padding: ${cellPadding}; text-align: right; font-weight: bold;">$${formattedTotalAmount}</div>
+                    </div>
+                </div>
+
+                <div class="receipt-footer">
+                    <div class="payment-details-box">
+                        <h3>Payment Details</h3>
+                        ${paymentDetailsHtml}
+                    </div>
+                    <div class="qr-code-section">
+                        <div class="notes">
+                            Thank you for your payment!
+                        </div>
+                        <div class="qr-code-container">
+                            <div id="${qrTargetId}"></div>
+                            <p style="font-size: 0.6em; max-width: 55px; margin-top: 1px;">${invoice.id}</p>
+                        </div>
                     </div>
                 </div>
             </div>
         `;
-    
+
         const printContent = `
             <html>
             <head>
-                <title>Receipt ${invoice.id} - Single Section Fixed Width Test</title>
+                <title>Receipt ${invoice.id}</title>
                 <style>
                     @page {
-                        size: A4 landscape; /* Or 'A4 portrait' if that makes more sense for a single wide receipt */
-                        margin: 10mm; /* Generous margins for testing a single item */
+                        size: A4 landscape;
+                        margin: 6mm; 
                     }
                     body {
                         font-family: 'Arial', sans-serif; 
-                        margin: 0; padding: 0; font-size: 9pt; /* Slightly larger base font for single view */
-                        color: #000; background-color: #fff;
-                        -webkit-print-color-adjust: exact; print-color-adjust: exact;
-                        /* width and height for body are less critical here as @page defines print area */
+                        margin: 0; padding: 0; font-size: 8pt; 
+                        color: #000; background-color: #fff; width: 297mm; height: 210mm;
+                        box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                    }
+                    /* This container holds the two side-by-side receipt sections */
+                    .receipt-page-container {
+                        display: flex; flex-direction: row; justify-content: space-between;
+                        align-items: stretch; width: 100%; height: 100%;
+                        box-sizing: border-box; padding: 0;
+                    }
+                    /* This is for EACH of the two receipt copies */
+                    .receipt-section {
+                        width: calc(50% - 3mm); /* Half page minus a small gap (3mm * 2 sections = 6mm total gap if space-between) */
+                                                /* Adjust 3mm if you want more/less space between copies */
+                        height: 100%; box-sizing: border-box;
+                        padding: 4mm; /* Inner padding for each receipt copy's content */
+                        border: 1px solid #888; 
+                        display: flex; flex-direction: column;
+                        overflow: hidden !important; 
                     }
                     
-                    /* This is the main container for the single receipt content */
-                    .receipt-section-container {
-                        width: 100%; /* Fill the printable area defined by @page margins */
-                        height: 100%;
-                        border: 1px solid #333; /* Border for the whole receipt section */
-                        padding: 5mm;
-                        box-sizing: border-box;
-                        display: flex;
-                        flex-direction: column; /* Stack elements vertically */
-                        overflow: hidden !important; /* Clip anything that tries to escape */
-                    }
-    
-                    /* Styling for elements within .receipt-section-container */
-                    .receipt-header-title { text-align: center; margin-bottom: 8px; flex-shrink: 0; font-size: 1.3em;}
-                    /* .receipt-copy-type removed for this test */
-                    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid #eee; flex-shrink: 0; font-size: 0.95em;}
-                    .header .logo { font-weight: bold; font-size: 1.1em; }
+                    /* Styles for elements INSIDE each .receipt-section */
+                    .receipt-header-title { text-align: center; margin-bottom: 5px; flex-shrink: 0; font-size: 1.2em;}
+                    .receipt-copy-type { font-size: 0.75em; color: #555; margin-top: -5px; font-style: italic;}
+                    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; padding-bottom: 3px; border-bottom: 1px solid #eee; flex-shrink: 0; font-size: 0.9em;}
+                    .header .logo { font-weight: bold; font-size: 1em; }
                     .header .company-details { text-align: right;}
-                    .header .company-details p { margin: 1px 0; font-size: 0.9em;}
-                    .receipt-info { display: flex; justify-content: space-between; margin-bottom: 8px; flex-shrink: 0; font-size: 0.95em;}
-                    .receipt-info .bill-to, .receipt-info .receipt-meta { width: 48%; } /* Adjust if needed for single view */
-                    .receipt-info .bill-to p, .receipt-info .receipt-meta p { margin: 1px 0; }
+                    .header .company-details p { margin: 0.5px 0; font-size: 0.85em;}
+                    .receipt-info { display: flex; justify-content: space-between; margin-bottom: 5px; flex-shrink: 0; font-size: 0.9em;}
+                    .receipt-info .bill-to, .receipt-info .receipt-meta { width: 48%; }
+                    .receipt-info .bill-to p, .receipt-info .receipt-meta p { margin: 0.5px 0; }
                     .receipt-info .receipt-meta p { text-align: right; }
                     
-                    .receipt-footer { flex-shrink: 0; margin-top: auto; /* Pushes to bottom */ font-size: 0.95em; border-top: 1px solid #eee; padding-top: 5px; }
-                    .payment-details-box { padding: 4px; border: 1px dashed #ccc; margin-bottom: 5px; background-color: #f9f9f9;}
-                    .payment-details-box h3 { margin:0 0 3px 0; font-size: 1em;}
-                    .qr-code-section { display: flex; align-items: flex-end; justify-content: space-between; padding-top: 5px; }
-                    .notes { max-width: 70%; font-size: 0.9em; color: #333; }
-                    .qr-code-container p { font-size: 0.8em; color: #444; }
-    
-                    /* === FLEXBOX "TABLE" STYLES (for single receipt test) === */
+                    .receipt-footer { flex-shrink: 0; margin-top: auto; font-size: 0.9em; border-top: 1px solid #eee; padding-top: 4px;}
+                    .payment-details-box { padding: 3px; border: 1px dashed #ccc; margin-bottom: 4px; background-color: #f9f9f9;}
+                    .payment-details-box h3 { margin:0 0 2px 0; font-size: 0.95em;}
+                    .qr-code-section { display: flex; align-items: flex-end; justify-content: space-between; padding-top: 4px;}
+                    .notes { max-width: 60%; font-size: 0.85em; color: #333; }
+                    .qr-code-container p { font-size: 0.7em; color: #444; }
+
+                    /* === FLEXBOX "TABLE" STYLES (these apply within each .receipt-section) === */
                     .flex-table {
-                        width: 100%; /* Table takes full width of its container (.receipt-section-container) */
+                        width: 100% !important; /* Table takes full width of its .receipt-section container */
                         display: flex;
                         flex-direction: column; 
-                        border: 1px solid #aaa; /* Border for the "table" */
+                        border: 1px solid #aaa; 
                         flex-grow: 1; 
                         min-height: 0; 
-                        font-size: 1em; /* Relative to .receipt-section-container font size */
-                        margin-bottom: 8px; 
+                        font-size: 0.95em; 
+                        margin-bottom: 6px; 
                     }
                     .flex-table-row {
                         display: flex;
@@ -360,76 +367,64 @@ const InvoiceManagerPage: React.FC = () => {
                         width: 100%;
                         border-bottom: 1px solid #ddd; 
                     }
-                    .flex-table-row:last-child {
-                        border-bottom: none;
-                    }
-                    .flex-table-header {
-                        /* font-weight is on inline style for TH cells */
-                        background-color: #f0f0f0; /* Lighter header */
-                    }
-                    .flex-table-footer {
-                        /* font-weight is on inline style for Footer cells */
-                        border-top: 1.5px solid #000; 
-                    }
+                    .flex-table-row:last-child { border-bottom: none; }
+                    .flex-table-header { background-color: #f0f0f0; }
+                    .flex-table-footer { border-top: 1.5px solid #000; }
                     .flex-table-cell {
-                        box-sizing: border-box !important; /* Crucial */
-                        /* Padding is applied inline via JS variable 'cellPadding' */
-                        /* flex properties (grow, shrink, basis) are set INLINE */
-                        /* overflow, text-overflow, word-break, white-space are set INLINE */
-                        border-right: 1px dotted #ccc; /* Dotted lines between "cells" */
+                        box-sizing: border-box !important;
+                        border-right: 1px dotted #ccc; 
+                        /* All critical layout styles (flex-basis, overflow, text-align, background, padding)
+                           are handled by INLINE styles on the cell <div> elements */
                     }
-                    .flex-table-cell:last-child {
-                        border-right: none; /* No border on the very last cell of a row */
-                    }
+                    .flex-table-cell:last-child { border-right: none; }
                     
                     .flex-table-body { 
                         flex-grow: 1; 
-                        overflow-y: auto; /* Scroll for many items on screen */
-                        min-height: 4em; /* Ensure body has some space */
+                        overflow-y: auto; 
+                        min-height: 3.5em; /* Min height for item area */
                     }
-    
+
                     @media print {
                         .no-print { display: none; }
-                        .flex-table-body { overflow-y: visible !important; } /* Important: try to show all items in print */
-                        .receipt-section-container { border: 1px solid #ccc; } /* Lighter border for actual print */
+                        .flex-table-body { overflow-y: visible !important; } 
+                        .receipt-section { border-color: #ccc; } /* Lighter border for actual print */
                     }
                 </style>
             </head>
             <body>
-                {/* The main container for the single receipt */ }
-                <div class="receipt-section-container">
-                    ${receiptSectionHtml('qr-code-target-single-test')}
+                {/* This container holds the two side-by-side receipt sections */ }
+                <div class="receipt-page-container">
+                    ${receiptSectionHtml('ORIGINAL', 'qr-code-target-original')}
+                    ${receiptSectionHtml('COPY', 'qr-code-target-copy')}
                 </div>
                 
-                <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 10px; right: 10px; padding: 10px 15px;">Print Single Fixed Test</button>
+                <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 10px; right: 10px; padding: 10px 15px;">Print</button>
             </body>
             </html>
         `;
         printWindow.document.write(printContent);
         printWindow.document.close();
-    
-        // Render QR code for the single receipt
+
         const renderQRCode = (targetId: string, invoiceId: string) => {
             const qrTarget = printWindow.document.getElementById(targetId);
             if (qrTarget) {
                 const root = createRoot(qrTarget);
                 root.render(
                     <React.StrictMode>
-                        <QRCodeCanvas value={invoiceId} size={50} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={false} />
+                        <QRCodeCanvas value={invoiceId} size={40} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={false} />
                     </React.StrictMode>
                 );
             } else { console.error(`Could not find QR code target element: ${targetId}`); }
         };
-    
-        renderQRCode('qr-code-target-single-test', invoice.id);
-    
+
+        renderQRCode('qr-code-target-original', invoice.id);
+        renderQRCode('qr-code-target-copy', invoice.id);
+
         setTimeout(() => {
             printWindow.focus();
-            // CRITICAL: COMMENT OUT printWindow.print() for inspection in Edge DevTools
-            // printWindow.print();
-            console.log("SINGLE RECEIPT FIXED WIDTH TEST - Ready for inspection in Edge DevTools. Check computed widths of lightblue/lightpink cells.");
-        }, 1500); // Increased timeout for inspection
-    }, [calculateTotal]); // Assuming calculateTotal is stable or defined outside and memoized
+            printWindow.print(); // Re-enable print for direct testing
+        }, 900);
+    }, [calculateTotal]);
 
     const handlePrintPaymentVoucher = useCallback((voucher: PaymentVoucher) => {
         const printWindow = window.open('', '_blank', 'height=800,width=800'); // Window size, not print size
