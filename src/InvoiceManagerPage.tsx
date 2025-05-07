@@ -200,9 +200,22 @@ const InvoiceManagerPage: React.FC = () => {
         }
         const totalAmount = calculateTotal(invoice.lineItems);
         let itemRowsHtml = '';
-        invoice.lineItems.forEach(item => {
-            itemRowsHtml += `<tr><td>${item.description || '(No description)'}</td><td class="text-right">$${(item.amount || 0).toFixed(2)}</td></tr>`;
+        // Ensure line items always have a description, even if it's a placeholder, to maintain structure
+        const lineItemsToPrint = invoice.lineItems.length > 0
+            ? invoice.lineItems
+            : [{ id: 'placeholder', description: '(No items)', amount: 0 }];
+
+        lineItemsToPrint.forEach(item => {
+            const descriptionText = item.description || (item.id === 'placeholder' ? item.description : '(No description)');
+            itemRowsHtml += `<tr>
+                                <td class="col-description">${descriptionText}</td>
+                                <td class="col-amount text-right">$${(item.amount || 0).toFixed(2)}</td>
+                             </tr>`;
         });
+        if (invoice.lineItems.length === 0) { // If there were truly no items, ensure total reflects this
+             itemRowsHtml = `<tr><td class="col-description">(No items listed)</td><td class="col-amount text-right">$0.00</td></tr>`;
+        }
+
 
         let paymentDetailsHtml = '<p>Payment Method: Not Specified</p>';
         if (invoice.paymentMethod === 'cash') {
@@ -214,7 +227,7 @@ const InvoiceManagerPage: React.FC = () => {
         const receiptSectionHtml = (type: 'ORIGINAL' | 'COPY', qrTargetId: string) => `
             <div class="receipt-section">
                 <div class="receipt-header-title">
-                    <h1 style="text-align: center; margin-bottom: 2px; color: #198754; font-size: 1.4em;">PAYMENT RECEIPT</h1> {/* Slightly smaller H1 */}
+                    <h1 style="text-align: center; margin-bottom: 2px; color: #198754; font-size: 1.4em;">PAYMENT RECEIPT</h1>
                     <p class="receipt-copy-type">${type}</p>
                 </div>
                 <div class="header">
@@ -238,19 +251,18 @@ const InvoiceManagerPage: React.FC = () => {
                 <table class="receipt-table">
                     <thead>
                         <tr>
-                            <th>Description</th>
-                            <th class="text-right">Amount Paid</th>
+                            <th class="col-description">Description</th>
+                            <th class="col-amount text-right">Amount Paid</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${itemRowsHtml}
                         <tr class="total-row">
-                            <td class="text-right"><strong>Total Paid:</strong></td>
+                            <td class="text-right"><strong>Total Paid:</strong></td> {/* This now correctly aligns with amount col */}
                             <td class="text-right"><strong>$${totalAmount.toFixed(2)}</strong></td>
                         </tr>
                     </tbody>
                 </table>
-                {/* Footer-like content moved into a dedicated div for better flex control */}
                 <div class="receipt-footer">
                     <div class="payment-details-box">
                         <h3>Payment Details</h3>
@@ -262,7 +274,7 @@ const InvoiceManagerPage: React.FC = () => {
                         </div>
                         <div class="qr-code-container">
                             <div id="${qrTargetId}"></div>
-                            <p style="font-size: 0.55em; max-width: 60px; margin-top: 1px;">${invoice.id}</p> {/* Smaller font, smaller max-width */}
+                            <p style="font-size: 0.55em; max-width: 60px; margin-top: 1px;">${invoice.id}</p>
                         </div>
                     </div>
                 </div>
@@ -276,48 +288,31 @@ const InvoiceManagerPage: React.FC = () => {
                 <style>
                     @page {
                         size: A4 landscape;
-                        margin: 7mm; /* Slightly reduced page margin */
+                        margin: 7mm;
                     }
                     body {
                         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                        margin: 0;
-                        padding: 0;
-                        font-size: 8.5px; /* Further reduced base font for print */
-                        color: #333;
-                        background-color: #fff;
-                        width: 297mm;
-                        height: 210mm;
-                        box-sizing: border-box;
+                        margin: 0; padding: 0; font-size: 8.5px; color: #333;
+                        background-color: #fff; width: 297mm; height: 210mm;
+                        box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact;
                     }
                     .receipt-page-container {
-                        display: flex;
-                        flex-direction: row;
-                        justify-content: space-between;
-                        align-items: stretch; /* Make sections take full available height */
-                        width: 100%;
-                        height: 100%;
-                        box-sizing: border-box;
-                        padding: 0;
+                        display: flex; flex-direction: row; justify-content: space-between;
+                        align-items: stretch; width: 100%; height: 100%;
+                        box-sizing: border-box; padding: 0;
                     }
                     .receipt-section {
-                        width: calc(50% - 3.5mm); /* Adjusted for 7mm page margin, creating a small gap */
-                        height: 100%; /* Sections will stretch to page height minus margins */
-                        box-sizing: border-box;
-                        padding: 5mm; /* Padding inside each receipt section */
-                        border: 1px solid #ccc;
-                        overflow: hidden; 
-                        display: flex;
-                        flex-direction: column; /* Key for internal stacking */
+                        width: calc(50% - 3.5mm); height: 100%; box-sizing: border-box;
+                        padding: 5mm; border: 1px solid #ccc; overflow: hidden;
+                        display: flex; flex-direction: column;
                     }
-                    .receipt-header-title { 
-                        text-align: center; margin-bottom: 8px; flex-shrink: 0;
-                    }
+                    .receipt-header-title { text-align: center; margin-bottom: 8px; flex-shrink: 0; }
                     .receipt-copy-type { font-size: 0.8em; color: #888; margin-top: -7px; font-style: italic; }
 
                     .header {
                         display: flex; justify-content: space-between; align-items: flex-start;
                         margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eee;
-                        flex-shrink: 0; /* Prevent shrinking */
+                        flex-shrink: 0;
                     }
                     .header .logo { font-size: 1em; font-weight: bold; color: #555; }
                     .header .company-details { text-align: right; }
@@ -325,35 +320,46 @@ const InvoiceManagerPage: React.FC = () => {
 
                     .receipt-info {
                         display: flex; justify-content: space-between;
-                        margin-bottom: 8px; font-size: 0.75em;
-                        flex-shrink: 0; /* Prevent shrinking */
+                        margin-bottom: 8px; font-size: 0.75em; flex-shrink: 0;
                     }
                     .receipt-info .bill-to, .receipt-info .receipt-meta { width: 48%; }
                     .receipt-info .bill-to p, .receipt-info .receipt-meta p { margin: 0.5px 0; }
                     .receipt-info .receipt-meta p { text-align: right; }
 
                     .receipt-table {
-                        width: 100%; border-collapse: collapse; 
-                        font-size: 0.75em;
-                        flex-grow: 1; /* This is crucial: table takes up remaining space */
-                        overflow: auto; /* Add scroll *if* content is too long, but goal is to fit */
-                        margin-bottom: 8px; /* Space before footer */
-                        min-height: 0; /* Allow table to shrink if needed with other content */
+                        width: 100%; border-collapse: collapse;
+                        font-size: 0.75em; flex-grow: 1; overflow: hidden; /* Changed from auto to hidden if content should be clipped */
+                        margin-bottom: 8px; min-height: 0; table-layout: fixed; /* Important for controlling column widths */
                     }
-                    .receipt-table th, .receipt-table td { border: 1px solid #eee; padding: 3px; text-align: left; }
-                    .receipt-table th { background-color: #f8f9fa; font-weight: bold; }
-                    .receipt-table .total-row td { font-weight: bold; border-top: 1px solid #aaa; } /* thinner border */
+                    .receipt-table th, .receipt-table td {
+                        border: 1px solid #eee; padding: 3px 4px; /* Adjusted padding */
+                        vertical-align: top; /* Align content to top of cell */
+                    }
+                    .receipt-table th { background-color: #f8f9fa; font-weight: bold; text-align: left; }
                     .receipt-table .text-right { text-align: right; }
-                    
-                    .receipt-footer { /* New wrapper for bottom content */
-                        flex-shrink: 0; /* Prevent this footer area from shrinking */
-                        margin-top: auto; /* Push to bottom if table doesn't fill all space */
+
+                    /* Column specific widths */
+                    .receipt-table .col-description {
+                        width: 70%; /* Adjust percentage as needed */
+                        overflow-wrap: break-word; /* Break long words */
+                        word-break: break-all; /* More aggressive word breaking if needed */
+                    }
+                    .receipt-table .col-amount {
+                        width: 30%; /* Adjust percentage as needed */
                     }
 
+                    .receipt-table .total-row td { font-weight: bold; border-top: 1px solid #aaa; }
+                    /* Adjust total row alignment: First td spans description, second aligns with amount */
+                    .receipt-table .total-row td:first-child {
+                        text-align: right;
+                        /* No specific width, it will take space from description or be empty if description is col-spanned */
+                    }
+
+
+                    .receipt-footer { flex-shrink: 0; margin-top: auto; }
                     .payment-details-box {
                         padding: 6px; border: 1px dashed #ccc; background-color: #f9f9f9;
-                        font-size: 0.8em; 
-                        margin-bottom: 6px; /* Space before QR section */
+                        font-size: 0.8em; margin-bottom: 6px;
                     }
                     .payment-details-box h3 { margin-top: 0; margin-bottom: 4px; font-size: 0.85em; }
 
@@ -362,15 +368,10 @@ const InvoiceManagerPage: React.FC = () => {
                         padding-top: 6px; border-top: 1px solid #eee;
                     }
                     .qr-code-container { text-align: center; }
-                     /* QR Code size adjusted in JS */
                     .qr-code-container p { font-size: 0.65em; margin-top: 1px; word-break: break-all; max-width: 70px; }
                     .notes { font-size: 0.7em; color: #777; max-width: 60%; margin-right: 5px;}
 
                     @media print {
-                        body {
-                            -webkit-print-color-adjust: exact;
-                            print-color-adjust: exact;
-                        }
                         .receipt-page-container { border: none; box-shadow: none; }
                         .receipt-section { page-break-inside: avoid; }
                         .no-print { display: none; }
@@ -395,7 +396,6 @@ const InvoiceManagerPage: React.FC = () => {
                 const root = createRoot(qrTarget);
                 root.render(
                     <React.StrictMode>
-                        {/* QR Code size reduced */}
                         <QRCodeCanvas value={invoiceId} size={50} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={false} />
                     </React.StrictMode>
                 );
@@ -410,17 +410,204 @@ const InvoiceManagerPage: React.FC = () => {
         setTimeout(() => {
             printWindow.focus();
             printWindow.print();
-        }, 600); // Slightly increased for rendering
+        }, 600);
     }, [calculateTotal]);
 
     const handlePrintPaymentVoucher = useCallback((voucher: PaymentVoucher) => {
-        const printWindow = window.open('', '_blank', 'height=800,width=800');
+        const printWindow = window.open('', '_blank', 'height=800,width=800'); // Window size, not print size
         if (!printWindow) { alert("Could not open print window."); return; }
-        const printContent = `<html><head><title>Payment Voucher ${voucher.id}</title><style> body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; font-size: 11pt; color: #333; } .voucher-container { width: 190mm; min-height: 120mm; margin: 10mm auto; padding: 8mm; border: 1px solid #ccc; box-shadow: 0 0 5px rgba(0,0,0,0.1); position: relative; } .header { text-align: center; margin-bottom: 20px; } .header .logo { font-size: 1.5em; font-weight: bold; color: #333; margin-bottom: 5px; } .header .company-details p { margin: 2px 0; font-size: 0.8em; color: #555; } .voucher-title { font-size: 1.8em; font-weight: bold; text-align: center; margin-bottom: 25px; padding-bottom: 5px; border-bottom: 2px solid #333; } .voucher-meta { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 0.9em; } .details table { width: 100%; border-collapse: collapse; margin-bottom: 20px; } .details th, .details td { padding: 8px 0; text-align: left; vertical-align: top; } .details th { width: 140px; font-weight: 600; color: #555; } .details td { border-bottom: 1px dotted #ccc; } .details tr:last-child td { border-bottom: none; } .amount-section { margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee; } .amount-section .total-amount { font-size: 1.2em; font-weight: bold; text-align: right; } .signatures { display: flex; justify-content: space-between; margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; font-size: 0.9em; } .signatures div { width: 30%; text-align: center; } .signatures div p { margin-top: 40px; border-top: 1px solid #888; padding-top: 5px; } .qr-code-print { text-align: right; margin-top: 10px; } .qr-code-print p {font-size: 0.7em; margin-top: 2px; color: #777;} @media print { body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .voucher-container { border: none; box-shadow: none; margin: 0 auto; width: 100%; height: 100%; } .no-print { display: none; } } </style></head><body><div class="voucher-container"><div class="header"><div class="logo">Project Theraphy</div><div class="company-details"><p>01 Sanambin Road, Nai Mueng, Phitsanulok 65000</p><p>Tel: 088-555-1946 | Email: thammalucka67@nu.ac.th</p></div></div><div class="voucher-title">ใบสำคัญจ่าย (Payment Voucher)</div><div class="voucher-meta"><div><strong>Voucher No.:</strong> ${voucher.id}</div><div><strong>Date:</strong> ${voucher.voucherDate}</div></div><div class="details"><table><tr><th>Pay To (จ่ายให้):</th><td>${voucher.payeeName}</td></tr><tr><th>Description (รายการ):</th><td>${voucher.description}</td></tr><tr><th>Payment Method:</th><td>${voucher.paymentMethod || 'N/A'}</td></tr>${voucher.referenceNo ? `<tr><th>Reference:</th><td>${voucher.referenceNo}</td></tr>` : ''}</table></div><div class="amount-section"><p class="total-amount">Amount (จำนวนเงิน): $${voucher.amount.toFixed(2)}</p></div><div class="signatures"><div><p>Approved By (ผู้อนุมัติ)</p></div><div><p>Paid By (ผู้จ่ายเงิน)</p></div><div><p>Received By (ผู้รับเงิน)</p></div></div><div class="qr-code-print"><div id="qr-pv-${voucher.id}"></div><p>${voucher.id}</p></div></div><button class="no-print" onclick="window.print()" style="position:fixed; bottom:10px; right:10px; padding:8px 15px;">Print</button></body></html>`;
-        printWindow.document.write(printContent); printWindow.document.close();
+        const printContent = `
+            <html>
+            <head>
+                <title>Payment Voucher ${voucher.id}</title>
+                <style>
+                    @page {
+                        size: A4 portrait;
+                        margin: 10mm; /* Standard A4 margins, adjust as needed */
+                    }
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        margin: 0; /* Body margin should be 0, @page handles print margins */
+                        padding: 0;
+                        font-size: 10pt; /* Base font size for voucher */
+                        color: #333;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    .voucher-container {
+                        /* A4 width is 210mm. With 10mm margins each side, usable is 190mm.
+                           Let's make the container slightly less to be safe, or ensure content within fits 190mm.
+                           If content is still cut off, reduce this further (e.g., to 185mm or 180mm)
+                           AND ensure @page margins allow for it.
+                        */
+                        width: 100%; /* Let it fill the @page area minus margins */
+                        max-width: 190mm; /* Theoretical max based on 10mm margins */
+                        min-height: 120mm; /* Keep a min height if desired */
+                        margin: 0 auto; /* Center on screen, print margins handled by @page */
+                        padding: 0; /* Padding was 8mm, now relying more on @page margins and internal spacing */
+                        /* border: 1px solid #ccc; /* Optional for screen debugging, remove for cleaner print if not desired */
+                        /* box-shadow: 0 0 5px rgba(0,0,0,0.1); /* Screen only */
+                        position: relative;
+                        box-sizing: border-box;
+                    }
+                    .header {
+                        text-align: center;
+                        margin-bottom: 15px; /* Reduced margin */
+                    }
+                    .header .logo {
+                        font-size: 1.4em; /* Slightly reduced */
+                        font-weight: bold;
+                        color: #333;
+                        margin-bottom: 4px;
+                    }
+                    .header .company-details p {
+                        margin: 1px 0;
+                        font-size: 0.75em; /* Slightly reduced */
+                        color: #555;
+                    }
+                    .voucher-title {
+                        font-size: 1.6em; /* Slightly reduced */
+                        font-weight: bold;
+                        text-align: center;
+                        margin-bottom: 20px;
+                        padding-bottom: 4px;
+                        border-bottom: 2px solid #333;
+                    }
+                    .voucher-meta {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 15px; /* Reduced margin */
+                        font-size: 0.85em; /* Slightly reduced */
+                        padding: 0 5mm; /* Add some padding if container padding was removed */
+                    }
+                     .voucher-meta div { /* Ensure these don't cause overflow */
+                        white-space: nowrap; /* Prevent wrapping that might make it taller if too narrow */
+                    }
+                    .details {
+                        padding: 0 5mm; /* Add some padding if container padding was removed */
+                    }
+                    .details table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 15px; /* Reduced margin */
+                    }
+                    .details th, .details td {
+                        padding: 7px 0; /* Reduced padding */
+                        text-align: left;
+                        vertical-align: top;
+                        font-size: 0.9em; /* Slightly reduced */
+                    }
+                    .details th {
+                        width: 130px; /* Slightly reduced */
+                        font-weight: 600;
+                        color: #555;
+                        padding-right: 5px; /* Add some space */
+                    }
+                    .details td {
+                        border-bottom: 1px dotted #ccc;
+                    }
+                    .details tr:last-child td {
+                        border-bottom: none;
+                    }
+                    .amount-section {
+                        margin-top: 20px; /* Reduced margin */
+                        padding-top: 10px; /* Reduced padding */
+                        border-top: 1px solid #eee;
+                        padding: 0 5mm; /* Add some padding */
+                    }
+                    .amount-section .total-amount {
+                        font-size: 1.1em; /* Slightly reduced */
+                        font-weight: bold;
+                        text-align: right;
+                    }
+                    .signatures {
+                        display: flex;
+                        justify-content: space-between; /* This might need to be space-around or widths adjusted */
+                        margin-top: 40px; /* Reduced margin */
+                        padding-top: 15px;
+                        border-top: 1px solid #eee;
+                        font-size: 0.85em; /* Slightly reduced */
+                        padding: 0 5mm; /* Add some padding */
+                    }
+                    .signatures div {
+                        width: 30%; /* Ensure this doesn't cause overflow with padding/margins */
+                        text-align: center;
+                        min-width: 0; /* for flex shrinking */
+                    }
+                    .signatures div p {
+                        margin-top: 30px; /* Reduced */
+                        border-top: 1px solid #888;
+                        padding-top: 4px;
+                    }
+                    .qr-code-print {
+                        text-align: right;
+                        margin-top: 15px; /* Reduced */
+                        padding-right: 5mm; /* Align with other padded content */
+                    }
+                    .qr-code-print div { /* The div containing QRCodeCanvas */
+                        display: inline-block; /* To allow text-align:right to work on its parent */
+                    }
+                    .qr-code-print p {
+                        font-size: 0.65em; /* Reduced */
+                        margin-top: 1px;
+                        color: #777;
+                    }
+                    @media print {
+                        /* .voucher-container border and shadow are implicitly removed as they are not here */
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="voucher-container">
+                    <div class="header">
+                        <div class="logo">Project Theraphy</div>
+                        <div class="company-details">
+                            <p>01 Sanambin Road, Nai Mueng, Phitsanulok 65000</p>
+                            <p>Tel: 088-555-1946 | Email: thammalucka67@nu.ac.th</p>
+                        </div>
+                    </div>
+                    <div class="voucher-title">ใบสำคัญจ่าย (Payment Voucher)</div>
+                    <div class="voucher-meta">
+                        <div><strong>Voucher No.:</strong> ${voucher.id}</div>
+                        <div><strong>Date:</strong> ${voucher.voucherDate}</div>
+                    </div>
+                    <div class="details">
+                        <table>
+                            <tr><th>Pay To (จ่ายให้):</th><td>${voucher.payeeName}</td></tr>
+                            <tr><th>Description (รายการ):</th><td>${voucher.description}</td></tr>
+                            <tr><th>Payment Method:</th><td>${voucher.paymentMethod || 'N/A'}</td></tr>
+                            ${voucher.referenceNo ? `<tr><th>Reference:</th><td>${voucher.referenceNo}</td></tr>` : ''}
+                        </table>
+                    </div>
+                    <div class="amount-section">
+                        <p class="total-amount">Amount (จำนวนเงิน): $${voucher.amount.toFixed(2)}</p>
+                    </div>
+                    <div class="signatures">
+                        <div><p>Approved By (ผู้อนุมัติ)</p></div>
+                        <div><p>Paid By (ผู้จ่ายเงิน)</p></div>
+                        <div><p>Received By (ผู้รับเงิน)</p></div>
+                    </div>
+                    <div class="qr-code-print">
+                        <div id="qr-pv-${voucher.id}"></div>
+                        <p>${voucher.id}</p>
+                    </div>
+                </div>
+                <button class="no-print" onclick="window.print()" style="position:fixed; bottom:10px; right:10px; padding:8px 15px;">Print</button>
+            </body>
+            </html>`;
+        printWindow.document.write(printContent);
+        printWindow.document.close();
         const qrTarget = printWindow.document.getElementById(`qr-pv-${voucher.id}`);
-        if (qrTarget) { const root = createRoot(qrTarget); root.render(<QRCodeCanvas value={voucher.id} size={80} level="M" />); }
-        setTimeout(() => { printWindow.focus(); printWindow.print(); }, 300);
+        if (qrTarget) {
+            const root = createRoot(qrTarget);
+            // QR code size might also need adjustment if it's part of the overflow
+            root.render(<QRCodeCanvas value={voucher.id} size={70} level="M" />); // Slightly smaller QR
+        }
+        setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+        }, 300);
     }, []);
 
     const handlePrintReceiveVoucher = useCallback((voucher: ReceiveVoucher) => {
