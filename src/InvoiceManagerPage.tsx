@@ -194,7 +194,7 @@ const InvoiceManagerPage: React.FC = () => {
 
     
     const handlePrintReceipt = useCallback((invoice: Invoice) => {
-        const printWindow = window.open('', '_blank', 'height=650,width=900'); // Popup window size
+        const printWindow = window.open('', '_blank', 'height=842,width=595'); // Standard A4 Portrait dimensions for popup
         if (!printWindow) {
             alert("Could not open print window. Check popup blockers.");
             return;
@@ -202,35 +202,36 @@ const InvoiceManagerPage: React.FC = () => {
         const totalAmount = calculateTotal(invoice.lineItems);
         let itemRowsHtml = '';
 
-        // --- CONFIGURABLE SECTION for Flexbox "Table" ---
-        // *** ADJUST THESE FIXED PIXEL WIDTHS for a FULL A4 Landscape Page width ***
-        // Printable width of A4 landscape (297mm) with 6mm margins is ~285mm (~1077px).
-        // Your two column widths below (plus their internal paddings) should fit within this.
-        const descriptionFlexFixedWidth = "800px"; // EXAMPLE: Generous width for description
-        const amountFlexFixedWidth = "200px";    // EXAMPLE: Generous width for amount
-                                                // Current sum: 1000px. Leaves ~77px for cell paddings/borders.
+        // --- CONFIGURABLE SECTION for Flexbox "Table" (A4 Portrait) ---
+        // Printable width of A4 Portrait (210mm) with, say, 10mm margins each side is ~190mm (~718px).
+        // Adjust these fixed pixel widths.
+        const descriptionFlexFixedWidth = "500px"; // EXAMPLE: More space for description
+        const amountFlexFixedWidth = "150px";    // EXAMPLE: Ample space for amount
+                                                // Current sum: 650px. Leaves ~68px for cell paddings/borders.
                                                 // YOU MUST FINE-TUNE THESE!
 
-        // Debug background colors (set to 'transparent' when satisfied)
-        const descBgColor = "transparent";   // "lightblue" for debugging
-        const amountBgColor = "transparent"; // "lightpink" for debugging
-
-        const cellPadding = "4px 6px"; // Can afford more padding now
+        const cellPadding = "5px 7px"; // Can afford more padding in portrait
+        const descriptionItemFontSize = "1.1em"; // Relative to cell font size, makes item description bigger
         // --- END CONFIGURABLE SECTION ---
 
-        const lineItemsToPrint = invoice.lineItems.length > 0
-            ? invoice.lineItems
-            : [{ id: 'placeholder-item', description: '(No items to display)', amount: 0 }];
-
-        lineItemsToPrint.forEach(item => {
-            const descriptionText = item.description || (item.id === 'placeholder-item' ? item.description : 'N/A');
-            itemRowsHtml += `
+        if (invoice.lineItems.length > 0) {
+            invoice.lineItems.forEach(item => {
+                const descriptionText = item.description || 'N/A'; // Default if description is empty
+                itemRowsHtml += `
+                    <div class="flex-table-row">
+                        <div class="flex-table-cell col-desc" style="flex: 0 1 ${descriptionFlexFixedWidth} !important; padding: ${cellPadding}; word-break: break-word; white-space: normal; vertical-align: top;"><span class="item-description-text">${descriptionText}</span></div>
+                        <div class="flex-table-cell col-amount" style="flex: 0 0 ${amountFlexFixedWidth} !important; padding: ${cellPadding}; text-align: right; white-space: nowrap; vertical-align: top;">$${(item.amount || 0).toFixed(2)}</div>
+                    </div>
+                `;
+            });
+        } else {
+            // Handle case with no line items gracefully
+            itemRowsHtml = `
                 <div class="flex-table-row">
-                    <div class="flex-table-cell col-desc" style="flex: 0 1 ${descriptionFlexFixedWidth} !important; background-color: ${descBgColor}; padding: ${cellPadding}; overflow: hidden; text-overflow: ellipsis; word-break: break-word; white-space: normal; vertical-align: top;">${descriptionText}</div>
-                    <div class="flex-table-cell col-amount" style="flex: 0 0 ${amountFlexFixedWidth} !important; background-color: ${amountBgColor}; padding: ${cellPadding}; text-align: right; white-space: nowrap; vertical-align: top;">$${(item.amount || 0).toFixed(2)}</div>
+                    <div class="flex-table-cell no-items-message" style="flex-basis: 100%; padding: ${cellPadding}; text-align: center; font-style: italic;">No items for this receipt.</div>
                 </div>
             `;
-        });
+        }
         const formattedTotalAmount = totalAmount.toFixed(2);
 
         let paymentDetailsHtml = '<p>Payment Method: Not Specified</p>';
@@ -240,10 +241,9 @@ const InvoiceManagerPage: React.FC = () => {
             paymentDetailsHtml = `<p>Payment Method: Bank Transfer</p><p>Reference: ${invoice.paymentReference || 'N/A'}</p>`;
         }
 
-        // This function generates the HTML for ONE full receipt section
         const receiptSectionHtml = (type: 'ORIGINAL' | 'COPY', qrTargetId: string) => `
             <div class="receipt-header-title">
-                <h1 style="text-align: center; margin-bottom: 4px; color: #198754; font-size: 1.5em;">PAYMENT RECEIPT</h1>
+                <h1 style="text-align: center; margin-bottom: 5px; color: #198754; font-size: 1.6em;">PAYMENT RECEIPT</h1>
                 <p class="receipt-copy-type">${type}</p>
             </div>
             <div class="header">
@@ -259,7 +259,7 @@ const InvoiceManagerPage: React.FC = () => {
                     ${invoice.customerName || 'N/A'}
                 </div>
                 <div class="receipt-meta">
-                    <p><strong>Receipt #:</strong> ${invoice.id.substring(0,16)}...</p> {/* Can show more ID now */}
+                    <p><strong>Receipt #:</strong> ${invoice.id}</p> {/* FULL INVOICE ID */}
                     <p><strong>Payment Date:</strong> ${new Date().toLocaleDateString()}</p>
                     <p><strong>Status:</strong> <strong style="color: #198754;">${invoice.status}</strong></p>
                 </div>
@@ -267,16 +267,17 @@ const InvoiceManagerPage: React.FC = () => {
 
             <div class="flex-table">
                 <div class="flex-table-header flex-table-row">
-                    <div class="flex-table-cell col-desc-header" style="flex: 0 1 ${descriptionFlexFixedWidth} !important; background-color: ${descBgColor}; padding: ${cellPadding}; font-weight: bold; vertical-align: top;">Description</div>
-                    <div class="flex-table-cell col-amount-header" style="flex: 0 0 ${amountFlexFixedWidth} !important; background-color: ${amountBgColor}; padding: ${cellPadding}; text-align: right; font-weight: bold; vertical-align: top;">Amount Paid</div>
+                    <div class="flex-table-cell col-desc-header" style="flex: 0 1 ${descriptionFlexFixedWidth} !important; padding: ${cellPadding}; font-weight: bold; vertical-align: top;">Description</div>
+                    <div class="flex-table-cell col-amount-header" style="flex: 0 0 ${amountFlexFixedWidth} !important; padding: ${cellPadding}; text-align: right; font-weight: bold; vertical-align: top;">Amount Paid</div>
                 </div>
                 <div class="flex-table-body">
                     ${itemRowsHtml}
                 </div>
+                ${invoice.lineItems.length > 0 ? `
                 <div class="flex-table-footer flex-table-row">
-                    <div class="flex-table-cell col-desc-footer" style="flex: 0 1 ${descriptionFlexFixedWidth} !important; background-color: ${descBgColor}; padding: ${cellPadding}; text-align: right; font-weight: bold; padding-right: 8px !important; vertical-align: top;">Total Paid:</div>
-                    <div class="flex-table-cell col-amount-footer" style="flex: 0 0 ${amountFlexFixedWidth} !important; background-color: ${amountBgColor}; padding: ${cellPadding}; text-align: right; font-weight: bold; vertical-align: top;">$${formattedTotalAmount}</div>
-                </div>
+                    <div class="flex-table-cell col-desc-footer" style="flex: 0 1 ${descriptionFlexFixedWidth} !important; padding: ${cellPadding}; text-align: right; font-weight: bold; padding-right: 8px !important; vertical-align: top;">Total Paid:</div>
+                    <div class="flex-table-cell col-amount-footer" style="flex: 0 0 ${amountFlexFixedWidth} !important; padding: ${cellPadding}; text-align: right; font-weight: bold; vertical-align: top;">$${formattedTotalAmount}</div>
+                </div>` : ''}
             </div>
 
             <div class="receipt-footer">
@@ -290,7 +291,7 @@ const InvoiceManagerPage: React.FC = () => {
                     </div>
                     <div class="qr-code-container">
                         <div id="${qrTargetId}"></div>
-                        <p style="font-size: 0.7em; max-width: 70px; margin-top: 1px;">${invoice.id}</p> {/* Can make QR ID text larger */}
+                        <p class="qr-code-id-text">${invoice.id}</p> {/* FULL INVOICE ID below QR */}
                     </div>
                 </div>
             </div>
@@ -302,54 +303,58 @@ const InvoiceManagerPage: React.FC = () => {
                 <title>Receipt ${invoice.id}</title>
                 <style>
                     @page {
-                        size: A4 landscape;
-                        margin: 8mm; /* Margins for the full page */
+                        size: A4 portrait; /* Changed to portrait */
+                        margin: 10mm;    /* Margins for A4 portrait */
                     }
                     body {
                         font-family: 'Arial', sans-serif; 
-                        margin: 0; padding: 0; font-size: 9pt; /* Slightly larger base font */
+                        margin: 0; padding: 0; font-size: 10pt; /* Base font for portrait */
                         color: #000; background-color: #fff;
                         box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact;
                     }
                     
                     .receipt-full-page-section {
-                        width: 100%; /* Takes full printable width of the page */
-                        height: 100%; /* Takes full printable height of the page */
+                        width: 100%; 
+                        height: 100%; 
                         box-sizing: border-box;
-                        padding: 6mm; /* Inner padding for the content within the page section */
+                        padding: 8mm; /* Inner padding for the content */
                         border: 1px solid #aaa; 
                         display: flex;
-                        flex-direction: column; /* Stack content vertically */
-                        overflow: hidden !important; /* Clip if anything tries to overflow the page */
-                        page-break-after: always; /* Force new page after this section */
+                        flex-direction: column; 
+                        overflow: hidden !important;
+                        page-break-after: always; 
                     }
                     .receipt-full-page-section:last-child {
-                        page-break-after: auto; /* No page break after the very last section */
+                        page-break-after: auto; 
                     }
                     
-                    /* Styles for elements INSIDE each .receipt-full-page-section */
-                    .receipt-header-title { text-align: center; margin-bottom: 8px; flex-shrink: 0; font-size: 1.2em;}
-                    .receipt-copy-type { font-size: 0.85em; color: #444; margin-top: -6px; font-style: italic;}
-                    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #ddd; flex-shrink: 0; font-size: 0.95em;}
-                    .header .logo { font-weight: bold; font-size: 1.1em; }
+                    .receipt-header-title { text-align: center; margin-bottom: 10px; flex-shrink: 0; font-size: 1.2em;}
+                    .receipt-copy-type { font-size: 0.9em; color: #444; margin-top: -8px; font-style: italic;}
+                    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #ddd; flex-shrink: 0; font-size: 0.95em;}
+                    .header .logo { font-weight: bold; font-size: 1.15em; }
                     .header .company-details { text-align: right;}
-                    .header .company-details p { margin: 0.5px 0; font-size: 0.95em;}
+                    .header .company-details p { margin: 1px 0; font-size: 0.9em;}
                     
-                    .receipt-info { display: flex; justify-content: space-between; margin-bottom: 8px; flex-shrink: 0; font-size: 0.95em;}
-                    /* Bill To and Meta can take more space now if needed */
-                    .receipt-info .bill-to { width: 55%; } 
-                    .receipt-info .receipt-meta { width: 43%; }
-                    .receipt-info .bill-to p, .receipt-info .receipt-meta p { margin: 0.5px 0; }
+                    .receipt-info { display: flex; justify-content: space-between; margin-bottom: 10px; flex-shrink: 0; font-size: 0.95em;}
+                    .receipt-info .bill-to { width: 60%; } 
+                    .receipt-info .receipt-meta { width: 38%; }
+                    .receipt-info .bill-to p, .receipt-info .receipt-meta p { margin: 1px 0; }
                     .receipt-info .receipt-meta p { text-align: right; }
+                    .receipt-info .receipt-meta p strong { font-weight: 600;} /* Ensure bold is applied */
                     
-                    .receipt-footer { flex-shrink: 0; margin-top: auto; /* Pushes footer to bottom */ font-size: 0.95em; border-top: 1px solid #ccc; padding-top: 6px;}
-                    .payment-details-box { padding: 5px; border: 1px dashed #bbb; margin-bottom: 6px; background-color: #f9f9f9;}
-                    .payment-details-box h3 { margin:0 0 4px 0; font-size: 1em;}
-                    .qr-code-section { display: flex; align-items: flex-end; justify-content: space-between; padding-top: 5px;}
+                    .receipt-footer { flex-shrink: 0; margin-top: auto; font-size: 0.95em; border-top: 1px solid #ccc; padding-top: 8px;}
+                    .payment-details-box { padding: 6px; border: 1px dashed #bbb; margin-bottom: 8px; background-color: #f9f9f9;}
+                    .payment-details-box h3 { margin:0 0 4px 0; font-size: 1.05em;}
+                    .qr-code-section { display: flex; align-items: flex-end; justify-content: space-between; padding-top: 6px;}
                     .notes { max-width: 70%; font-size: 0.9em; color: #333; }
-                    .qr-code-container p { font-size: 0.75em; color: #444; }
+                    .qr-code-container { text-align: center; }
+                    .qr-code-container .qr-code-id-text { 
+                        font-size: 0.7em; color: #555; margin-top: 2px; 
+                        word-break: break-all; /* Allow long ID to wrap if needed */
+                        max-width: 100px; /* Adjust if needed */
+                    }
 
-                    /* === FLEXBOX "TABLE" STYLES (these apply within each receipt page) === */
+                    /* === FLEXBOX "TABLE" STYLES === */
                     .flex-table {
                         width: 100% !important; 
                         display: flex;
@@ -357,8 +362,8 @@ const InvoiceManagerPage: React.FC = () => {
                         border: 1px solid #bbb; 
                         flex-grow: 1; 
                         min-height: 0; 
-                        font-size: 1em; /* Relative to parent font size (9pt body) */
-                        margin-bottom: 8px; 
+                        font-size: 0.95em; /* Base font for table content */
+                        margin-bottom: 10px; 
                     }
                     .flex-table-row {
                         display: flex;
@@ -367,21 +372,28 @@ const InvoiceManagerPage: React.FC = () => {
                         border-bottom: 1px solid #ddd; 
                     }
                     .flex-table-row:last-child { border-bottom: none; }
-                    .flex-table-header { background-color: #f0f0f0; } 
-                    .flex-table-footer { border-top: 1.5px solid #333 !important; } 
+                    .flex-table-header { background-color: #f0f0f0; font-size: 1.05em; /* Make headers slightly bigger */ } 
+                    .flex-table-footer { border-top: 1.5px solid #333 !important; font-size: 1.05em; } 
                     
                     .flex-table-cell {
                         box-sizing: border-box !important;
                         border-right: 1px dotted #ccc; 
-                        /* Critical layout styles (flex, background-color, padding, overflow, etc.)
-                           are applied via INLINE STYLES on the cell <div> elements. */
+                        vertical-align: top; /* Default, overridden by inline for specific cells */
                     }
                     .flex-table-cell:last-child { border-right: none; } 
+                    .flex-table-cell .item-description-text {
+                        font-size: ${descriptionItemFontSize}; /* Applied to item description */
+                        line-height: 1.3; /* Adjust line height for bigger font */
+                    }
+                    .flex-table-cell.no-items-message {
+                        font-size: 1em; /* Normal size for this message */
+                        color: #777;
+                    }
                     
                     .flex-table-body { 
                         flex-grow: 1; 
                         overflow-y: auto; 
-                        min-height: 5em;  /* Min height for the item area */
+                        min-height: 6em;  /* Min height for the item area */
                     }
 
                     @media print {
@@ -412,16 +424,14 @@ const InvoiceManagerPage: React.FC = () => {
                 const root = createRoot(qrTarget);
                 root.render(
                     <React.StrictMode>
-                        <QRCodeCanvas value={invoiceId} size={50} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={false} /> {/* Can be a bit larger now */}
+                        <QRCodeCanvas value={invoiceId} size={60} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={true} /> {/* Slightly larger QR */}
                     </React.StrictMode>
                 );
             } else { console.error(`Could not find QR code target element: ${targetId}`); }
         };
 
-        // Need to ensure QR targets are unique if you render both pages at once before print,
-        // but since print() is called after document.write, it should be fine.
         renderQRCode('qr-code-target-original', invoice.id);
-        renderQRCode('qr-code-target-copy', invoice.id); // This will look for the ID on the current page, might need a delay or ensure IDs are unique
+        renderQRCode('qr-code-target-copy', invoice.id);
 
         setTimeout(() => {
             printWindow.focus();
