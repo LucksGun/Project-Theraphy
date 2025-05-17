@@ -1,4 +1,4 @@
-// src/InterviewMode.tsx - Full code with useRef and STT Encoding Map fixes
+// src/InterviewMode.tsx - Full code with all recent fixes
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 // Assuming types and constants can be imported from App or another shared location
@@ -9,21 +9,21 @@ import './InterviewMode.css'; // Make sure this CSS file exists
 const INTERVIEWER_PERSONA_ID = 'interviewer';
 const MAX_RECORDING_DURATION = 15000; // 15 seconds for user to speak
 
-// Corrected and used GOOGLE_STT_ENCODING_MAP
+// GOOGLE_STT_ENCODING_MAP to map browser MIME types to Google STT encodings
 const GOOGLE_STT_ENCODING_MAP: Record<string, string> = {
     'audio/webm;codecs=opus': 'WEBM_OPUS',
+    'video/x-matroska;codecs=avc1,opus': 'WEBM_OPUS', // Seen in user's logs
     'audio/ogg;codecs=opus': 'OGG_OPUS',
-    'audio/opus': 'OGG_OPUS',
+    'audio/opus': 'OGG_OPUS', // Browsers might report just audio/opus
     'audio/mp3': 'MP3',
     'audio/mpeg': 'MP3',
-    'audio/wav': 'WAV', // For WAV, LINEAR16 is often better if sampleRate known
-    'audio/vnd.wave': 'WAV', // Another common WAV mime type
+    'audio/wav': 'WAV',
+    'audio/vnd.wave': 'WAV',
     'audio/pcm': 'LINEAR16',
     'audio/l16': 'LINEAR16',
     'audio/flac': 'FLAC',
-    // More specific types take precedence if found
 };
-const DEFAULT_GOOGLE_STT_ENCODING = 'WEBM_OPUS'; // Fallback if no specific match
+const DEFAULT_GOOGLE_STT_ENCODING = 'WEBM_OPUS'; // A common, good default
 
 // --- Component Props Interface ---
 interface InterviewModeProps {
@@ -100,9 +100,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
     const stageRef = useRef<InterviewStage>(stage);
     const googleTtsAudioRef = useRef<HTMLAudioElement | null>(null);
     const initialSessionSetupDone = useRef(false);
-    // ----- CORRECTED useRef INITIALIZATION -----
     const currentAudioSampleRate = useRef<number | undefined>(undefined);
-    // ----- END CORRECTION -----
 
 
     useEffect(() => { stageRef.current = stage; }, [stage]);
@@ -188,7 +186,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             }
         }
         return () => {
-            if (isOpen && stageRef.current !== 'idle') { // If unmounting while it thought it was open and active
+            if (isOpen && stageRef.current !== 'idle') {
                 console.log("InterviewMode: Component unmounting while active. Performing cleanup.");
                 stopStreamsAndTTS();
             }
@@ -229,8 +227,8 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         console.log(`InterviewMode: Attempting to start audio recording for STT. Lang: ${sttLang}`);
         setError(null); setStage('listening'); audioChunksRef.current = [];
         try {
-            const options = undefined; // Force browser default MIME type for testing NotSupportedError
-            console.log("InterviewMode: Initializing MediaRecorder with stream ID:", cameraStream.id, "Active:", cameraStream.active, "Options: BROWSER DEFAULT (FORCED TEST)");
+            const options = undefined; // Force browser default MIME type
+            console.log("InterviewMode: Initializing MediaRecorder with stream ID:", cameraStream.id, "Active:", cameraStream.active, "Options: BROWSER DEFAULT");
             mediaRecorderRef.current = new MediaRecorder(cameraStream, options);
 
             mediaRecorderRef.current.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
@@ -252,18 +250,29 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                     try {
                         let googleEncoding = DEFAULT_GOOGLE_STT_ENCODING;
                         const lowerMimeType = actualMimeType.toLowerCase();
-                        if (GOOGLE_STT_ENCODING_MAP[lowerMimeType]) { googleEncoding = GOOGLE_STT_ENCODING_MAP[lowerMimeType]; }
-                        else { // Fallback to keyword matching if direct MIME type not in map
-                            if (lowerMimeType.includes('opus')) { googleEncoding = lowerMimeType.includes('webm') ? 'WEBM_OPUS' : lowerMimeType.includes('ogg') ? 'OGG_OPUS' : 'OGG_OPUS'; }
-                            else if (lowerMimeType.includes('mp3') || lowerMimeType.includes('mpeg')) { googleEncoding = 'MP3'; }
-                            else if (lowerMimeType.includes('wav') || lowerMimeType.includes('pcm') || lowerMimeType.includes('l16')) { googleEncoding = 'LINEAR16'; }
+
+                        if (GOOGLE_STT_ENCODING_MAP[lowerMimeType]) {
+                            googleEncoding = GOOGLE_STT_ENCODING_MAP[lowerMimeType];
+                        } else {
+                            // Fallback to keyword matching if direct MIME type not in map
+                            if (lowerMimeType.includes('opus')) {
+                                googleEncoding = (lowerMimeType.includes('webm') || lowerMimeType.includes('matroska')) ? 'WEBM_OPUS'
+                                             : lowerMimeType.includes('ogg') ? 'OGG_OPUS'
+                                             : 'OGG_OPUS'; // Default for opus if container unknown
+                            } else if (lowerMimeType.includes('mp3') || lowerMimeType.includes('mpeg')) {
+                                googleEncoding = 'MP3';
+                            } else if (lowerMimeType.includes('wav') || lowerMimeType.includes('pcm') || lowerMimeType.includes('l16')) {
+                                googleEncoding = 'LINEAR16';
+                            } else if (lowerMimeType.includes('flac')) {
+                                googleEncoding = 'FLAC';
+                            }
                         }
                         console.log(`InterviewMode: Determined Google STT Encoding: ${googleEncoding} from MIME Type: ${actualMimeType}`);
 
                         const sttRequestBody = {
                             action: 'transcribe_speech', audioData: base64AudioData, languageCode: sttLang,
                             audioEncoding: googleEncoding,
-                            sampleRateHertz: (googleEncoding === 'LINEAR16' || googleEncoding === 'FLAC') ? currentAudioSampleRate.current : undefined,
+                            sampleRateHertz: currentAudioSampleRate.current, // Send detected sample rate
                             accessKey: accessKey,
                         };
                         console.log("InterviewMode: Sending to worker for transcription. Req Body (audio data omitted):", { ...sttRequestBody, audioData: "..."});
