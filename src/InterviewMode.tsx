@@ -242,6 +242,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 const actualMimeType = mediaRecorderRef.current?.mimeType || 'application/octet-stream';
                 console.log("InterviewMode: Actual MIME type from MediaRecorder:", actualMimeType);
                 const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
+                console.log("InterviewMode: Audio Blob created. Size:", audioBlob.size, "Type:", audioBlob.type);
                 audioChunksRef.current = [];
                 const reader = new FileReader();
                 reader.readAsDataURL(audioBlob);
