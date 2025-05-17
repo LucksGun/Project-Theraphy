@@ -1,18 +1,29 @@
-// src/InterviewMode.tsx - Now using Google Cloud STT via Backend
+// src/InterviewMode.tsx - Full code with useRef and STT Encoding Map fixes
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+// Assuming types and constants can be imported from App or another shared location
 import { Message, GeminiModel, SpeechLanguage, ApiRequestBody, WORKER_URL } from './App';
-import './InterviewMode.css';
+import './InterviewMode.css'; // Make sure this CSS file exists
 
 // --- Constants ---
 const INTERVIEWER_PERSONA_ID = 'interviewer';
 const MAX_RECORDING_DURATION = 15000; // 15 seconds for user to speak
-const PREFERRED_AUDIO_MIME_TYPE = 'audio/webm;codecs=opus'; // Opus is good for quality & size
-const FALLBACK_AUDIO_MIME_TYPE = 'audio/webm'; // Browser default if Opus not supported
-const GOOGLE_STT_AUDIO_ENCODING_OPUS = 'WEBM_OPUS'; // What Google STT expects for webm/opus
-const GOOGLE_STT_AUDIO_ENCODING_DEFAULT = 'WEBM_OPUS'; // Assuming fallback is also webm based
-// We can try to get sampleRate from stream, but for Opus, Google often infers it.
-// const TARGET_SAMPLE_RATE_HERTZ = 48000; // Common sample rate
+
+// Corrected and used GOOGLE_STT_ENCODING_MAP
+const GOOGLE_STT_ENCODING_MAP: Record<string, string> = {
+    'audio/webm;codecs=opus': 'WEBM_OPUS',
+    'audio/ogg;codecs=opus': 'OGG_OPUS',
+    'audio/opus': 'OGG_OPUS',
+    'audio/mp3': 'MP3',
+    'audio/mpeg': 'MP3',
+    'audio/wav': 'WAV', // For WAV, LINEAR16 is often better if sampleRate known
+    'audio/vnd.wave': 'WAV', // Another common WAV mime type
+    'audio/pcm': 'LINEAR16',
+    'audio/l16': 'LINEAR16',
+    'audio/flac': 'FLAC',
+    // More specific types take precedence if found
+};
+const DEFAULT_GOOGLE_STT_ENCODING = 'WEBM_OPUS'; // Fallback if no specific match
 
 // --- Component Props Interface ---
 interface InterviewModeProps {
@@ -20,7 +31,7 @@ interface InterviewModeProps {
     onClose: () => void;
     selectedModel: GeminiModel;
     accessKey: string;
-    sttLang: SpeechLanguage; // e.g., "th-TH", "en-US"
+    sttLang: SpeechLanguage;
 }
 
 // --- Types for Interview ---
@@ -28,14 +39,14 @@ type InterviewStage =
     | 'idle'
     | 'requesting_perms'
     | 'starting'
-    | 'listening' // User is speaking, audio is being recorded
-    | 'processing_stt_audio' // Audio sent to backend for transcription
-    | 'processing_user' // Transcript received, now sending to Gemini (renamed from original)
+    | 'listening'
+    | 'processing_stt_audio'
+    | 'processing_user'
     | 'ai_thinking'
     | 'ai_speaking'
     | 'finished'
     | 'error'
-    | 'user_turn'; // Ready for user to start speaking
+    | 'user_turn';
 
 type InterviewResult = 'pass' | 'fail' | null;
 type HistoryItem = { role: 'user' | 'model'; parts: { text: string }[] };
@@ -75,9 +86,9 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
     const [stage, setStage] = useState<InterviewStage>('idle');
     const [messages, setMessages] = useState<Message[]>([]);
     const [result, setResult] = useState<InterviewResult>(null);
-    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null); // Includes audio
+    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [isSttActive, setIsSttActive] = useState(false); // True when MediaRecorder is recording
+    const [isSttActive, setIsSttActive] = useState(false);
     const [isGoogleTtsPlaying, setIsGoogleTtsPlaying] = useState(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -89,10 +100,10 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
     const stageRef = useRef<InterviewStage>(stage);
     const googleTtsAudioRef = useRef<HTMLAudioElement | null>(null);
     const initialSessionSetupDone = useRef(false);
-    const currentAudioConfig = useRef<{ mimeType: string, encoding: string, sampleRate?: number }>({
-        mimeType: PREFERRED_AUDIO_MIME_TYPE,
-        encoding: GOOGLE_STT_AUDIO_ENCODING_OPUS,
-    });
+    // ----- CORRECTED useRef INITIALIZATION -----
+    const currentAudioSampleRate = useRef<number | undefined>(undefined);
+    // ----- END CORRECTION -----
+
 
     useEffect(() => { stageRef.current = stage; }, [stage]);
 
@@ -108,32 +119,29 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
 
     const stopRecordingAndClearData = useCallback(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-            mediaRecorderRef.current.stop(); // This will trigger 'onstop'
+            mediaRecorderRef.current.stop();
         }
         if (recordingTimeoutRef.current) {
             clearTimeout(recordingTimeoutRef.current);
             recordingTimeoutRef.current = null;
         }
-        setIsSttActive(false); // Mark as not active
-        audioChunksRef.current = []; // Clear previous chunks
+        setIsSttActive(false);
+        audioChunksRef.current = [];
     }, []);
 
 
     const stopStreamsAndTTS = useCallback(() => {
-        stopRecordingAndClearData(); // Stop MediaRecorder if active
-
+        stopRecordingAndClearData();
         if (cameraStream) {
             cameraStream.getTracks().forEach(track => track.stop());
             setCameraStream(null);
         }
-        // No SpeechRecognition specific cleanup needed anymore
-
         if (googleTtsAudioRef.current) {
             googleTtsAudioRef.current.pause(); googleTtsAudioRef.current.currentTime = 0;
             googleTtsAudioRef.current.src = ""; googleTtsAudioRef.current.onended = null; googleTtsAudioRef.current.onerror = null;
         }
         setIsGoogleTtsPlaying(false);
-    }, [cameraStream, stopRecordingAndClearData]); // stopRecordingAndClearData is stable
+    }, [cameraStream, stopRecordingAndClearData]);
 
     const startInterviewSetup = useCallback(async () => {
         console.log("InterviewMode: startInterviewSetup called.");
@@ -145,30 +153,14 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             console.log("InterviewMode: Permissions granted, stream obtained.");
 
-            // Determine supported MIME type
-            if (MediaRecorder.isTypeSupported(PREFERRED_AUDIO_MIME_TYPE)) {
-                currentAudioConfig.current.mimeType = PREFERRED_AUDIO_MIME_TYPE;
-                currentAudioConfig.current.encoding = GOOGLE_STT_AUDIO_ENCODING_OPUS;
-            } else if (MediaRecorder.isTypeSupported(FALLBACK_AUDIO_MIME_TYPE)) {
-                currentAudioConfig.current.mimeType = FALLBACK_AUDIO_MIME_TYPE;
-                currentAudioConfig.current.encoding = GOOGLE_STT_AUDIO_ENCODING_DEFAULT; // Needs adjustment if not opus
-            } else {
-                console.warn("InterviewMode: Neither preferred nor fallback MIME type supported for MediaRecorder.");
-                // Fallback to browser default, encoding might be unknown or need to be LINEAR16 if raw
-                currentAudioConfig.current.mimeType = ''; // Let browser pick
-                currentAudioConfig.current.encoding = 'LINEAR16'; // Assume raw if unknown, requires sampleRate
-            }
-            console.log("InterviewMode: Using audio config:", currentAudioConfig.current);
-
-            // Try to get sample rate from the audio track
             const audioTracks = stream.getAudioTracks();
             if (audioTracks.length > 0) {
                 const settings = audioTracks[0].getSettings();
                 if (settings.sampleRate) {
-                    currentAudioConfig.current.sampleRate = settings.sampleRate;
-                    console.log("InterviewMode: Detected audio sample rate:", settings.sampleRate);
-                }
-            }
+                    currentAudioSampleRate.current = settings.sampleRate;
+                    console.log("InterviewMode: Detected audio sample rate from stream:", settings.sampleRate);
+                } else { currentAudioSampleRate.current = undefined; console.warn("InterviewMode: Could not detect audio sample rate from stream track.");}
+            } else { currentAudioSampleRate.current = undefined; console.warn("InterviewMode: No audio tracks in stream to get sample rate from.");}
 
             setCameraStream(stream);
             setStage('starting');
@@ -195,244 +187,149 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 stopStreamsAndTTS(); setStage('idle'); initialSessionSetupDone.current = false;
             }
         }
-        return () => { // Only for unmount
-            if (isOpen && stageRef.current !== 'idle') {
+        return () => {
+            if (isOpen && stageRef.current !== 'idle') { // If unmounting while it thought it was open and active
                 console.log("InterviewMode: Component unmounting while active. Performing cleanup.");
                 stopStreamsAndTTS();
             }
         };
     }, [isOpen, startInterviewSetup, stopStreamsAndTTS]);
 
+
     const stopListeningAndProcessAudio = useCallback(async () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
             console.log("InterviewMode: Stopping recording and processing audio.");
-            mediaRecorderRef.current.stop(); // This will trigger 'onstop'
+            mediaRecorderRef.current.stop();
         }
-        if (recordingTimeoutRef.current) {
-            clearTimeout(recordingTimeoutRef.current);
-            recordingTimeoutRef.current = null;
-        }
+        if (recordingTimeoutRef.current) { clearTimeout(recordingTimeoutRef.current); recordingTimeoutRef.current = null; }
         setIsSttActive(false);
-        if (stageRef.current === 'listening') { // Only transition if we were actually listening
-            setStage('processing_stt_audio');
-        }
+        if (stageRef.current === 'listening') { setStage('processing_stt_audio'); }
     }, []);
 
     const startListening = useCallback(() => {
-        if (stageRef.current === 'error' && initialSessionSetupDone.current) {
-            console.warn("startListening: Aborted, initial session setup had an error.");
-            return;
-        }
+        if (stageRef.current === 'error' && initialSessionSetupDone.current) { console.warn("startListening: Aborted, initial setup failed."); return; }
         if (isGoogleTtsPlaying && googleTtsAudioRef.current) {
-            console.log("startListening: Stopping active Google TTS audio before listening.");
-            googleTtsAudioRef.current.pause();
-            googleTtsAudioRef.current.currentTime = 0;
-            setIsGoogleTtsPlaying(false);
+            googleTtsAudioRef.current.pause(); googleTtsAudioRef.current.currentTime = 0; setIsGoogleTtsPlaying(false);
         }
-    
-        // ----- START OF NEW CHECKS for cameraStream -----
-        if (!cameraStream) {
-            console.error("startListening Error: cameraStream is null. Cannot start recording.");
-            setError("Microphone source not available for recording.");
-            setStage('error');
-            initialSessionSetupDone.current = true;
-            return;
-        }
-        if (!cameraStream.active) {
-            console.error("startListening Error: cameraStream is not active.");
-            setError("The microphone/camera stream is not active. Please try re-granting permissions or check device.");
-            setStage('error');
-            initialSessionSetupDone.current = true;
-            return;
+        if (!cameraStream || !cameraStream.active) {
+            console.error("startListening Error: cameraStream is null or not active.");
+            setError("Microphone source not available or not active."); setStage('error'); initialSessionSetupDone.current = true; return;
         }
         const audioTracks = cameraStream.getAudioTracks();
-        if (audioTracks.length === 0) {
-            console.error("startListening Error: No audio tracks found in the cameraStream.");
-            setError("No audio input track found in the provided stream.");
-            setStage('error');
-            initialSessionSetupDone.current = true;
-            return;
+        if (audioTracks.length === 0 || !audioTracks.find(track => track.enabled && !track.muted && track.readyState === 'live')) {
+            console.error("startListening Error: No active/enabled audio track.");
+            setError("Audio input is muted, disabled, or has ended."); setStage('error'); initialSessionSetupDone.current = true; return;
         }
-        const activeAudioTrack = audioTracks.find(track => track.enabled && !track.muted && track.readyState === 'live');
-        if (!activeAudioTrack) {
-            console.error("startListening Error: No active/enabled audio track. Tracks:", audioTracks.map(t => ({enabled: t.enabled, muted: t.muted, state: t.readyState })));
-            setError("Audio input is muted, disabled, or has ended. Please check microphone settings.");
-            setStage('error');
-            initialSessionSetupDone.current = true;
-            return;
-        }
-        // ----- END OF NEW CHECKS for cameraStream -----
-    
-        if (isSttActive || (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording")) {
-            console.warn("startListening: Already recording or MediaRecorder in recording state.");
-            return;
-        }
+        if (isSttActive || (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording")) { console.warn("startListening: Already recording."); return; }
         if (stageRef.current !== 'user_turn') {
             console.warn(`startListening: Not user's turn. Stage: ${stageRef.current}.`);
-            if (stageRef.current === 'ai_speaking') {
-                console.log("Forcing to user_turn due to attempt to listen while AI speaking.");
-                setStage('user_turn');
-            }
+            if (stageRef.current === 'ai_speaking') { setStage('user_turn');}
             return;
         }
-    
-        console.log(`InterviewMode: Attempting to start audio recording for STT. Lang: ${sttLang}, Audio Config:`, currentAudioConfig.current);
-        setError(null);
-        setStage('listening');
-        audioChunksRef.current = [];
-    
+        console.log(`InterviewMode: Attempting to start audio recording for STT. Lang: ${sttLang}`);
+        setError(null); setStage('listening'); audioChunksRef.current = [];
         try {
-            const options = currentAudioConfig.current.mimeType ? { mimeType: currentAudioConfig.current.mimeType } : undefined;
-            console.log("InterviewMode: Initializing MediaRecorder with stream ID:", cameraStream.id, "Active:", cameraStream.active, "Options:", options || "{browser default}");
-    
+            const options = undefined; // Force browser default MIME type for testing NotSupportedError
+            console.log("InterviewMode: Initializing MediaRecorder with stream ID:", cameraStream.id, "Active:", cameraStream.active, "Options: BROWSER DEFAULT (FORCED TEST)");
             mediaRecorderRef.current = new MediaRecorder(cameraStream, options);
-    
-            mediaRecorderRef.current.ondataavailable = (event) => {
-                // console.log("InterviewMode: MediaRecorder data available, size:", event.data.size);
-                if (event.data.size > 0) {
-                    audioChunksRef.current.push(event.data);
-                }
-            };
-    
+
+            mediaRecorderRef.current.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
+
             mediaRecorderRef.current.onstop = async () => {
-                console.log("InterviewMode: MediaRecorder stopped. Processing audio chunks. Number of chunks:", audioChunksRef.current.length);
-                if (audioChunksRef.current.length === 0 && stageRef.current !== 'error') { // Check stage again, as error might have occurred
+                console.log("InterviewMode: MediaRecorder stopped. Chunks:", audioChunksRef.current.length);
+                if (audioChunksRef.current.length === 0 && stageRef.current !== 'error') {
                     console.warn("InterviewMode: No audio chunks recorded.");
-                    setError("I didn't hear anything. Please try speaking again.");
-                    setStage('user_turn');
-                    return;
+                    setError("I didn't hear anything. Please try speaking again."); setStage('user_turn'); return;
                 }
-    
-                const audioBlob = new Blob(audioChunksRef.current, { type: currentAudioConfig.current.mimeType || undefined });
+                const actualMimeType = mediaRecorderRef.current?.mimeType || 'application/octet-stream';
+                console.log("InterviewMode: Actual MIME type from MediaRecorder:", actualMimeType);
+                const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
                 audioChunksRef.current = [];
-    
                 const reader = new FileReader();
                 reader.readAsDataURL(audioBlob);
                 reader.onloadend = async () => {
                     const base64AudioData = reader.result as string;
                     try {
+                        let googleEncoding = DEFAULT_GOOGLE_STT_ENCODING;
+                        const lowerMimeType = actualMimeType.toLowerCase();
+                        if (GOOGLE_STT_ENCODING_MAP[lowerMimeType]) { googleEncoding = GOOGLE_STT_ENCODING_MAP[lowerMimeType]; }
+                        else { // Fallback to keyword matching if direct MIME type not in map
+                            if (lowerMimeType.includes('opus')) { googleEncoding = lowerMimeType.includes('webm') ? 'WEBM_OPUS' : lowerMimeType.includes('ogg') ? 'OGG_OPUS' : 'OGG_OPUS'; }
+                            else if (lowerMimeType.includes('mp3') || lowerMimeType.includes('mpeg')) { googleEncoding = 'MP3'; }
+                            else if (lowerMimeType.includes('wav') || lowerMimeType.includes('pcm') || lowerMimeType.includes('l16')) { googleEncoding = 'LINEAR16'; }
+                        }
+                        console.log(`InterviewMode: Determined Google STT Encoding: ${googleEncoding} from MIME Type: ${actualMimeType}`);
+
                         const sttRequestBody = {
-                            action: 'transcribe_speech',
-                            audioData: base64AudioData,
-                            languageCode: sttLang,
-                            audioEncoding: currentAudioConfig.current.encoding,
-                            sampleRateHertz: currentAudioConfig.current.sampleRate,
+                            action: 'transcribe_speech', audioData: base64AudioData, languageCode: sttLang,
+                            audioEncoding: googleEncoding,
+                            sampleRateHertz: (googleEncoding === 'LINEAR16' || googleEncoding === 'FLAC') ? currentAudioSampleRate.current : undefined,
                             accessKey: accessKey,
                         };
-                        console.log("InterviewMode: Sending to worker for transcription. Encoding:", currentAudioConfig.current.encoding, "SampleRate:", currentAudioConfig.current.sampleRate);
-                        const sttResponse = await fetch(WORKER_URL, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sttRequestBody)
-                        });
-                        if (!sttResponse.ok) {
-                            const errData = await sttResponse.json().catch(() => ({error: `STT API Error via Worker: ${sttResponse.status}`}));
-                            throw new Error(errData.error || `STT API Error via Worker: ${sttResponse.status}`);
-                        }
+                        console.log("InterviewMode: Sending to worker for transcription. Req Body (audio data omitted):", { ...sttRequestBody, audioData: "..."});
+                        const sttResponse = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sttRequestBody)});
+                        if (!sttResponse.ok) { const errData = await sttResponse.json().catch(() => ({error: `STT API Error via Worker: ${sttResponse.status}`})); throw new Error(errData.error || `STT API Error via Worker: ${sttResponse.status}`);}
                         const transcriptData = await sttResponse.json();
-                        if (transcriptData.error && !transcriptData.transcript) { // Check if it's an error without a transcript
-                             console.error("InterviewMode: Transcription error from worker:", transcriptData.error);
-                             setError(transcriptData.error);
-                             setStage('user_turn'); // Allow retry
-                             return;
-                        }
-    
+                        if (transcriptData.error && !transcriptData.transcript) { console.error("InterviewMode: Transcription error from worker:", transcriptData.error); setError(transcriptData.error); setStage('user_turn'); return; }
                         if (transcriptData.transcript && transcriptData.transcript.trim().length > 0) {
                             console.log("InterviewMode: Transcript received:", transcriptData.transcript);
-                            setStage('processing_user');
-                            handleUserSpeechRef.current(transcriptData.transcript);
+                            setStage('processing_user'); handleUserSpeechRef.current(transcriptData.transcript);
                         } else {
-                            console.warn("InterviewMode: Empty transcript received from STT. Or error: ", transcriptData.error);
-                            setError(transcriptData.error || "I couldn't understand what was said. Please try again.");
-                            setStage('user_turn');
+                            console.warn("InterviewMode: Empty transcript. Error from worker:", transcriptData.error);
+                            setError(transcriptData.error || "I couldn't understand what was said. Please try again."); setStage('user_turn');
                         }
-                    } catch (transcribeError) {
-                        console.error("InterviewMode: Error during transcription request:", transcribeError);
-                        setError(`Transcription failed: ${(transcribeError as Error).message}`);
-                        setStage('user_turn');
-                    }
+                    } catch (transcribeError) { console.error("InterviewMode: Error during transcription request:", transcribeError); setError(`Transcription failed: ${(transcribeError as Error).message}`); setStage('user_turn');}
                 };
-                reader.onerror = (readError) => {
-                    console.error("InterviewMode: Error reading audio blob as base64:", readError);
-                    setError("Failed to process recorded audio.");
-                    setStage('user_turn');
-                };
+                reader.onerror = (readError) => { console.error("InterviewMode: Error reading audio blob:", readError); setError("Failed to process recorded audio."); setStage('user_turn');};
             };
-    
             mediaRecorderRef.current.onerror = (event: Event) => {
                 console.error("InterviewMode: MediaRecorder .onerror event triggered");
-                const typedEvent = event as any; // To access potential 'error' property
-                let specificError = "Unknown MediaRecorder Error";
-                if (typedEvent.error) {
-                    specificError = `MediaRecorder Error: Name: ${typedEvent.error.name}, Message: ${typedEvent.error.message}`;
-                } else if ((event.target as any)?.error) {
-                    specificError = `MediaRecorder Error on Target: Name: ${(event.target as any).error.name}, Message: ${(event.target as any).error.message}`;
-                }
-                console.error(specificError);
-                setError(`Microphone recording failed: ${specificError}. Please check mic permissions or try another browser.`);
-                setIsSttActive(false); // Ensure this is reset
-                setStage('error');
-                initialSessionSetupDone.current = true; // Mark setup as failed
-                stopRecordingAndClearData(); // Clean up any partial recording attempt
+                const typedEvent = event as any; let specificError = "Unknown MediaRecorder Error";
+                if (typedEvent.error) { specificError = `Name: ${typedEvent.error.name}, Msg: ${typedEvent.error.message}`; }
+                else if ((event.target as any)?.error) { specificError = `Target Error: Name: ${(event.target as any).error.name}, Msg: ${(event.target as any).error.message}`; }
+                console.error("Specific MediaRecorder error:", specificError);
+                setError(`Mic recording failed: ${specificError}. Check permissions or try another browser.`);
+                setIsSttActive(false); setStage('error'); initialSessionSetupDone.current = true; stopRecordingAndClearData();
             };
-    
-            mediaRecorderRef.current.start(); // This is the line that fails according to the error message
-            setIsSttActive(true);
-            console.log("InterviewMode: MediaRecorder.start() called successfully.");
-    
+            mediaRecorderRef.current.start(); setIsSttActive(true);
+            console.log("InterviewMode: MediaRecorder.start() called. Actual MIME type used:", mediaRecorderRef.current.mimeType);
             if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
             recordingTimeoutRef.current = setTimeout(() => {
-                console.log("InterviewMode: Max recording duration reached. Stopping recorder.");
-                if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-                     stopListeningAndProcessAudio();
-                }
+                console.log("InterviewMode: Max recording duration reached.");
+                if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") { stopListeningAndProcessAudio(); }
             }, MAX_RECORDING_DURATION);
-    
         } catch (e) {
-            console.error("Error caught while trying to start MediaRecorder (outer try-catch):", e);
-            setError(`Could not start microphone recording: ${(e as Error).message}.`);
-            setIsSttActive(false);
-            setStage('error');
-            initialSessionSetupDone.current = true;
+            console.error("Error caught trying to start MediaRecorder (outer try-catch):", e);
+            setError(`Could not start mic recording: ${(e as Error).message}.`);
+            setIsSttActive(false); setStage('error'); initialSessionSetupDone.current = true;
         }
-    }, [cameraStream, sttLang, accessKey, isGoogleTtsPlaying, stopListeningAndProcessAudio]);
+    }, [cameraStream, sttLang, accessKey, isGoogleTtsPlaying, stopListeningAndProcessAudio, stopRecordingAndClearData]);
 
     useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
 
     const playGoogleCloudTTS = useCallback(async (text: string, lang: string) => {
-        if (isSttActive) { // If user was somehow still recording when AI is about to speak
-            console.warn("playGoogleCloudTTS: User STT was active. Stopping and processing it first.");
-            await stopListeningAndProcessAudio(); // Wait for it to process before AI speaks
-        }
+        if (isSttActive) { await stopListeningAndProcessAudio(); }
         if (stageRef.current === 'error' && initialSessionSetupDone.current) { return; }
         if (!text) { setStage('user_turn'); setTimeout(() => startListeningRef.current(), 300); return; }
-
         setStage('ai_speaking'); setIsGoogleTtsPlaying(true); setError(null);
         try {
             const cleanText = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(\*|_)(.*?)\1/g, '$2').replace(/#/g, '');
             const ttsRequestBody = { action: 'synthesize_speech', text: cleanText, languageCode: lang, accessKey: accessKey };
             const response = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ttsRequestBody) });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: `TTS Worker Error: ${response.status}` }));
-                throw new Error(errorData.error || `TTS Worker Error: ${response.status}`);
-            }
+            if (!response.ok) { const errorData = await response.json().catch(() => ({ error: `TTS Worker Error: ${response.status}` })); throw new Error(errorData.error || `TTS Worker Error: ${response.status}`);}
             const responseData = await response.json();
             if (responseData.error) throw new Error(responseData.error);
             if (!responseData.audioContent && !responseData.audioUrl) throw new Error("No audio from TTS worker.");
-
             if (googleTtsAudioRef.current) { googleTtsAudioRef.current.onended = null; googleTtsAudioRef.current.onerror = null; googleTtsAudioRef.current.src = "";}
             const audio = googleTtsAudioRef.current || new Audio(); googleTtsAudioRef.current = audio;
             if (responseData.audioUrl) audio.src = responseData.audioUrl; else if (responseData.audioContent) audio.src = `data:audio/mp3;base64,${responseData.audioContent}`;
-
             audio.onended = () => {
                 setIsGoogleTtsPlaying(false);
                 if (stageRef.current === 'ai_speaking') {
-                    if (result) { setStage('finished'); }
-                    else { setStage('user_turn'); setTimeout(() => startListeningRef.current(), 300); }
+                    if (result) { setStage('finished'); } else { setStage('user_turn'); setTimeout(() => startListeningRef.current(), 300); }
                 }
             };
-            audio.onerror = (e) => {
-                setIsGoogleTtsPlaying(false); console.error('TTS Playback Error:', e); setError(`TTS playback error.`);
-                if (stageRef.current === 'ai_speaking') { if (result) setStage('finished'); else setStage('user_turn');}
-            };
+            audio.onerror = (e) => { setIsGoogleTtsPlaying(false); console.error('TTS Playback Error:', e); setError(`TTS playback error.`); if (stageRef.current === 'ai_speaking') { if (result) setStage('finished'); else setStage('user_turn');}};
             await audio.play();
         } catch (error) {
             setIsGoogleTtsPlaying(false); const msg = (error as Error).message; console.error('TTS fetch/setup error:', msg);
@@ -447,7 +344,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         console.log("InterviewMode: Handling user transcript:", userText);
         const userMessage: Message = { id: Date.now(), text: userText, sender: 'user', timestamp: Date.now() };
         setMessages(prev => [...prev, userMessage]); messageHistoryRef.current.push({ role: 'user', parts: [{ text: userText }] });
-        setStage('ai_thinking'); // Different from processing_user (which was STT -> Gemini)
+        setStage('ai_thinking');
         const loadingMessage: Message = { id: Date.now() + 1, text: "...", sender: 'loading', timestamp: Date.now() + 1 };
         setMessages(prev => [...prev, loadingMessage]);
         const historyForApi = messageHistoryRef.current.slice(-10);
@@ -457,12 +354,10 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             if (!response.text.startsWith("Error:")) messageHistoryRef.current.push({ role: 'model', parts: [{ text: response.text }] });
             else { console.error("Gemini API error:", response.text); setError(response.text); }
             setMessages(prev => [...prev.filter(m => m.sender !== 'loading'), botMessage]);
-
             let endResult: InterviewResult = null;
             const lowerText = response.text.toLowerCase();
             if (lowerText.includes("conclusion: pass") || lowerText.includes("final result: pass")) { endResult = 'pass'; }
             else if (lowerText.includes("conclusion: fail") || lowerText.includes("final result: fail")) { endResult = 'fail'; }
-
             if (endResult) { console.log("InterviewMode: Gemini decided interview result:", endResult); setResult(endResult); }
             if (response.text.startsWith("Error:")) { setStage('error'); initialSessionSetupDone.current = true; }
             else { playGoogleCloudTTSRef.current(response.text, sttLang.startsWith('th') ? 'th-TH' : 'en-US');}
@@ -508,7 +403,6 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         return () => { if (videoElement) { videoElement.pause(); videoElement.srcObject = null; }};
     }, [cameraStream]);
 
-
     useEffect(() => { // Effect to auto-start interview flow
         if (isOpen && stage === 'starting' && cameraStream && !(stageRef.current === 'error' && initialSessionSetupDone.current)) {
             startInterview();
@@ -538,7 +432,6 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                         </p>
                     </div>
                     <div className="interview-chat-view">
-                        {/* ... messages map ... */}
                         <div className="interview-messages">
                             {messages.map(msg => (
                                 <div key={msg.id} className={`interview-message interview-${msg.sender}`}>
@@ -554,7 +447,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                             <div ref={messagesEndRef} style={{ height: '1px' }} />
                         </div>
                         <div className="interview-status">
-                            {stage === 'listening' && "Listening (Rec ends in " + MAX_RECORDING_DURATION/1000 + "s)..."}
+                            {stage === 'listening' && `Listening (ends in ${MAX_RECORDING_DURATION/1000}s)...`}
                             {stage === 'processing_stt_audio' && "Processing your audio..."}
                             {stage === 'ai_thinking' && "Interviewer Thinking..."}
                             {stage === 'ai_speaking' && "Interviewer Speaking..."}
@@ -563,7 +456,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                             {stage === 'user_turn' && "Your Turn (Speak now)"}
                             {stage === 'starting' && "Starting Interview..."}
                             {stage === 'requesting_perms' && "Requesting Permissions..."}
-                            {stage === 'processing_user' && "Sending to Interviewer..."} {/* Stage after STT, before Gemini */}
+                            {stage === 'processing_user' && "Sending to Interviewer..."}
                             {stage === 'idle' && (isOpen ? "Initializing..." : "Closed")}
                             {isSttActive && stage === 'listening' && <span className="recording-dot"></span>}
                         </div>
@@ -575,14 +468,9 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 <button
                     onClick={onClose}
                     className="interview-close-button"
-                    // Allow closing unless AI is actively thinking/speaking or STT is processing
                     disabled={stage === 'ai_thinking' || (stage === 'ai_speaking' && isGoogleTtsPlaying) || stage === 'processing_stt_audio'}
-                    title={
-                        (stage === 'ai_thinking' || (stage === 'ai_speaking' && isGoogleTtsPlaying) || stage === 'processing_stt_audio')
-                        ? "Please wait..."
-                        : (stage === 'finished' ? 'Close' : 'Leave Interview')
-                    }
-                >
+                    title={ (stage === 'ai_thinking' || (stage === 'ai_speaking' && isGoogleTtsPlaying) || stage === 'processing_stt_audio')
+                        ? "Please wait..." : (stage === 'finished' ? 'Close' : 'Leave Interview') } >
                     {stage === 'finished' || stage === 'error' || stage === 'idle' ? 'Close' : 'Leave Interview'}
                 </button>
             </div>
