@@ -1,8 +1,9 @@
-// src/InterviewMode.tsx - Complete Code with Stability Fixes
+// src/InterviewMode.tsx - Complete Code with TypeScript Fix and Stability
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Message, GeminiModel, SpeechLanguage, ApiRequestBody, WORKER_URL } from './App'; // Assuming types and constants
-import './InterviewMode.css';
+// Assuming types and constants can be imported from App or another shared location
+import { Message, GeminiModel, SpeechLanguage, ApiRequestBody, WORKER_URL } from './App';
+import './InterviewMode.css'; // Make sure this CSS file exists
 
 // --- STT/TTS Setup & Browser API Declarations ---
 declare var SpeechRecognition: any;
@@ -11,6 +12,7 @@ declare var SpeechRecognitionEvent: {
     prototype: SpeechRecognitionEvent;
     new(type: string, eventInitDict: SpeechRecognitionEventInit): SpeechRecognitionEvent;
 };
+// Add SpeechRecognitionErrorEvent if not globally available for STT error typing
 declare interface SpeechRecognitionErrorEvent extends Event {
     readonly error: string;
     readonly message: string;
@@ -53,7 +55,7 @@ async function getBotResponseInterview(
         accessKey: accessKey || undefined,
         history: history,
     };
-    console.log(`Interview API Req (Model: ${model}, Persona: ${persona}, History: ${history.length})`);
+    // console.log(`Interview API Req (Model: ${model}, Persona: ${persona}, History: ${history.length})`); // Less verbose
     try {
         const response = await fetch(WORKER_URL, {
             method: 'POST',
@@ -94,6 +96,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<InterviewStage>(stage);
     const googleTtsAudioRef = useRef<HTMLAudioElement | null>(null);
+    const initialSessionSetupDone = useRef(false);
 
     useEffect(() => { stageRef.current = stage; }, [stage]);
 
@@ -109,20 +112,20 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
 
     const stopStreamsAndTTS = useCallback(() => {
         if (cameraStream) {
-            console.log("InterviewMode: Stopping media streams.");
+            // console.log("InterviewMode: Stopping media streams.");
             cameraStream.getTracks().forEach(track => track.stop());
             setCameraStream(null);
         }
-        if (recognitionRef.current && (isSttActive || recognitionRef.current.recognizing)) { // check recognizing for some browsers
+        if (recognitionRef.current && (isSttActive || (recognitionRef.current as any).recognizing)) {
             try {
-                console.log("InterviewMode: Stopping STT via stopStreamsAndTTS.");
-                recognitionRef.current.abort(); // Use abort for immediate stop
+                // console.log("InterviewMode: Aborting STT via stopStreamsAndTTS.");
+                recognitionRef.current.abort();
             } catch (e) { console.warn("Error aborting STT:", e); }
         }
-         setIsSttActive(false); // Ensure STT state is reset
+        setIsSttActive(false);
 
         if (googleTtsAudioRef.current) {
-            console.log("InterviewMode: Stopping Google TTS audio.");
+            // console.log("InterviewMode: Stopping Google TTS audio.");
             googleTtsAudioRef.current.pause();
             googleTtsAudioRef.current.currentTime = 0;
             googleTtsAudioRef.current.src = "";
@@ -130,14 +133,10 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             googleTtsAudioRef.current.onerror = null;
         }
         setIsGoogleTtsPlaying(false);
-    }, [cameraStream, isSttActive]); // isSttActive ensures this callback updates if STT state changes
+    }, [cameraStream, isSttActive]);
 
     const startInterviewSetup = useCallback(async () => {
         console.log("InterviewMode: startInterviewSetup called.");
-        setError(null); // Clear previous errors for a new setup attempt
-        setResult(null);
-        setMessages([]); // Reset messages for a clean slate
-        messageHistoryRef.current = [];
         setStage('requesting_perms');
         try {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -145,21 +144,55 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             }
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             console.log("InterviewMode: Permissions granted, stream obtained.");
-            setCameraStream(stream); // Set stream first
-            setStage('starting');    // Then set stage to trigger interview start
+            setCameraStream(stream);
+            setStage('starting');
         } catch (err) {
-            console.error("InterviewMode: Permission Error:", err);
+            console.error("InterviewMode: Permission Error in startInterviewSetup:", err);
             let errMsg = `Error accessing camera/microphone: ${(err as Error).message}.`;
             if ((err as Error).name === 'NotAllowedError' || (err as Error).name === 'PermissionDeniedError') { errMsg += " Please grant permissions in browser settings."; }
             else if ((err as Error).name === 'NotFoundError' || (err as Error).name === 'DevicesNotFoundError') { errMsg += " No camera/microphone found."; }
             setError(errMsg);
             setStage('error');
-            if (cameraStream) stopStreamsAndTTS(); // Ensure stream is stopped if obtained then error
-            else setCameraStream(null);
+            setCameraStream(null);
+            initialSessionSetupDone.current = true;
         }
-    }, [stopStreamsAndTTS]); // Added stopStreamsAndTTS dependency
+    }, []);
 
+    useEffect(() => {
+        if (isOpen) {
+            if (!initialSessionSetupDone.current) {
+                console.log("InterviewMode: isOpen is true AND initial session setup not done. Resetting and starting setup.");
+                setMessages([]); messageHistoryRef.current = []; setError(null); setResult(null);
+                stopStreamsAndTTS();
+                setStage('idle');
+                startInterviewSetup();
+                initialSessionSetupDone.current = true;
+            } else {
+                // console.log("InterviewMode: isOpen is true, but initial session setup already done/attempted. Current stage:", stageRef.current);
+            }
+        } else {
+            if (initialSessionSetupDone.current || stageRef.current !== 'idle') {
+                console.log("InterviewMode: isOpen is false. Cleaning up active session.");
+                stopStreamsAndTTS();
+                setStage('idle');
+                initialSessionSetupDone.current = false;
+            }
+        }
+        return () => { // Only for unmount
+            if (isOpen && stageRef.current !== 'idle') { // If unmounting while it thought it was open and active
+                console.log("InterviewMode: Component unmounting while active. Performing cleanup.");
+                stopStreamsAndTTS();
+            }
+        };
+    }, [isOpen, startInterviewSetup, stopStreamsAndTTS]);
+
+
+    // ----- CORRECTED startListening function -----
     const startListening = useCallback(() => {
+        if (stageRef.current === 'error') {
+            console.warn("startListening: Aborted, current stage is 'error'.");
+            return;
+        }
         if (isGoogleTtsPlaying && googleTtsAudioRef.current) {
             console.log("startListening: Stopping active Google TTS audio before listening.");
             googleTtsAudioRef.current.pause();
@@ -168,23 +201,21 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         }
         if (!recognitionRef.current) {
             console.warn("Cannot start STT: Recognition engine not initialized. Current stage:", stageRef.current);
-            if (stageRef.current !== 'error') { // Avoid setting error if already in one from STT init
-                 setError("Microphone input is not ready. Please ensure permissions are granted.");
-                 setStage('error');
-            }
+            // If recognitionRef is null, it's a critical issue for STT.
+            setError("Microphone input is not ready (engine not initialized).");
+            setStage('error');
+            initialSessionSetupDone.current = true; // Mark setup as failed if STT can't even init
             return;
         }
         if (isSttActive) {
             console.warn("Cannot start STT: Already active.");
             return;
         }
-        // Only allow starting listening if it's explicitly the user's turn.
         if (stageRef.current !== 'user_turn') {
             console.warn(`Cannot start STT: Not user's turn. Current stage: ${stageRef.current}.`);
-            if (stageRef.current === 'ai_speaking') { // TTS might have been cut short
-                console.log("Attempting to listen after AI speaking stage was interrupted. Forcing to user_turn.");
+            if (stageRef.current === 'ai_speaking') {
+                console.log("Forcing to user_turn due to attempt to listen while AI speaking.");
                 setStage('user_turn');
-                 // Do not immediately call startListening again, let the stage update, then user action or next UI cue.
             }
             return;
         }
@@ -197,103 +228,72 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             setIsSttActive(true);
         } catch (e) {
             console.error("Error starting STT:", e);
-            setError(`Could not start microphone: ${(e as Error).message}. Check browser permissions.`);
+            setError(`Could not start microphone: ${(e as Error).message}.`);
             setIsSttActive(false);
             setStage('error');
+            initialSessionSetupDone.current = true; // Mark setup as failed
         }
     }, [isSttActive, sttLang, isGoogleTtsPlaying]);
+    // ----- END OF CORRECTION -----
 
     useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
 
     const playGoogleCloudTTS = useCallback(async (text: string, lang: string) => {
-        if (stageRef.current === 'error') {
-            console.warn("playGoogleCloudTTS: Aborting TTS play because current stage is 'error'.");
-            return;
-        }
-        if (!text) {
-            console.warn("Google TTS: Text is empty. Moving to user turn.");
-            setStage('user_turn');
-            setTimeout(() => startListeningRef.current(), 300);
-            return;
-        }
+        if (stageRef.current === 'error' && initialSessionSetupDone.current) { console.warn("playGoogleCloudTTS: Aborted, initial setup failed."); return;}
+        if (!text) { console.warn("Google TTS: Text is empty. Moving to user turn."); setStage('user_turn'); setTimeout(() => startListeningRef.current(), 300); return;}
         if (isSttActive && recognitionRef.current) {
             console.log("playGoogleCloudTTS: STT is active, stopping it first.");
             try { recognitionRef.current.abort(); } catch(e) { console.warn("Error aborting STT before TTS:", e); }
             setIsSttActive(false);
         }
-        console.log("InterviewMode: Preparing to play AI response via Google Cloud TTS...");
-        setStage('ai_speaking');
-        setIsGoogleTtsPlaying(true);
-        setError(null);
+        // console.log("InterviewMode: Preparing to play AI response via Google Cloud TTS...");
+        setStage('ai_speaking'); setIsGoogleTtsPlaying(true); setError(null);
         try {
             const cleanText = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(\*|_)(.*?)\1/g, '$2').replace(/#/g, '');
-            const ttsRequestBody = {
-                action: 'synthesize_speech', text: cleanText, languageCode: lang, accessKey: accessKey,
-            };
-            const response = await fetch(WORKER_URL, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ttsRequestBody)
-            });
+            const ttsRequestBody = { action: 'synthesize_speech', text: cleanText, languageCode: lang, accessKey: accessKey };
+            const response = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ttsRequestBody) });
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ error: `Google TTS API Error via Worker: ${response.status}` }));
                 throw new Error(errorData.error || `Google TTS API Error via Worker: ${response.status}`);
             }
             const responseData = await response.json();
             if (responseData.error) throw new Error(responseData.error);
-            if (!responseData.audioContent && !responseData.audioUrl) {
-                throw new Error("No audio content/URL received from Google TTS service via worker.");
-            }
-            if (googleTtsAudioRef.current) {
-                googleTtsAudioRef.current.onended = null; googleTtsAudioRef.current.onerror = null; googleTtsAudioRef.current.src = "";
-            }
-            const audio = googleTtsAudioRef.current || new Audio();
-            googleTtsAudioRef.current = audio;
-            if (responseData.audioUrl) audio.src = responseData.audioUrl;
-            else if (responseData.audioContent) audio.src = `data:audio/mp3;base64,${responseData.audioContent}`;
+            if (!responseData.audioContent && !responseData.audioUrl) throw new Error("No audio content/URL from TTS worker.");
+
+            if (googleTtsAudioRef.current) { googleTtsAudioRef.current.onended = null; googleTtsAudioRef.current.onerror = null; googleTtsAudioRef.current.src = "";}
+            const audio = googleTtsAudioRef.current || new Audio(); googleTtsAudioRef.current = audio;
+            if (responseData.audioUrl) audio.src = responseData.audioUrl; else if (responseData.audioContent) audio.src = `data:audio/mp3;base64,${responseData.audioContent}`;
 
             audio.onended = () => {
                 setIsGoogleTtsPlaying(false);
                 if (stageRef.current === 'ai_speaking') {
-                    console.log("InterviewMode: Google TTS finished normally.");
-                    if (result) { // If interview already has a final result (e.g. AI announced Pass/Fail)
-                        setStage('finished');
-                    } else {
-                        setStage('user_turn');
-                        setTimeout(() => startListeningRef.current(), 300);
-                    }
-                } else { console.log("InterviewMode: Google TTS 'onended' fired but stage was " + stageRef.current + ". Ignoring."); }
-            };
-            audio.onerror = (e) => {
-                setIsGoogleTtsPlaying(false);
-                console.error('Interview Google TTS Playback Error:', e);
-                setError(`Speech synthesis playback error. The AI's response might not have been spoken.`);
-                // If TTS playback fails, don't get stuck in ai_speaking. Move to a resolvable state.
-                if (stageRef.current === 'ai_speaking') {
-                    if (result) setStage('finished'); // If there was a result, go to finished.
-                    else setStage('user_turn'); // Otherwise, allow user to try again or see error and close.
+                    // console.log("InterviewMode: Google TTS finished normally.");
+                    if (result) { setStage('finished'); }
+                    else { setStage('user_turn'); setTimeout(() => startListeningRef.current(), 300); }
                 }
             };
-            console.log("InterviewMode: Calling audio.play() for Google TTS.");
+            audio.onerror = (e) => {
+                setIsGoogleTtsPlaying(false); console.error('Interview Google TTS Playback Error:', e);
+                setError(`Speech synthesis playback error.`);
+                if (stageRef.current === 'ai_speaking') { if (result) setStage('finished'); else setStage('user_turn');}
+            };
+            // console.log("InterviewMode: Calling audio.play() for Google TTS.");
             await audio.play();
         } catch (error) {
-            setIsGoogleTtsPlaying(false);
-            const specificErrorMessage = (error as Error).message || "Unknown TTS error during fetch/setup";
+            setIsGoogleTtsPlaying(false); const specificErrorMessage = (error as Error).message || "Unknown TTS error during fetch/setup";
             console.error('Google Cloud TTS setup/fetch error:', specificErrorMessage);
-            setError(`Google TTS Error: ${specificErrorMessage}. The AI's response could not be spoken.`);
-            setStage('error'); // Critical TTS failure leads to error stage.
+            setError(`Google TTS Error: ${specificErrorMessage}. AI response not spoken.`);
+            setStage('error'); initialSessionSetupDone.current = true;
         }
-    }, [accessKey, isSttActive, result]); // Added result to deps for onended logic
+    }, [accessKey, isSttActive, result]);
 
     useEffect(() => { playGoogleCloudTTSRef.current = playGoogleCloudTTS; }, [playGoogleCloudTTS]);
 
     const handleUserSpeech = useCallback(async (userText: string) => {
-        if (stageRef.current === 'error') {
-            console.warn("handleUserSpeech: Aborting because current stage is 'error'.");
-            return;
-        }
-        console.log("InterviewMode: Processing user speech:", userText);
+        if (stageRef.current === 'error' && initialSessionSetupDone.current) { console.warn("handleUserSpeech: Aborted, initial setup failed."); return; }
+        // console.log("InterviewMode: Processing user speech:", userText);
         const userMessage: Message = { id: Date.now(), text: userText, sender: 'user', timestamp: Date.now() };
-        setMessages(prev => [...prev, userMessage]);
-        messageHistoryRef.current.push({ role: 'user', parts: [{ text: userText }] });
+        setMessages(prev => [...prev, userMessage]); messageHistoryRef.current.push({ role: 'user', parts: [{ text: userText }] });
         setStage('ai_thinking');
         const loadingMessage: Message = { id: Date.now() + 1, text: "...", sender: 'loading', timestamp: Date.now() + 1 };
         setMessages(prev => [...prev, loadingMessage]);
@@ -301,51 +301,34 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         try {
             const response = await getBotResponseInterview(userText, historyForApi, selectedModel, INTERVIEWER_PERSONA_ID, accessKey);
             const botMessage: Message = { id: Date.now() + 2, text: response.text, sender: 'bot', timestamp: Date.now() + 2 };
-            if (!response.text.startsWith("Error:")) {
-                messageHistoryRef.current.push({ role: 'model', parts: [{ text: response.text }] });
-            } else {
-                console.error("API returned error:", response.text);
-                setError(response.text);
-            }
+            if (!response.text.startsWith("Error:")) messageHistoryRef.current.push({ role: 'model', parts: [{ text: response.text }] });
+            else { console.error("API returned error:", response.text); setError(response.text); }
             setMessages(prev => [...prev.filter(m => m.sender !== 'loading'), botMessage]);
+
             let endResult: InterviewResult = null;
             const lowerText = response.text.toLowerCase();
             if (lowerText.includes("conclusion: pass") || lowerText.includes("final result: pass") || lowerText.includes("outcome: pass")) { endResult = 'pass'; }
             else if (lowerText.includes("conclusion: fail") || lowerText.includes("final result: fail") || lowerText.includes("outcome: fail")) { endResult = 'fail'; }
 
-            if (endResult) {
-                console.log("InterviewMode: Interview finished by Gemini. Result:", endResult);
-                setResult(endResult); // Set result state
-                // AI will speak the final result, playGoogleCloudTTSRef onended will set stage to 'finished'
-            }
-            if (response.text.startsWith("Error:")) {
-                setStage('error'); // API error from Gemini
-            } else {
-                // If no error, AI responds. TTS onended will transition stage.
-                playGoogleCloudTTSRef.current(response.text, sttLang.startsWith('th') ? 'th-TH' : 'en-US');
-            }
+            if (endResult) { console.log("InterviewMode: Interview finished by Gemini. Result:", endResult); setResult(endResult); }
+            if (response.text.startsWith("Error:")) { setStage('error'); initialSessionSetupDone.current = true; }
+            else { playGoogleCloudTTSRef.current(response.text, sttLang.startsWith('th') ? 'th-TH' : 'en-US');}
         } catch (e) {
-            const errorMsg = `Error processing Gemini response: ${(e as Error).message}`;
-            console.error(errorMsg);
-            setError(errorMsg);
+            const errorMsg = `Error processing Gemini response: ${(e as Error).message}`; console.error(errorMsg); setError(errorMsg);
             const errorMessage: Message = { id: Date.now() + 2, text: errorMsg, sender: 'bot', timestamp: Date.now() + 2 };
             setMessages(prev => [...prev.filter(m => m.sender !== 'loading'), errorMessage]);
-            setStage('error');
+            setStage('error'); initialSessionSetupDone.current = true;
         }
     }, [selectedModel, accessKey, sttLang]);
 
     useEffect(() => { handleUserSpeechRef.current = handleUserSpeech; }, [handleUserSpeech]);
 
     const startInterview = useCallback(async () => {
-        if (stageRef.current === 'error') {
-             console.warn("startInterview: Aborting because current stage is 'error'.");
-             return;
-        }
+        if (stageRef.current === 'error' && initialSessionSetupDone.current) { console.warn("startInterview: Aborted, initial setup failed."); return;}
         console.log("InterviewMode: Starting interview flow...");
         setStage('ai_thinking');
         const startMessage: Message = { id: Date.now(), text: "Connecting to interviewer...", sender: 'loading', timestamp: Date.now() };
-        setMessages([startMessage]);
-        messageHistoryRef.current = [];
+        setMessages([startMessage]); messageHistoryRef.current = [];
         try {
             const initialPrompt = "Please begin the interview by introducing yourself and asking the first question.";
             const response = await getBotResponseInterview(initialPrompt, [], selectedModel, INTERVIEWER_PERSONA_ID, accessKey);
@@ -355,64 +338,34 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             setMessages([firstBotMessage]);
             playGoogleCloudTTSRef.current(response.text, sttLang.startsWith('th') ? 'th-TH' : 'en-US');
         } catch (e) {
-            const errorMsg = `Failed to start interview: ${(e as Error).message}`;
-            console.error(errorMsg);
-            setError(errorMsg);
+            const errorMsg = `Failed to start interview: ${(e as Error).message}`; console.error(errorMsg); setError(errorMsg);
             setMessages([{ id: Date.now(), text: errorMsg, sender: 'bot', timestamp: Date.now() }]);
-            setStage('error'); // Critical failure during start
+            setStage('error'); initialSessionSetupDone.current = true;
         }
     }, [selectedModel, accessKey, sttLang]);
 
-    useEffect(() => {
-        if (isOpen) {
-            console.log("InterviewMode: isOpen is true. Resetting and starting setup.");
-            setMessages([]); messageHistoryRef.current = []; setError(null); setResult(null);
-            // setCameraStream(null); // Handled by stopStreamsAndTTS if needed
-            setStage('idle');
-            startInterviewSetup();
-        } else {
-            console.log("InterviewMode: isOpen is false. Cleaning up.");
-            stopStreamsAndTTS();
-            setStage('idle');
-        }
-        return () => {
-            console.log("InterviewMode: Cleanup for isOpen effect or unmount. Current stage was:", stageRef.current);
-            if (stageRef.current !== 'idle') {
-                stopStreamsAndTTS();
-                setStage('idle');
-            }
-        };
-    }, [isOpen, startInterviewSetup, stopStreamsAndTTS]); // startInterviewSetup is stable, stopStreamsAndTTS deps are managed
-
-    useEffect(() => {
+    useEffect(() => { // Effect to attach stream to video element
         const videoElement = videoRef.current;
         if (cameraStream && videoElement) {
             videoElement.srcObject = cameraStream;
             videoElement.play().catch(playError => {
                 console.error("InterviewMode: Video element play error:", playError.name, playError.message);
-                if (playError.name !== 'AbortError') { // Only set critical error if it's not a common AbortError
-                    setError("Could not play camera video. Please check browser permissions.");
-                    // Don't set stage to 'error' here unless video is absolutely critical path that can't be recovered.
-                    // The user might still be able to proceed with audio only if STT/TTS works.
-                }
+                if (playError.name !== 'AbortError') { setError("Could not play camera video."); }
             });
         } else if (videoElement) { videoElement.srcObject = null; }
         return () => { if (videoElement) { videoElement.pause(); videoElement.srcObject = null; }};
     }, [cameraStream]);
 
-    useEffect(() => {
+    useEffect(() => { // Effect to setup STT
         if (!recognitionAvailable || !isOpen) {
             if (recognitionRef.current) {
-                console.log("STT Effect: Not available or not open, aborting and cleaning up STT.");
+                // console.log("STT Effect: Not available or not open, cleaning up STT.");
                 try { recognitionRef.current.abort(); } catch (e) { console.warn("Error aborting STT on close/unavailable:", e); }
                 recognitionRef.current.onresult = null; recognitionRef.current.onerror = null; recognitionRef.current.onend = null;
                 recognitionRef.current.onstart = null; recognitionRef.current.onaudiostart = null; recognitionRef.current.onsoundstart = null;
                 recognitionRef.current.onspeechstart = null; recognitionRef.current.onspeechend = null; recognitionRef.current.onaudioend = null;
                 recognitionRef.current.onnomatch = null;
-                // recognitionRef.current = null; // Keep instance if re-opening, just remove handlers. Nullify if fully closing.
-                                               // For now, let's nullify to ensure clean state on re-open if STT had issues.
-                if(isOpen) console.warn("STT being nullified while isOpen is true - likely due to !recognitionAvailable"); else recognitionRef.current = null;
-
+                if (!isOpen) recognitionRef.current = null;
                 if(isSttActive) setIsSttActive(false);
             }
             return;
@@ -423,28 +376,26 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 recognitionRef.current.continuous = true; recognitionRef.current.interimResults = false;
                 console.log("InterviewMode: STT engine initialized.");
             } catch (err) {
-                console.error("Failed to initialize STT engine:", err);
-                setError("Failed to initialize Speech Recognition. Your browser might not support it.");
-                setStage('error'); return;
+                console.error("Failed to initialize STT engine:", err); setError("Failed to initialize Speech Recognition.");
+                setStage('error'); initialSessionSetupDone.current = true; return;
             }
         }
         try { recognitionRef.current.lang = sttLang; }
-        catch (e) { console.error(`Failed to set STT language to ${sttLang}:`, e); setError(`Failed to set STT language. ${ (e as Error).message }`); }
+        catch (e) { console.error(`Failed to set STT language to ${sttLang}:`, e); setError(`Failed to set STT language. ${(e as Error).message }`); }
 
-        const onResult = (event: SpeechRecognitionEvent) => { /* ... see previous correct implementation ... */
+        const onResult = (event: SpeechRecognitionEvent) => {
             let finalTranscript = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) { if (event.results[i].isFinal) { finalTranscript += event.results[i][0].transcript; }}
             const trimmedTranscript = finalTranscript.trim();
-            console.log("STT Final Transcript:", trimmedTranscript, "Current stage:", stageRef.current);
+            // console.log("STT Final Transcript:", trimmedTranscript, "Current stage:", stageRef.current);
             if (trimmedTranscript && stageRef.current === 'listening') {
                 setIsSttActive(false);
                 try { if (recognitionRef.current) recognitionRef.current.stop(); } catch(e){ console.warn("STT: error stopping on result", e); }
-                setStage('processing_user');
-                handleUserSpeechRef.current(trimmedTranscript);
-            } else if (trimmedTranscript && stageRef.current !== 'listening') { console.log(`STT result ignored (not listening): "${trimmedTranscript}"`);}
-            else if (!trimmedTranscript) { console.log("STT empty final transcript."); }
+                setStage('processing_user'); handleUserSpeechRef.current(trimmedTranscript);
+            } else if (trimmedTranscript && stageRef.current !== 'listening') { /* console.log(`STT result ignored (not listening): "${trimmedTranscript}"`);*/ }
+            else if (!trimmedTranscript) { /* console.log("STT empty final transcript."); */ }
         };
-        const onError = (event: SpeechRecognitionErrorEvent) => { /* ... see previous correct implementation ... */
+        const onError = (event: SpeechRecognitionErrorEvent) => {
             console.error('Interview STT Error:', event.error, event.message);
             let detailedError = `Speech recognition error: ${event.error}.`;
             if (event.error === 'no-speech') detailedError += " No speech detected.";
@@ -454,45 +405,41 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             setError(detailedError); setIsSttActive(false);
             if (stageRef.current === 'listening' || stageRef.current === 'user_turn') setStage('user_turn');
         };
-        const onEnd = () => { /* ... see previous correct implementation ... */
-            console.log("STT onEnd. Was active:", isSttActive, "Current stage:", stageRef.current);
+        const onEnd = () => {
+            // console.log("STT onEnd. Was active:", isSttActive, "Current stage:", stageRef.current);
             const wasListening = stageRef.current === 'listening';
-            if (isSttActive) setIsSttActive(false); // Ensure state reflects STT is off
-            if (wasListening) { // If ended unexpectedly while listening
-                console.log("STT ended while 'listening'. No result or timeout. To user_turn.");
+            if (isSttActive) setIsSttActive(false);
+            if (wasListening) {
+                // console.log("STT ended while 'listening'. No result or timeout. To user_turn.");
                 if(!error && stageRef.current === 'listening') setError("I didn't catch that. Please try again.");
                 setStage('user_turn');
             }
         };
         recognitionRef.current.onresult = onResult; recognitionRef.current.onerror = onError; recognitionRef.current.onend = onEnd;
-        recognitionRef.current.onstart = () => console.log("STT Event: onstart");
-        recognitionRef.current.onaudiostart = () => console.log("STT Event: onaudiostart");
-        recognitionRef.current.onsoundstart = () => console.log("STT Event: onsoundstart");
-        recognitionRef.current.onspeechstart = () => console.log("STT Event: onspeechstart");
-        recognitionRef.current.onspeechend = () => console.log("STT Event: onspeechend");
-        recognitionRef.current.onaudioend = () => console.log("STT Event: onaudioend");
+        recognitionRef.current.onstart = () => { /* console.log("STT Event: onstart"); */ };
         recognitionRef.current.onnomatch = () => {
-            console.log("STT Event: onnomatch");
+            // console.log("STT Event: onnomatch");
             if (stageRef.current === 'listening') { setError("I didn't understand. Try again?"); setStage('user_turn'); if (isSttActive) setIsSttActive(false);}
         };
         return () => {
-            console.log("Cleaning up STT effect.");
+            // console.log("Cleaning up STT effect handlers.");
             if (recognitionRef.current) {
-                try { recognitionRef.current.abort(); } catch(e) {}
+                try { if(isSttActive || (recognitionRef.current as any).recognizing) recognitionRef.current.abort(); } catch(e) {}
                 recognitionRef.current.onresult = null; recognitionRef.current.onerror = null; recognitionRef.current.onend = null;
-                // ... detach other handlers ...
+                recognitionRef.current.onstart = null; recognitionRef.current.onnomatch = null;
             }
-            // if (isSttActive) setIsSttActive(false); // Already handled by onEnd or abort
         };
-    }, [isOpen, sttLang]); // Removed isSttActive from here, onEnd logic handles it.
+    }, [isOpen, sttLang]);
 
-    useEffect(() => {
-        if (isOpen && stage === 'starting' && cameraStream && stageRef.current !== 'error') {
+    useEffect(() => { // Effect to auto-start interview flow
+        if (isOpen && stage === 'starting' && cameraStream && !(stageRef.current === 'error' && initialSessionSetupDone.current)) {
             startInterview();
         }
     }, [isOpen, stage, cameraStream, startInterview]);
 
-    if (!isOpen && stage === 'idle') return null;
+    // More robust check for hiding to prevent flashing if it was just closed and is resetting.
+    if (!isOpen && !initialSessionSetupDone.current && stage === 'idle') return null;
+
 
     return (
         <div className="interview-mode-overlay">
@@ -506,12 +453,12 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                         ) : (
                             <div className="placeholder">
                                 {stage === 'requesting_perms' ? 'Requesting permissions...'
-                                    : (stage === 'error' && !cameraStream) ? 'Camera/Mic Unavailable'
+                                    : (stage === 'error' && initialSessionSetupDone.current && !cameraStream) ? 'Camera/Mic Unavailable'
                                     : 'Camera Off'}
                             </div>
                         )}
                         <p className="interview-notice">
-                            {cameraStream ? "Your camera is active." : "Camera is off or unavailable."}
+                            {cameraStream ? "Your camera is active." : (stage === 'error' && initialSessionSetupDone.current ? "Camera setup failed." : "Camera is off.")}
                         </p>
                     </div>
                     <div className="interview-chat-view">
@@ -539,7 +486,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                             {stage === 'starting' && "Starting Interview..."}
                             {stage === 'requesting_perms' && "Requesting Permissions..."}
                             {stage === 'processing_user' && "Processing your response..."}
-                            {stage === 'idle' && "Initializing..."}
+                            {stage === 'idle' && (isOpen ? "Initializing..." : "Closed")}
                             {isSttActive && stage === 'listening' && <span className="recording-dot"></span>}
                         </div>
                     </div>
