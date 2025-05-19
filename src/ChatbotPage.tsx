@@ -16,7 +16,7 @@ import { FaPlus, FaPaperclip, FaCamera, FaDesktop, FaEdit, FaMicrophone, FaPaper
 
 // --- Constants ---
 const SEND_COOLDOWN_MS = 1500;
-const MAX_HISTORY = 20;
+const MAX_HISTORY = 30;
 const MAX_IMAGE_SIZE_MB = 3.8;
 const GA_MEASUREMENT_ID = "G-JX58QMMKZY"; // Ensure consistency if used here
 
