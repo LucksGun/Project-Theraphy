@@ -37,7 +37,7 @@ export const ALL_AVAILABLE_MODELS_FRONTEND: ModelInfo[] = [
     { value: 'gemini-2.5-pro-preview-03-25', label: 'Gemini 2.5 Pro Preview', restricted: true } ];
 export const ALL_MODEL_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.map(m => m.value);
 export interface PersonaInfo { value: Persona; label: string; emoji: string; restricted: boolean; }
-export const AVAILABLE_PERSONAS: PersonaInfo[] = [ { value: 'university_master', label: 'University Master', emoji: '🎓', restricted: false }, { value: 'normal', label: 'Normal Bot', emoji: '🤖', restricted: true }, { value: 'therapist', label: 'Therapist', emoji: '🧠', restricted: true } ];
+export const AVAILABLE_PERSONAS: PersonaInfo[] = [ { value: 'university_master', label: 'University Master', emoji: '🎓', restricted: false }, { value: 'normal', label: 'Normal Bot', emoji: '�', restricted: true }, { value: 'therapist', label: 'Therapist', emoji: '🧠', restricted: true } ];
 export const ALL_PERSONAS: Persona[] = AVAILABLE_PERSONAS.map(p => p.value);
 export const DEFAULT_UNRESTRICTED_PERSONA: Persona = 'university_master';
 export const RESTRICTED_MODELS_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.filter(m => m.restricted).map(m => m.value);
@@ -310,24 +310,20 @@ function App() {
                         <h1 className="welcome-title">Project Theraphy</h1>
                         <p className="welcome-subtitle">
                             Hi and welcome to Project Theraphy, <br />
-                            a challenging exploration of user interactions and design patterns
+                            a chatbot which guide you thru entrace and admission steps of your desired collage
                         </p>
                         <p className="welcome-instructions">
-                            To get started, simply click the button below:
+                            To get started, you accept our term of use/services by clicking button below.
                         </p>
                         <div className="welcome-button-container">
-                            <button onClick={handleAcceptWelcome} className="welcome-main-button">
-                                HERE
+                            <button onClick={() => { /* Do nothing */ }} className="welcome-main-button">
+                                NO
                             </button>
                         </div>
                         <p className="welcome-bottom-text">
                             Please click <span className="welcome-bottom-link" onClick={handleAcceptWelcome}>HERE</span> to Go to the next page
                         </p>
-                        <div className="welcome-logo-container">
-                            {/* You can replace this with an actual logo if needed */}
-                            <span className="welcome-logo-text">VERHAERT</span>
-                            <span className="welcome-logo-subtext">DIGITAL INNOVATION</span>
-                        </div>
+                        {/* Removed the logo container as requested */}
                     </div>
                 </div>
             )}
