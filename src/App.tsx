@@ -9,7 +9,8 @@ import PersonaPlinkoGame from './PersonaPlinkoGame';
 import InterviewMode from './InterviewMode';
 import PresentationPage from './PresentationPage';
 import InvoiceManagerPage from './InvoiceManagerPage';
-
+import lieDetectorImage from './LIE.jpg'; // <-- ADD THIS LINE
+// ... other imports
 // --- GA Initialization ---
 const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
 if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "YOUR_GA_ID_HERE") {
@@ -638,7 +639,7 @@ function App() {
 
                     {showLieDetector && (
                         <div className="lie-detector-overlay">
-                            <img src="LIE.jpg" alt="Lie Detector" className="lie-detector-image" />
+                            <img src={lieDetectorImage} alt="Lie Detector" className="lie-detector-image" />
                         </div>
                     )}
                 </div>
