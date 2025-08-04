@@ -9,8 +9,7 @@ import PersonaPlinkoGame from './PersonaPlinkoGame';
 import InterviewMode from './InterviewMode';
 import PresentationPage from './PresentationPage';
 import InvoiceManagerPage from './InvoiceManagerPage';
-import lieDetectorImage from './LIE.jpg'; // <-- ADD THIS LINE
-// ... other imports
+
 // --- GA Initialization ---
 const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
 if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_ID !== "YOUR_GA_ID_HERE") {
@@ -57,7 +56,7 @@ export interface PersonaInfo { value: Persona; label: string; emoji: string; res
 export const AVAILABLE_PERSONAS: PersonaInfo[] = [
     { value: 'university_master', label: 'University Master', emoji: '🎓', restricted: false },
     { value: 'normal', label: 'Normal Bot', emoji: '🤖', restricted: true },
-    { value: 'therapist', label: 'Therapist', emoji: '�', restricted: true }
+    { value: 'therapist', label: 'Therapist', emoji: '🧠', restricted: true }
 ];
 export const ALL_PERSONAS: Persona[] = AVAILABLE_PERSONAS.map(p => p.value);
 export const DEFAULT_UNRESTRICTED_PERSONA: Persona = 'university_master';
@@ -154,7 +153,8 @@ function App() {
     const [showKnowledgeCheck, setShowKnowledgeCheck] = useState<boolean>(false);
     const [showLieDetector, setShowLieDetector] = useState<boolean>(false);
     const [showTutorial, setShowTutorial] = useState<boolean>(false);
-    const [tutorialBaitButtonPosition, setTutorialBaitButtonPosition] = useState<{ top: string; left: string }>({ top: '50%', left: '50%' });
+    const [isFanOn, setIsFanOn] = useState(true);
+    const [buttonTransform, setButtonTransform] = useState('translate(0, 0)');
     const [enteredKey, setEnteredKey] = useState<string>(() => localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '');
     const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.5-flash-preview-04-17');
     const [sttLang, setSttLang] = useState<SpeechLanguage>(() => {
@@ -370,29 +370,19 @@ function App() {
         setShowTutorial(true);
     };
 
-    const handleTutorialBaitClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-        const button = e.currentTarget;
-        const parent = button.offsetParent as HTMLElement;
-        if (!parent) return;
-
-        const parentRect = parent.getBoundingClientRect();
-        const buttonRect = button.getBoundingClientRect();
-
-        const maxLeft = parentRect.width - buttonRect.width;
-        const maxTop = parentRect.height - buttonRect.height;
-
-        const randomLeft = Math.random() * maxLeft;
-        const randomTop = Math.random() * maxTop;
-
-        setTutorialBaitButtonPosition({
-            left: `${randomLeft}px`,
-            top: `${randomTop}px`
-        });
+    const handleEnterChatbot = () => {
+        if (!isFanOn) {
+            setShowTutorial(false);
+            navigate('/');
+        }
     };
 
-    const handleHiddenRedirectClick = () => {
-        setShowTutorial(false);
-        navigate('/');
+    const handleWindEffect = () => {
+        if (isFanOn) {
+            const x = (Math.random() - 0.5) * 100;
+            const y = (Math.random() - 0.5) * 50;
+            setButtonTransform(`translate(${x}px, ${y}px)`);
+        }
     };
 
     const handleSttLangChange = (e: ChangeEvent<HTMLSelectElement>) => { setSttLang(e.target.value as SpeechLanguage); };
@@ -639,7 +629,7 @@ function App() {
 
                     {showLieDetector && (
                         <div className="lie-detector-overlay">
-                            <img src={lieDetectorImage} alt="Lie Detector" className="lie-detector-image" />
+                            <img src="https://storage.googleapis.com/gemini-generated-images/lie-detector-indicator-gauge-with-dial-showing-true-green-deceit-red_79145-1532.jpg" alt="Lie Detector" className="lie-detector-image" />
                         </div>
                     )}
                 </div>
@@ -648,44 +638,40 @@ function App() {
             {showTutorial && (
                  <div className="tutorial-modal-overlay">
                      <div className="tutorial-modal">
+                        <div className={`fan ${isFanOn ? 'spinning' : ''}`}>
+                            <div className="fan-blade"></div>
+                            <div className="fan-blade"></div>
+                            <div className="fan-blade"></div>
+                        </div>
                          <h3>Chatbot Tutorial</h3>
-                         <p>Welcome to the chatbot tutorial! This guide will help you understand how to interact with our AI assistant. We aim to make your experience as smooth and intuitive as possible.</p>
+                         <p>This guide will help you understand how to interact with our AI assistant.</p>
+                         
+                         {/* Tutorial Content Shortened for brevity in example */}
+                         <p>To send messages, type in the input field. Use the microphone for voice commands and the paperclip to attach images. You can find more options in the settings menu (⚙️).</p>
 
-                         <h4>1. Sending Messages:</h4>
-                         <p>To initiate a conversation or respond to the chatbot, simply type your question or statement into the text input field located at the very bottom of the screen. This is your primary way to communicate with the AI. Once you've finished typing, you can press the "Send" button (typically represented by a paper airplane or an arrow icon pointing right) or simply hit the Enter key on your keyboard. Your message will then appear in the chat history.</p>
-
-                         <h4>2. Using Voice Input:</h4>
-                         <p>For hands-free interaction, our chatbot supports voice input. Click the microphone icon (🎤) usually found near the text input field. If it's your first time, your browser might ask for permission to access your microphone; please grant it. Once activated, begin speaking clearly. The system is designed to detect when you've finished your thought, but you can also click the microphone icon again to manually stop recording. Always review the transcribed text before sending to ensure accuracy.</p>
-
-                         <h4>3. Image Input:</h4>
-                         <p>Our advanced chatbot can process and understand images, making your interactions richer! To send an image, click the paperclip icon (📎) or a similar attachment button. You'll typically have options to:
-                             <ul>
-                                 <li>**Upload from Device:** Select an image file directly from your computer or phone.</li>
-                                 <li>**Use Camera:** Capture a live photo using your device's camera.</li>
-                                 <li>**Capture Screen:** Take a screenshot of your current screen (availability depends on browser and operating system).</li>
-                             </ul>
-                         After selecting your image, you have the option to add a descriptive text message to provide context before sending it to the chatbot.</p>
-
-                         <h4>4. Understanding Bot Responses:</h4>
-                         <p>The chatbot will provide its responses in text format. These responses are designed to be informative and helpful. Sometimes, the chatbot might offer "suggestions" for follow-up questions or related topics, which will appear as clickable buttons below its message. This helps guide your conversation. Additionally, if you prefer to listen to the bot's responses, look for a speaker icon (🔊) next to its message. Clicking it will play an audio version of the response; clicking again will stop it.</p>
-
-                         <h4>5. Advanced Features and Customization:</h4>
-                         <p>To personalize your chatbot experience, explore the settings menu (⚙️ icon) usually located in the header. Here, you can find options such as:
-                             <ul>
-                                 <li>Changing the chatbot's display language.</li>
-                                 <li>Exporting your chat history for your records.</li>
-                                 <li>Accessing advanced configurations, including selecting different AI models or personas. Please note that some advanced features may require a special access key for full functionality.</li>
-                             </ul>
-                         </p>
-                         <p>We encourage you to experiment with different types of queries and features to discover the full potential of Project Theraphy. Our goal is to provide a seamless and intelligent conversational experience tailored to your needs. If you're ready to dive in you can <span className="hidden-redirect-link" onClick={handleHiddenRedirectClick}>start chatting now</span>!</p>
-
-                         <button
-                             style={{ position: 'absolute', top: tutorialBaitButtonPosition.top, left: tutorialBaitButtonPosition.left, transition: 'all 0.3s ease-out' }}
-                             onClick={handleTutorialBaitClick}
-                             className="tutorial-bait-button"
-                         >
-                             Skip
-                         </button>
+                         <div className="tutorial-interaction-area">
+                            <div 
+                                className="wind-zone"
+                                onMouseMove={handleWindEffect}
+                                onMouseLeave={() => setButtonTransform('translate(0,0)')}
+                            >
+                                <button
+                                    className="tutorial-enter-button"
+                                    onClick={handleEnterChatbot}
+                                    style={{ transform: buttonTransform, transition: 'transform 0.2s ease-out' }}
+                                >
+                                    Enter Chatbot Page
+                                </button>
+                            </div>
+                         </div>
+                         
+                         <div className="fan-controls">
+                            <label className="fan-switch">
+                                <input type="checkbox" checked={isFanOn} onChange={() => setIsFanOn(!isFanOn)} />
+                                <span className="slider round"></span>
+                            </label>
+                            <span>Turn Off Fan To Enter</span>
+                         </div>
                      </div>
                  </div>
             )}
