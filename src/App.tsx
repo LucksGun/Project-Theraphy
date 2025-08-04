@@ -684,7 +684,7 @@ function App() {
                              onClick={handleTutorialBaitClick}
                              className="tutorial-bait-button"
                          >
-                             Enter
+                             Skip
                          </button>
                      </div>
                  </div>
