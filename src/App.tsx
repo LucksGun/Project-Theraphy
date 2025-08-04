@@ -638,7 +638,7 @@ function App() {
 
                     {showLieDetector && (
                         <div className="lie-detector-overlay">
-                            <img src="https://storage.googleapis.com/gemini-generated-images/lie-detector-indicator-gauge-with-dial-showing-true-green-deceit-red_79145-1532.jpg" alt="Lie Detector" className="lie-detector-image" />
+                            <img src="LIE.jpg" alt="Lie Detector" className="lie-detector-image" />
                         </div>
                     )}
                 </div>
