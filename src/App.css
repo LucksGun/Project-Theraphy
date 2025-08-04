@@ -99,6 +99,16 @@
   --code-block-border: var(--border-color);
   /* Disabled state for advanced settings button (Uses staff colors as base) */
   --button-disabled-border: #cccccc; /* Ensure this exists */
+
+  /* NEW: Welcome Page Specific Variables */
+  --welcome-bg: #0000FF; /* Blue background from image */
+  --welcome-text-primary: #ffffff; /* White text for titles */
+  --welcome-text-secondary: #ADD8E6; /* Light blue for subtitles/instructions */
+  --welcome-button-bg: #00FF00; /* Green button from image */
+  --welcome-button-text: #ffffff; /* White text on green button */
+  --welcome-button-hover-bg: #00CC00; /* Darker green on hover */
+  --welcome-link-color: #ADD8E6; /* Light blue for the "HERE" link */
+  --welcome-logo-color: #ffffff; /* White for logo text */
 }
 
 /* Dark theme overrides */
@@ -197,6 +207,16 @@
   --code-block-border: #383838;
   /* Disabled state for advanced settings button */
   --button-disabled-border: #404040; /* Ensure this exists for dark theme */
+
+  /* NEW: Welcome Page Specific Variables (Dark Theme) */
+  --welcome-bg: #00008B; /* Darker blue for dark theme */
+  --welcome-text-primary: #E0E0E0;
+  --welcome-text-secondary: #B0C4DE;
+  --welcome-button-bg: #008000; /* Darker green */
+  --welcome-button-text: #ffffff;
+  --welcome-button-hover-bg: #006400;
+  --welcome-link-color: #B0C4DE;
+  --welcome-logo-color: #E0E0E0;
 }
 
 
@@ -208,7 +228,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 .App { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
 /* Add transitions to other elements */
-.App, .App-header, .chatbot-container, .chatbot-input-area, .settings-menu, .staff-panel-modal, .beta-notice-modal, .feedback-modal, .analysis-form-modal, input, select, textarea, button, .message, .intro-notice-modal { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
+.App, .App-header, .chatbot-container, .chatbot-input-area, .settings-menu, .staff-panel-modal, .beta-notice-modal, .feedback-modal, .analysis-form-modal, input, select, textarea, button, .message, .intro-notice-modal, .welcome-modal { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
 .message.user, .message.bot { transition: background-color 0.3s ease, color 0.3s ease; }
 
 /* Scrollbars */
@@ -308,24 +328,16 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 
 /* NEW Advanced Settings Trigger Button */
 .advanced-settings-trigger-button {
-    /* background-color: var(--settings-staff-bg); */ /* Old */
-    /* color: var(--settings-staff-text); */ /* Old */
-    /* border-color: var(--settings-staff-border); */ /* Old */
     background-color: var(--button-green-bg); /* << GREEN */
     color: var(--button-green-text); /* << GREEN */
     border-color: var(--button-green-border); /* << GREEN */
 }
 .advanced-settings-trigger-button:hover:not(:disabled) {
-    /* background-color: var(--settings-staff-hover-bg); */ /* Old */
-    /* border-color: var(--settings-staff-hover-border); */ /* Old */
     background-color: var(--button-green-hover-bg); /* << GREEN HOVER */
     border-color: var(--button-green-hover-border); /* << GREEN HOVER */
     color: var(--button-green-text); /* Ensure text color stays correct */
 }
 .advanced-settings-trigger-button:disabled {
-    /* background-color: var(--button-disabled-bg) !important; */ /* Old disabled */
-    /* color: var(--button-disabled-text) !important; */ /* Old disabled */
-    /* border-color: var(--button-disabled-border, #cccccc) !important; */ /* Old disabled */
     background-color: var(--button-green-disabled-bg) !important; /* << GREEN DISABLED */
     color: var(--button-green-disabled-text) !important; /* << GREEN DISABLED */
     border-color: var(--button-green-disabled-border) !important; /* << GREEN DISABLED */
@@ -419,15 +431,14 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 .analysis-form-actions .close-settings-button, .analysis-form-actions .beta-accept-button { width:auto; margin-top:0; }
 .beta-accept-button:disabled { background-color:var(--button-disabled-bg) !important; color:var(--button-disabled-text) !important; cursor:default; opacity:0.7; }
 
-/* Beta Notice */
-/* ... keep existing beta notice styles ... */
-.beta-notice-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--beta-overlay-bg); display: flex; align-items: center; justify-content: center; z-index: 1050; padding: 15px; box-sizing: border-box; }
+/* Beta Notice (Original - now replaced by Welcome Page) */
+/* .beta-notice-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--beta-overlay-bg); display: flex; align-items: center; justify-content: center; z-index: 1050; padding: 15px; box-sizing: border-box; }
 .beta-notice-modal { background-color: var(--beta-modal-bg); padding: 25px 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); max-width: 500px; width: 100%; text-align: center; box-sizing: border-box; }
 .beta-notice-modal h2 { margin-top: 0; color: var(--beta-heading-color); font-size: 1.3em; margin-bottom: 10px; }
 .beta-notice-modal p { margin-bottom: 15px; line-height: 1.6; color: var(--beta-text-color); font-size: 0.95em; }
 .beta-notice-modal p:last-of-type { margin-bottom: 25px; }
 .beta-accept-button { padding: 10px 20px; border: none; background-color: var(--beta-button-bg); color: var(--beta-button-text); border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: background-color 0.2s ease; }
-.beta-accept-button:hover { background-color: var(--beta-button-hover-bg); }
+.beta-accept-button:hover { background-color: var(--beta-button-hover-bg); } */
 
 
 /* Feedback Modal */
@@ -462,9 +473,8 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 :root[data-theme='dark'] .feedback-message.error { background-color: #4d2d30; }
 
 
-/* --- Introduction Notice Styles --- */
-/* ... keep existing introduction notice styles ... */
-.intro-notice-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--beta-overlay-bg); display: flex; align-items: center; justify-content: center; z-index: 1060; padding: 15px; box-sizing: border-box; }
+/* --- Introduction Notice Styles (Original - now replaced by Welcome Page) --- */
+/* .intro-notice-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--beta-overlay-bg); display: flex; align-items: center; justify-content: center; z-index: 1060; padding: 15px; box-sizing: border-box; }
 .intro-notice-modal { background-color: var(--beta-modal-bg); padding: 25px 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); max-width: 650px; width: 100%; box-sizing: border-box; max-height: 90vh; overflow-y: auto; position: relative; padding-bottom: 80px; }
 .intro-notice-modal h2 { margin-top: 0; color: var(--text-primary); font-size: 1.3em; margin-bottom: 15px; text-align: center; }
 .intro-notice-modal p { margin-bottom: 15px; line-height: 1.6; color: var(--beta-text-color); font-size: 0.95em; text-align: left; }
@@ -488,7 +498,126 @@ input:checked + .slider:before { transform: translateX(26px); }
 .intro-accept-button:hover { background-color: var(--beta-button-hover-bg); }
 .intro-accept-button.button-runaway { opacity: 0.8; }
 .intro-accept-button.button-runaway:hover { background-color: var(--beta-button-bg); opacity: 0.8; }
-.intro-notice-modal::-webkit-scrollbar { width: 6px; } .intro-notice-modal::-webkit-scrollbar-thumb { background: var(--text-secondary); border-radius: 3px; } .intro-notice-modal { scrollbar-width: thin; scrollbar-color: var(--text-secondary) transparent; }
+.intro-notice-modal::-webkit-scrollbar { width: 6px; } .intro-notice-modal::-webkit-scrollbar-thumb { background: var(--text-secondary); border-radius: 3px; } .intro-notice-modal { scrollbar-width: thin; scrollbar-color: var(--text-secondary) transparent; } */
+
+
+/* --- NEW Welcome Page Styles --- */
+.welcome-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--welcome-bg); /* Blue background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200; /* Higher than other modals */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.welcome-modal {
+    background-color: transparent; /* Transparent background to show blue overlay */
+    text-align: center;
+    color: var(--welcome-text-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%; /* Take full height of overlay */
+    width: 100%; /* Take full width of overlay */
+    max-width: 800px; /* Max width for content */
+    margin: auto;
+    position: relative; /* For logo positioning */
+}
+
+.welcome-title {
+    font-size: 3em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--welcome-text-primary);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.welcome-subtitle {
+    font-size: 1.5em;
+    line-height: 1.6;
+    margin-bottom: 30px;
+    color: var(--welcome-text-secondary);
+    max-width: 600px;
+}
+
+.welcome-instructions {
+    font-size: 1.2em;
+    margin-bottom: 40px;
+    color: var(--welcome-text-secondary);
+}
+
+.welcome-button-container {
+    margin-bottom: 30px;
+}
+
+.welcome-main-button {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%; /* Make it circular */
+    background-color: var(--welcome-button-bg); /* Green button */
+    color: var(--welcome-button-text);
+    border: 5px solid rgba(255, 255, 255, 0.5); /* White border */
+    font-size: 3em;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.welcome-main-button:hover {
+    background-color: var(--welcome-button-hover-bg);
+    transform: scale(1.05);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.5);
+}
+
+.welcome-bottom-text {
+    font-size: 1em;
+    color: var(--welcome-text-secondary);
+    margin-top: 20px;
+}
+
+.welcome-bottom-link {
+    color: var(--welcome-link-color);
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.welcome-bottom-link:hover {
+    color: var(--welcome-text-primary);
+}
+
+.welcome-logo-container {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    text-align: left;
+}
+
+.welcome-logo-text {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: var(--welcome-logo-color);
+    display: block;
+}
+
+.welcome-logo-subtext {
+    font-size: 0.8em;
+    color: var(--welcome-logo-color);
+    opacity: 0.8;
+}
 
 
 /* --- ChatbotPage Styles --- */
@@ -592,7 +721,20 @@ input:checked + .slider:before { transform: translateX(26px); }
     .message-meta { font-size: 0.65em; }
     .tts-button { font-size: 1.1em; }
     .message-wrapper-bot .message-meta, .message-wrapper-user .message-meta { margin-left: 10px; margin-right: 10px; }
-    .intro-notice-modal { max-width: 95%; padding: 20px 25px; padding-bottom: 70px; }
+    /* .intro-notice-modal { max-width: 95%; padding: 20px 25px; padding-bottom: 70px; } */ /* Original intro modal */
+    /* .intro-section { flex-direction: column; align-items: flex-start; gap: 8px; } */
+    /* .intro-section-toggle { align-self: flex-end; margin-top: 5px; } */
+    .action-menu-popup { bottom: calc(100% + 5px); left: -5px; }
+
+    /* Welcome Page Responsive */
+    .welcome-title { font-size: 2.5em; }
+    .welcome-subtitle { font-size: 1.2em; margin-bottom: 20px; }
+    .welcome-instructions { font-size: 1em; margin-bottom: 30px; }
+    .welcome-main-button { width: 120px; height: 120px; font-size: 2.5em; border-width: 3px; }
+    .welcome-bottom-text { font-size: 0.9em; }
+    .welcome-logo-container { bottom: 15px; left: 15px; }
+    .welcome-logo-text { font-size: 1.1em; }
+    .welcome-logo-subtext { font-size: 0.7em; }
 }
 
 @media (max-width: 500px) {
@@ -633,18 +775,28 @@ input:checked + .slider:before { transform: translateX(26px); }
     .analysis-form-modal { padding: 15px; }
     .analysis-form-actions { gap: 6px; }
     .analysis-form-actions .close-settings-button, .analysis-form-actions .beta-accept-button { font-size: 0.9em; padding: 6px 12px; }
-    .beta-notice-modal { padding: 20px 20px; }
-    .beta-notice-modal h2 { font-size: 1.2em; }
-    .beta-notice-modal p { font-size: 0.9em; }
-    .beta-accept-button { font-size: 0.9rem; padding: 8px 16px; }
+    /* .beta-notice-modal { padding: 20px 20px; } */ /* Original beta modal */
+    /* .beta-notice-modal h2 { font-size: 1.2em; } */
+    /* .beta-notice-modal p { font-size: 0.9em; } */
+    /* .beta-accept-button { font-size: 0.9rem; padding: 8px 16px; } */
     .staff-panel-modal { padding: 15px; }
     .staff-panel-modal h3 { font-size: 1.15em; margin-bottom: 15px; }
     .message pre code { font-size: 0.82em !important; }
     .message-meta { font-size: 0.6em; gap: 3px; }
     .tts-button { font-size: 1em; }
     .message-wrapper-bot .message-meta, .message-wrapper-user .message-meta { margin-left: 8px; margin-right: 8px; }
-    .intro-notice-modal { padding: 15px 20px; padding-bottom: 65px; }
-    .intro-section { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .intro-section-toggle { align-self: flex-end; margin-top: 5px; }
+    /* .intro-notice-modal { padding: 15px 20px; padding-bottom: 65px; } */ /* Original intro modal */
+    /* .intro-section { flex-direction: column; align-items: flex-start; gap: 8px; } */
+    /* .intro-section-toggle { align-self: flex-end; margin-top: 5px; } */
     .action-menu-popup { bottom: calc(100% + 5px); left: -5px; }
+
+    /* Welcome Page Responsive */
+    .welcome-title { font-size: 2em; }
+    .welcome-subtitle { font-size: 1em; margin-bottom: 15px; }
+    .welcome-instructions { font-size: 0.9em; margin-bottom: 20px; }
+    .welcome-main-button { width: 100px; height: 100px; font-size: 2em; border-width: 2px; }
+    .welcome-bottom-text { font-size: 0.8em; }
+    .welcome-logo-container { bottom: 10px; left: 10px; }
+    .welcome-logo-text { font-size: 1em; }
+    .welcome-logo-subtext { font-size: 0.6em; }
 }

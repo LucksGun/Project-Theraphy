@@ -1,4 +1,4 @@
-// src/App.tsx - FINAL Version with REVERTED Model Selection (No Game)
+/* src/App.tsx - FINAL Version with Combined Welcome Page */
 
 import React, { useState, useEffect, ChangeEvent, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
@@ -8,7 +8,6 @@ import ChatbotPage from './ChatbotPage';
 import AdminPage from './AdminPage';
 import ConfirmClearCupGame from './ConfirmClearCupGame';
 import PersonaPlinkoGame from './PersonaPlinkoGame';
-// import ModelBuilderGame from './ModelBuilderGame'; // <<< REMOVE Import
 import InterviewMode from './InterviewMode';
 import PresentationPage from './PresentationPage';
 import InvoiceManagerPage from './InvoiceManagerPage';
@@ -29,7 +28,7 @@ export type PersonaInstructionMap = { [key in Persona]?: string };
 export type AppTheme = 'light' | 'dark';
 
 // --- localStorage Keys ---
-const CHAT_STORAGE_KEY = 'chatMessages'; const BETA_ACCEPTED_KEY = 'betaAccepted'; const MODEL_STORAGE_KEY = 'selectedApiModel'; const STT_LANG_STORAGE_KEY = 'selectedSttLang'; const ACCESS_KEY_STORAGE_KEY = 'userAccessKey'; const PERSONA_STORAGE_KEY = 'selectedPersona'; const THEME_STORAGE_KEY = 'selectedAppTheme'; const INTRODUCTION_SEEN_KEY = 'introductionSeenV1';
+const CHAT_STORAGE_KEY = 'chatMessages'; const MODEL_STORAGE_KEY = 'selectedApiModel'; const STT_LANG_STORAGE_KEY = 'selectedSttLang'; const ACCESS_KEY_STORAGE_KEY = 'userAccessKey'; const PERSONA_STORAGE_KEY = 'selectedPersona'; const THEME_STORAGE_KEY = 'selectedAppTheme'; const WELCOME_SEEN_KEY = 'welcomePageSeenV1'; // New key for combined welcome page
 
 // --- Configurations ---
 export interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
@@ -60,26 +59,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => { const 
 // --- Helper function to get initial theme ---
 const getInitialTheme = (): AppTheme => { if (typeof window !== 'undefined') { const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as AppTheme | null; if (storedTheme && (storedTheme === 'light' || storedTheme === 'dark')) { return storedTheme; } if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) { return 'dark'; } } return 'light'; };
 
-// --- Define Introduction Sections ---
-const introductionSections = [
- { key: 'textInput', title: 'การส่งข้อความ', text: 'พิมพ์คำถามหรือสิ่งที่คุณต้องการบอก ในช่องด้านล่างที่เขียนว่า "Type your message..."\nกดส่ง: กดปุ่มลูกศรชี้ขวา (➤) เพื่อส่งข้อความของคุณ' },
- { key: 'imageInput', title: 'การส่งรูปภาพ', text: 'คุณสามารถส่งรูปภาพได้ 3 วิธี:\n\n•\u00A0\u00A0\u00A0\u00A0**อัปโหลดรูป (📎):** กดปุ่มเครื่องหมายบวก (+) > เลือก "Upload Image" > เลือกรูป > พิมพ์ข้อความ (ไม่บังคับ) > กดส่ง (➤)\n•\u00A0\u00A0\u00A0\u00A0**ถ่ายรูปจากกล้อง (📷):** กดปุ่ม (+) > เลือก "Use Camera" > (อาจต้องอนุญาต) > กด "Capture Photo" (📸) > กดส่ง (➤)\n•\u00A0\u00A0\u00A0\u00A0**จับภาพหน้าจอ (🖥️):** กดปุ่ม (+) > เลือก "Capture Screen" > เลือกจอ > กด "Share" > กด "Capture Frame" (🖼️) > กดส่ง (➤)' },
- { key: 'voiceInput', title: 'การใช้เสียงพูดแทนการพิมพ์', text: 'กดปุ่มไมค์ (🎤) > เริ่มพูด (อาจต้องอนุญาต) > ระบบอาจหยุดเองเมื่อพูดจบ หรือกดหยุด (🛑) > ตรวจสอบข้อความ > กดส่ง (➤)' },
- { key: 'ttsOutput', title: 'การฟังคำตอบของบอท', text: 'หากต้องการฟังเสียงอ่าน ให้มองหาปุ่มรูปลำโพง (🔊) ข้างข้อความบอทแล้วกด หากต้องการหยุด ให้กดปุ่มเดิมอีกครั้ง (อาจเปลี่ยนเป็น ⏹️)' },
- { key: 'uniForm', title: 'ฟอร์มแนะนำมหาวิทยาลัย', text: 'หากต้องการคำแนะนำเรื่องเรียนต่อ ให้กดปุ่มบวก (+) > เลือก "University Form" (📝) > กรอกข้อมูลในฟอร์ม > กด "Submit for Advice" เพื่อให้ AI วิเคราะห์' },
- { key: 'suggestions', title: 'การใช้ข้อเสนอแนะ (Suggestions)', text: 'บางครั้ง บอทอาจแสดงปุ่มข้อแนะนำต่อท้ายคำตอบ คุณสามารถกดปุ่มนั้นเพื่อถามต่อได้ทันที' }
-];
-const initialAcknowledgementState = introductionSections.reduce((acc, section) => { acc[section.key] = false; return acc; }, {} as { [key: string]: boolean });
-
-
 // --- App Component ---
 function App() {
     // --- State ---
     const [messages, setMessages] = useState<Message[]>(() => { const stored = localStorage.getItem(CHAT_STORAGE_KEY); let initial: Message[] = []; try { initial = stored && stored !== '[]' ? JSON.parse(stored) : []; if (!Array.isArray(initial)) throw new Error("Bad format"); initial = initial.filter(m => m.sender !== 'loading'); } catch (e) { console.error("Bad stored msgs:", e); localStorage.removeItem(CHAT_STORAGE_KEY); initial = []; } if (initial.length === 0) { const ts = Date.now(); return [{ id: ts, text: "Welcome!", sender: 'bot', timestamp: ts }]; } else { return initial; } });
-    const [showBetaNotice, setShowBetaNotice] = useState<boolean>(false);
-    const [showIntroduction, setShowIntroduction] = useState<boolean>(false);
-    const [introSectionsAcknowledged, setIntroSectionsAcknowledged] = useState<{ [key: string]: boolean }>(initialAcknowledgementState);
-    const [continueButtonStyle, setContinueButtonStyle] = useState<React.CSSProperties>({});
+    const [showWelcomePage, setShowWelcomePage] = useState<boolean>(false); // New state for combined welcome page
     const [enteredKey, setEnteredKey] = useState<string>(() => localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '');
     const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.5-flash-preview-04-17'); // Default to unrestricted
     const [sttLang, setSttLang] = useState<SpeechLanguage>(() => { const stored = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null; if (stored && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(stored)) { return stored; } return 'en-US'; });
@@ -109,12 +93,10 @@ function App() {
     const [currentTheme, setCurrentTheme] = useState<AppTheme>(getInitialTheme);
     const [isPersonaPlinkoVisible, setIsPersonaPlinkoVisible] = useState<boolean>(false);
     const [isClearCupGameVisible, setIsClearCupGameVisible] = useState(false);
-    // const [isModelBuilderVisible, setIsModelBuilderVisible] = useState(false); // <<< REMOVE State
 
     const navigate = useNavigate();
 
     // --- Calculate derived state ---
-    const allIntroSectionsAcknowledged = Object.values(introSectionsAcknowledged).every(status => status === true);
     const availablePersonasForGame = AVAILABLE_PERSONAS.filter(p => !p.restricted || keyStatus.isValid === true);
     const canChangePersona = keyStatus.isValid === true && availablePersonasForGame.length >= 1;
     const canAccessAdvanced = keyStatus.isValid === true;
@@ -164,9 +146,10 @@ function App() {
 
     // Initial Load Effect
     useEffect(() => {
-        const accepted = localStorage.getItem(BETA_ACCEPTED_KEY);
-        if (accepted !== 'true') { setShowBetaNotice(true); }
-        else { const introSeen = localStorage.getItem(INTRODUCTION_SEEN_KEY); if (introSeen !== 'true') { setShowIntroduction(true); setIntroSectionsAcknowledged(initialAcknowledgementState); } }
+        const welcomeSeen = localStorage.getItem(WELCOME_SEEN_KEY);
+        if (welcomeSeen !== 'true') {
+            setShowWelcomePage(true);
+        }
 
         const initialKey = localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '';
         const storedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null;
@@ -217,8 +200,6 @@ function App() {
     useEffect(() => { localStorage.setItem(THEME_STORAGE_KEY, currentTheme); document.documentElement.setAttribute('data-theme', currentTheme); }, [currentTheme]);
     // Feedback Success Timeout
     useEffect(() => { let timer: NodeJS.Timeout | null = null; if (feedbackSuccess) { timer = setTimeout(() => setFeedbackSuccess(null), 3000); } return () => { if (timer) clearTimeout(timer); }; }, [feedbackSuccess]);
-    // Intro Button Style Effect
-    useEffect(() => { if (showIntroduction && allIntroSectionsAcknowledged) { setContinueButtonStyle({}); } }, [allIntroSectionsAcknowledged, showIntroduction]);
 
     // --- Event Handlers ---
 
@@ -229,15 +210,16 @@ function App() {
         setIsStaffLoginModalVisible(false);
         setIsFeedbackModalVisible(false);
         setIsClearCupGameVisible(false);
-        // setIsModelBuilderVisible(false); // <<< REMOVE
         setIsPersonaPlinkoVisible(false);
         setIsInterviewModeOpen(false);
     };
 
-    const handleAcceptBeta = () => { localStorage.setItem(BETA_ACCEPTED_KEY, 'true'); setShowBetaNotice(false); const introSeen = localStorage.getItem(INTRODUCTION_SEEN_KEY); if (introSeen !== 'true') { setShowIntroduction(true); setIntroSectionsAcknowledged(initialAcknowledgementState); } };
-    const handleSectionToggle = (sectionKey: string) => { setIntroSectionsAcknowledged(prev => ({ ...prev, [sectionKey]: !prev[sectionKey] })); };
-    const handleAcceptIntroduction = () => { if (!allIntroSectionsAcknowledged) return; localStorage.setItem(INTRODUCTION_SEEN_KEY, 'true'); setShowIntroduction(false); };
-    const handleMoveButton = () => { const vw = window.innerWidth; const vh = window.innerHeight; const buttonWidth = 180; const buttonHeight = 45; const randomTop = Math.random() * (vh - buttonHeight); const randomLeft = Math.random() * (vw - buttonWidth); setContinueButtonStyle({ position: 'fixed', top: `${randomTop}px`, left: `${randomLeft}px`, zIndex: 1070 }); };
+    // Handle acceptance of the new combined welcome page
+    const handleAcceptWelcome = () => {
+        localStorage.setItem(WELCOME_SEEN_KEY, 'true');
+        setShowWelcomePage(false);
+    };
+
     const handleSttLangChange=(e:ChangeEvent<HTMLSelectElement>)=>{setSttLang(e.target.value as SpeechLanguage);};
 
     // Settings Toggle
@@ -313,61 +295,38 @@ function App() {
         setIsSettingsOpen(false);
         setIsClearCupGameVisible(true);
     }
-    // const openModelBuilder = () => { // <<< REMOVE this function
-    //    if (!canAccessAdvanced) return;
-    //    setIsAdvancedSettingsOpen(false);
-    //    setIsModelBuilderVisible(true);
-    // }
 
     // Handler for Persona selected from Plinko game
     const handlePersonaSelectedFromPlinko = (persona: Persona) => { setSelectedPersona(persona); setIsPersonaPlinkoVisible(false); };
-    // Handler for Model selected from Builder game
-    // const handleModelSelectedFromBuilder = (model: GeminiModel) => { setSelectedModel(model); setIsModelBuilderVisible(false); }; // <<< REMOVE this handler
 
 
     // --- JSX ---
     return (
         <div className="App">
-            {/* Beta Notice Modal */}
-            {showBetaNotice && (
-                <div className="beta-notice-overlay">
-                    <div className="beta-notice-modal">
-                        <h2>⚠️ Beta Notice</h2>
-                        <p>Welcome! This is a beta test version. Features may change or contain bugs.</p>
-                        <p>Your feedback is valuable!</p>
-                        <button onClick={handleAcceptBeta} className="beta-accept-button">✔️ Accept & Continue</button>
-                    </div>
-                </div>
-            )}
-
-            {/* Introduction Modal */}
-            {showIntroduction && !showBetaNotice && (
-                <div className="intro-notice-overlay">
-                    <div className="intro-notice-modal" style={{ position: 'relative' }}>
-                        <h2>วิธีใช้งาน Project Theraphy</h2>
-                        {introductionSections.map(section => (
-                            <div className="intro-section" key={section.key}>
-                                <div className="intro-section-content">
-                                    <h4>{section.title}</h4>
-                                    <p style={{ whiteSpace: 'pre-wrap' }}>{section.text}</p>
-                                </div>
-                                <div className="intro-section-toggle">
-                                    <label className="switch" title={`ยืนยันว่าอ่านหัวข้อ ${section.title}`}>
-                                        <input type="checkbox" checked={introSectionsAcknowledged[section.key]} onChange={() => handleSectionToggle(section.key)} />
-                                        <span className="slider round"></span>
-                                    </label>
-                                </div>
-                            </div>
-                        ))}
-                        <div className="intro-button-container">
-                            <button
-                                style={continueButtonStyle}
-                                onClick={allIntroSectionsAcknowledged ? handleAcceptIntroduction : handleMoveButton}
-                                className={`intro-accept-button ${!allIntroSectionsAcknowledged ? 'button-runaway' : ''}`}
-                                title={!allIntroSectionsAcknowledged ? "โปรดยืนยันทุกหัวข้อก่อน!" : "เริ่มแชท"}
-                            >
-                                {allIntroSectionsAcknowledged ? "เริ่มแชท" : "ยืนยันให้ครบก่อน"}
+            {/* New Combined Welcome Page */}
+            {showWelcomePage && (
+                <div className="welcome-overlay">
+                    <div className="welcome-modal">
+                        <h1 className="welcome-title">Project Theraphy</h1>
+                        <p className="welcome-subtitle">
+                            Hi and welcome to Project Theraphy, <br />
+                            a challenging exploration of user interactions and design patterns
+                        </p>
+                        <p className="welcome-instructions">
+                            To get started, simply click the button below:
+                        </p>
+                        <div className="welcome-button-container">
+                            <button onClick={handleAcceptWelcome} className="welcome-main-button">
+                                HERE
                             </button>
+                        </div>
+                        <p className="welcome-bottom-text">
+                            Please click <span className="welcome-bottom-link" onClick={handleAcceptWelcome}>HERE</span> to Go to the next page
+                        </p>
+                        <div className="welcome-logo-container">
+                            {/* You can replace this with an actual logo if needed */}
+                            <span className="welcome-logo-text">VERHAERT</span>
+                            <span className="welcome-logo-subtext">DIGITAL INNOVATION</span>
                         </div>
                     </div>
                 </div>
@@ -575,15 +534,13 @@ function App() {
                 </div>
             )}
 
-            {/* --- Render Correct Game Modals (excluding ModelBuilderGame) --- */}
+            {/* --- Render Correct Game Modals --- */}
             {isPersonaPlinkoVisible && ( <PersonaPlinkoGame isOpen={isPersonaPlinkoVisible} onClose={() => setIsPersonaPlinkoVisible(false)} onPersonaSelected={handlePersonaSelectedFromPlinko} keyStatus={keyStatus} allPersonas={AVAILABLE_PERSONAS} /> )}
             {isClearCupGameVisible && ( <ConfirmClearCupGame isOpen={isClearCupGameVisible} onClose={() => setIsClearCupGameVisible(false)} onConfirm={executeClearChat} /> )}
-            {/* {isModelBuilderVisible && ( <ModelBuilderGame isOpen={isModelBuilderVisible} onClose={() => setIsModelBuilderVisible(false)} onModelSelected={handleModelSelectedFromBuilder} keyStatus={keyStatus} allModelsInfo={ALL_AVAILABLE_MODELS_FRONTEND} restrictedModels={RESTRICTED_MODELS_VALUES} /> )} */}
-            {/* <<< REMOVE ModelBuilderGame Rendering >>> */}
 
 
             {/* Main Routing and Layout */}
-            {!showBetaNotice && !showIntroduction && (
+            {!showWelcomePage && ( // Only render main app if welcome page is not visible
                 <Routes>
                     <Route path="/" element={
                         <>
@@ -620,7 +577,7 @@ function App() {
                 </Routes>
                )}
 
-        </div> // End div.App
+        </div> 
     );
 }
 
