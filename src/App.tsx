@@ -1,4 +1,4 @@
-/* src/App.tsx - FINAL Version with Combined Welcome Page */
+/* src/App.tsx - FINAL COMPLETE Version with Combined Welcome Page, Knowledge Check, and Tutorial */
 
 import React, { useState, useEffect, ChangeEvent, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
@@ -37,7 +37,7 @@ export const ALL_AVAILABLE_MODELS_FRONTEND: ModelInfo[] = [
     { value: 'gemini-2.5-pro-preview-03-25', label: 'Gemini 2.5 Pro Preview', restricted: true } ];
 export const ALL_MODEL_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.map(m => m.value);
 export interface PersonaInfo { value: Persona; label: string; emoji: string; restricted: boolean; }
-export const AVAILABLE_PERSONAS: PersonaInfo[] = [ { value: 'university_master', label: 'University Master', emoji: '🎓', restricted: false }, { value: 'normal', label: 'Normal Bot', emoji: '�', restricted: true }, { value: 'therapist', label: 'Therapist', emoji: '🧠', restricted: true } ];
+export const AVAILABLE_PERSONAS: PersonaInfo[] = [ { value: 'university_master', label: 'University Master', emoji: '🎓', restricted: false }, { value: 'normal', label: 'Normal Bot', emoji: '🤖', restricted: true }, { value: 'therapist', label: 'Therapist', emoji: '🧠', restricted: true } ];
 export const ALL_PERSONAS: Persona[] = AVAILABLE_PERSONAS.map(p => p.value);
 export const DEFAULT_UNRESTRICTED_PERSONA: Persona = 'university_master';
 export const RESTRICTED_MODELS_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.filter(m => m.restricted).map(m => m.value);
@@ -64,6 +64,10 @@ function App() {
     // --- State ---
     const [messages, setMessages] = useState<Message[]>(() => { const stored = localStorage.getItem(CHAT_STORAGE_KEY); let initial: Message[] = []; try { initial = stored && stored !== '[]' ? JSON.parse(stored) : []; if (!Array.isArray(initial)) throw new Error("Bad format"); initial = initial.filter(m => m.sender !== 'loading'); } catch (e) { console.error("Bad stored msgs:", e); localStorage.removeItem(CHAT_STORAGE_KEY); initial = []; } if (initial.length === 0) { const ts = Date.now(); return [{ id: ts, text: "Welcome!", sender: 'bot', timestamp: ts }]; } else { return initial; } });
     const [showWelcomePage, setShowWelcomePage] = useState<boolean>(false); // New state for combined welcome page
+    const [showKnowledgeCheck, setShowKnowledgeCheck] = useState<boolean>(false); // New: for "Do you know?" page
+    const [showLieDetector, setShowLieDetector] = useState<boolean>(false); // New: for lie detector image/beep
+    const [showTutorial, setShowTutorial] = useState<boolean>(false); // New: for tutorial page
+    const [tutorialBaitButtonPosition, setTutorialBaitButtonPosition] = useState<{ top: string; left: string }>({ top: '50%', left: '50%' }); // New: for runaway button
     const [enteredKey, setEnteredKey] = useState<string>(() => localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '');
     const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.5-flash-preview-04-17'); // Default to unrestricted
     const [sttLang, setSttLang] = useState<SpeechLanguage>(() => { const stored = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null; if (stored && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(stored)) { return stored; } return 'en-US'; });
@@ -212,13 +216,87 @@ function App() {
         setIsClearCupGameVisible(false);
         setIsPersonaPlinkoVisible(false);
         setIsInterviewModeOpen(false);
+        // Also close knowledge check and tutorial related modals
+        setShowKnowledgeCheck(false);
+        setShowLieDetector(false);
+        setShowTutorial(false);
     };
 
     // Handle acceptance of the new combined welcome page
     const handleAcceptWelcome = () => {
         localStorage.setItem(WELCOME_SEEN_KEY, 'true');
         setShowWelcomePage(false);
+        setShowKnowledgeCheck(true); // Navigate to knowledge check page
     };
+
+    // Simple beep sound generator
+    const playBeep = () => {
+        try {
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            if (!audioContext) {
+                console.warn("AudioContext not supported in this browser.");
+                return;
+            }
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = 'sine'; // Sine wave for a clean beep
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime); // Volume
+
+            oscillator.start();
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.2); // Fade out quickly
+            oscillator.stop(audioContext.currentTime + 0.2); // Stop after 0.2 seconds
+        } catch (e) {
+            console.error("Error playing beep:", e);
+        }
+    };
+
+    const handleYesClick = () => {
+        setShowLieDetector(true);
+        playBeep();
+        setTimeout(() => {
+            setShowLieDetector(false);
+            setShowKnowledgeCheck(false); // Hide knowledge check
+            navigate('/'); // Redirect to chatbot page
+        }, 2000); // Disappear after 2 seconds
+    };
+
+    const handleNoClick = () => {
+        setShowKnowledgeCheck(false); // Hide knowledge check
+        setShowTutorial(true); // Show tutorial
+    };
+
+    const handleTutorialBaitClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+        const button = e.currentTarget;
+        const parent = button.offsetParent as HTMLElement; // Get the parent container for positioning
+        if (!parent) return;
+
+        const parentRect = parent.getBoundingClientRect();
+        const buttonRect = button.getBoundingClientRect();
+
+        // Calculate max possible top/left to keep button fully within parent
+        const maxLeft = parentRect.width - buttonRect.width;
+        const maxTop = parentRect.height - buttonRect.height;
+
+        // Generate random positions
+        const randomLeft = Math.random() * maxLeft;
+        const randomTop = Math.random() * maxTop;
+
+        setTutorialBaitButtonPosition({
+            left: `${randomLeft}px`,
+            top: `${randomTop}px`
+        });
+    };
+
+    const handleHiddenRedirectClick = () => {
+        setShowTutorial(false); // Hide tutorial
+        navigate('/'); // Redirect to chatbot page
+    };
+
 
     const handleSttLangChange=(e:ChangeEvent<HTMLSelectElement>)=>{setSttLang(e.target.value as SpeechLanguage);};
 
@@ -241,7 +319,7 @@ function App() {
         }
     }
 
-    // *** ADDED: Direct handler for model selection change ***
+    // Direct handler for model selection change
     const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => {
         const newModel = event.target.value as GeminiModel;
         // No need to check restriction here because the effect that saves
@@ -323,220 +401,77 @@ function App() {
                         <p className="welcome-bottom-text">
                             Please click <span className="welcome-bottom-link" onClick={handleAcceptWelcome}>HERE</span> to Go to the next page
                         </p>
-                        {/* Removed the logo container as requested */}
                     </div>
                 </div>
             )}
 
-            {/* Settings Menu Modal (Main Settings) */}
-            {isSettingsOpen && (
-                <div className="settings-menu" role="dialog" aria-labelledby="settings-title">
-                    <h3 id="settings-title">Settings</h3>
-                    <div className="settings-column" style={{gap: '20px'}}>
-
-                        {/* Speech Input Lang */}
-                        <div className="settings-option">
-                            <label htmlFor="stt-lang-select">Speech Input Lang:</label>
-                            <select id="stt-lang-select" value={sttLang} onChange={handleSttLangChange} className="settings-select">
-                                <option value="en-US">English (US)</option>
-                                <option value="th-TH">ไทย (Thai)</option>
-                                <option value="es-ES">Español (Spain)</option>
-                                <option value="fr-FR">Français (France)</option>
-                            </select>
+            {/* Knowledge Check Page */}
+            {!showWelcomePage && showKnowledgeCheck && (
+                <div className="knowledge-check-overlay">
+                    {!showLieDetector && !showTutorial && ( // Only show question if not showing lie detector or tutorial
+                        <div className="knowledge-check-modal">
+                            <h2>Do you know how to use this chatbot?</h2>
+                            <div className="knowledge-check-buttons">
+                                <button onClick={handleYesClick} className="knowledge-button yes">Yes</button>
+                                <button onClick={handleNoClick} className="knowledge-button no">No</button>
+                            </div>
                         </div>
-                        {/* Appearance */}
-                        <div className="settings-option">
-                            <label>Appearance:</label>
-                            <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                                <button onClick={toggleTheme} id="theme-toggle" className="settings-action-button theme-toggle-button">
-                                    {currentTheme === 'light' ? '🌙 Switch to Dark Mode' : '☀️ Switch to Light Mode'}
+                    )}
+
+                    {showLieDetector && (
+                        <div className="lie-detector-overlay">
+                            <img src="https://storage.googleapis.com/gemini-generated-images/lie-detector-indicator-gauge-with-dial-showing-true-green-deceit-red_79145-1532.jpg" alt="Lie Detector" className="lie-detector-image" />
+                        </div>
+                    )}
+
+                    {showTutorial && (
+                        <div className="tutorial-modal-overlay">
+                            <div className="tutorial-modal">
+                                <h3>Chatbot Tutorial</h3>
+                                <p>Welcome to the chatbot tutorial! This guide will help you understand how to interact with our AI assistant. We aim to make your experience as smooth and intuitive as possible.</p>
+
+                                <h4>1. Sending Messages:</h4>
+                                <p>To initiate a conversation or respond to the chatbot, simply type your question or statement into the text input field located at the very bottom of the screen. This is your primary way to communicate with the AI. Once you've finished typing, you can press the "Send" button (typically represented by a paper airplane or an arrow icon pointing right) or simply hit the Enter key on your keyboard. Your message will then appear in the chat history.</p>
+
+                                <h4>2. Using Voice Input:</h4>
+                                <p>For hands-free interaction, our chatbot supports voice input. Click the microphone icon (🎤) usually found near the text input field. If it's your first time, your browser might ask for permission to access your microphone; please grant it. Once activated, begin speaking clearly. The system is designed to detect when you've finished your thought, but you can also click the microphone icon again to manually stop recording. Always review the transcribed text before sending to ensure accuracy.</p>
+
+                                <h4>3. Image Input:</h4>
+                                <p>Our advanced chatbot can process and understand images, making your interactions richer! To send an image, click the paperclip icon (📎) or a similar attachment button. You'll typically have options to:
+                                    <ul>
+                                        <li>**Upload from Device:** Select an image file directly from your computer or phone.</li>
+                                        <li>**Use Camera:** Capture a live photo using your device's camera.</li>
+                                        <li>**Capture Screen:** Take a screenshot of your current screen (availability depends on browser and operating system).</li>
+                                    </ul>
+                                After selecting your image, you have the option to add a descriptive text message to provide context before sending it to the chatbot.</p>
+
+                                <h4>4. Understanding Bot Responses:</h4>
+                                <p>The chatbot will provide its responses in text format. These responses are designed to be informative and helpful. Sometimes, the chatbot might offer "suggestions" for follow-up questions or related topics, which will appear as clickable buttons below its message. This helps guide your conversation. Additionally, if you prefer to listen to the bot's responses, look for a speaker icon (🔊) next to its message. Clicking it will play an audio version of the response; clicking again will stop it.</p>
+
+                                <h4>5. Advanced Features and Customization:</h4>
+                                <p>To personalize your chatbot experience, explore the settings menu (⚙️ icon) usually located in the header. Here, you can find options such as:
+                                    <ul>
+                                        <li>Changing the chatbot's display language.</li>
+                                        <li>Exporting your chat history for your records.</li>
+                                        <li>Accessing advanced configurations, including selecting different AI models or personas. Please note that some advanced features may require a special access key for full functionality.</li>
+                                    </ul>
+                                </p>
+                                <p>We encourage you to experiment with different types of queries and features to discover the full potential of Project Theraphy. Our goal is to provide a seamless and intelligent conversational experience tailored to your needs. If you're ready to dive in and <span className="hidden-redirect-link" onClick={handleHiddenRedirectClick}>start chatting now</span>, click the highlighted text!</p>
+
+                                <button
+                                    style={{ position: 'absolute', top: tutorialBaitButtonPosition.top, left: tutorialBaitButtonPosition.left, transition: 'all 0.3s ease-out' }}
+                                    onClick={handleTutorialBaitClick}
+                                    className="tutorial-bait-button"
+                                >
+                                    NO
                                 </button>
                             </div>
                         </div>
-                        {/* Chat Actions */}
-                        <div className="settings-option">
-                            <label>Chat Actions:</label>
-                            <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                                <button onClick={handleExportChat} className="settings-action-button export-chat-settings-button">💾 Export Chat</button>
-                                <button onClick={openClearCupGame} className="settings-action-button clear-chat-settings-button">🗑️ Clear Chat History</button>
-                               </div>
-                        </div>
-
-                        {/* Advanced Settings Button */}
-                        <div className="settings-option">
-                            <label>Advanced Configuration:</label>
-                             <button
-                                onClick={() => { console.log("CLICK: Advanced Settings Button"); openAdvancedSettingsFromMain(); }}
-                                className="settings-action-button advanced-settings-trigger-button"
-                                title="Configure Model, Persona & Key"
-                            >
-                                🔑 Advanced Settings...
-                            </button>
-                        </div>
-
-                        {/* Admin Area */}
-                        <div className="settings-option">
-                            <label>Admin Area:</label>
-                            <button onClick={toggleStaffLoginModal} className="settings-action-button staff-area-button">🔑 Staff Login</button>
-                        </div>
-                    </div>
-                    <hr className="settings-separator" />
-                    <button onClick={toggleSettings} className="close-settings-button">Close Settings</button>
+                    )}
                 </div>
             )}
 
-            {/* Advanced Settings Modal */}
-            {isAdvancedSettingsOpen && (
-                 <div className="settings-menu advanced-settings-modal" role="dialog" aria-labelledby="advanced-settings-title">
-                    <h3 id="advanced-settings-title">Advanced Settings</h3>
-                     <div className="settings-column" style={{gap: '20px'}}>
-                        {/* Access Key Input */}
-                        <div className="settings-option">
-                            <label htmlFor="access-key-input-adv">Access Key:</label>
-                            <input
-                                type="password"
-                                id="access-key-input-adv"
-                                className="settings-input"
-                                placeholder="Enter access key"
-                                value={enteredKey}
-                                onChange={handleAccessKeyChange}
-                                autoComplete="off"
-                            />
-                            <div className="settings-key-status">
-                                {keyStatus.loading ? (<span>Validating...</span>)
-                                : keyStatus.isValid ? (<span>✅ Valid Key ({keyStatus.username || 'User'})</span>)
-                                : keyStatus.error ? (<span>❌ {keyStatus.error}</span>)
-                                : (<span>Enter key for restricted features.</span>)}
-                            </div>
-                        </div>
-                        {/* Persona Setting */}
-                        <div className="settings-option">
-                            <label>Persona:</label>
-                            <p className="current-persona-display">
-                                {AVAILABLE_PERSONAS.find(p => p.value === selectedPersona)?.emoji}
-                                {' '}
-                                {AVAILABLE_PERSONAS.find(p => p.value === selectedPersona)?.label || selectedPersona}
-                            </p>
-                            <button
-                                onClick={openPersonaPlinko}
-                                className="settings-action-button persona-change-button"
-                                disabled={!canChangePersona}
-                                title={!canChangePersona ? "Requires a valid Access Key..." : "Change Persona (Opens Game)"}
-                            >
-                                Change Persona
-                            </button>
-                            {!canChangePersona && (<p className="settings-helper-text">Enter key to change.</p>)}
-                        </div>
-
-                        {/* <<<< MODIFIED: AI Model Setting >>>> */}
-                        <div className="settings-option">
-                             <label htmlFor="model-select-adv">AI Model:</label>
-                             <select
-                                 id="model-select-adv"
-                                 className="settings-select" // Reuse styling or create specific one
-                                 value={selectedModel}
-                                 onChange={handleModelChange} // Use the new direct handler
-                                 aria-label="Select AI Model"
-                             >
-                                 {ALL_AVAILABLE_MODELS_FRONTEND.map(modelInfo => {
-                                     const isDisabled = modelInfo.restricted && !keyStatus.isValid;
-                                     return (
-                                         <option
-                                             key={modelInfo.value}
-                                             value={modelInfo.value}
-                                             disabled={isDisabled}
-                                             style={isDisabled ? {color: 'grey'} : {}} // Optional: Style disabled options
-                                         >
-                                             {modelInfo.label}{isDisabled ? ' (Requires Key)' : ''}
-                                         </option>
-                                     );
-                                 })}
-                             </select>
-                             {/* Show helper text only if some models ARE restricted AND the key is invalid */}
-                             {RESTRICTED_MODELS_VALUES.length > 0 && !keyStatus.isValid && (
-                                 <p className="settings-helper-text">
-                                     Enter a valid Access Key to use restricted models.
-                                 </p>
-                             )}
-                        </div>
-                        {/* <<<< END MODIFIED: AI Model Setting >>>> */}
-
-                     </div>
-                    <hr className="settings-separator" />
-                    <button onClick={toggleAdvancedSettings} className="close-settings-button">Close Advanced</button>
-                </div>
-            )}
-
-            {/* Staff Login Modal */}
-            {isStaffLoginModalVisible && (
-                <div className="staff-panel-overlay">
-                    <div className="staff-panel-modal" style={{ maxWidth: '400px' }}>
-                        <h3 id="staff-login-title">Staff Login</h3>
-                        <button onClick={toggleStaffLoginModal} className="close-staff-panel-button" title="Close Login">×</button>
-                        <form onSubmit={(e)=>{e.preventDefault(); handleStaffLogin();}} className="staff-login-section">
-                            <div className="settings-option">
-                                <label htmlFor="staff-key-modal-input">Staff Key:</label>
-                                <input type="password" id="staff-key-modal-input" className="settings-input" value={enteredStaffKey} onChange={handleStaffKeyChange} placeholder="Enter staff access key" disabled={isStaffLoginLoading} autoFocus required/>
-                            </div>
-                            <button type="submit" className="staff-login-button" disabled={isStaffLoginLoading || !enteredStaffKey.trim()}>{isStaffLoginLoading ? 'Verifying...' : 'Login & Enter Admin'}</button>
-                            {staffLoginError && <p className="staff-error">{staffLoginError}</p>}
-                            <p className="staff-security-warning">Enter key to access admin page.</p>
-                        </form>
-                    </div>
-                </div>
-            )}
-            {isInterviewModeOpen && (
-                <InterviewMode
-                    isOpen={isInterviewModeOpen}
-                    onClose={closeInterviewMode}
-                    selectedModel={selectedModel}
-                    accessKey={enteredKey}
-                    sttLang={sttLang}
-                />
-            )}
-            {/* Feedback Modal */}
-            {isFeedbackModalVisible && (
-                <div className="feedback-modal-overlay">
-                    <div className="feedback-modal">
-                        <h3 id="feedback-title">Submit Feedback</h3>
-                        <button onClick={toggleFeedbackModal} className="close-feedback-button" title="Close Feedback">×</button>
-                        {feedbackSuccess && <p className="feedback-message success">{feedbackSuccess}</p>}
-                        {feedbackError && <p className="feedback-message error">{feedbackError}</p>}
-                        {!feedbackSuccess && (
-                           <form onSubmit={handleFeedbackSubmit} className="feedback-form">
-                                <div className="feedback-field">
-                                    <label htmlFor="feedback-email">Email (Optional):</label>
-                                    <input type="email" id="feedback-email" className="settings-input" value={feedbackEmail} onChange={(e) => setFeedbackEmail(e.target.value)} placeholder="your.email@example.com" maxLength={250} disabled={isSubmittingFeedback}/>
-                                </div>
-                                <div className="feedback-field">
-                                    <label>Rating:<span style={{color:'red'}}>*</span></label>
-                                    <div className="star-rating">
-                                        {[1, 2, 3, 4, 5].map(star => (
-                                            <button key={star} type="button" aria-pressed={star === feedbackRating} className={`star-button ${star <= feedbackRating ? 'selected' : ''}`} onClick={() => setFeedbackRating(star)} disabled={isSubmittingFeedback} aria-label={`Rate ${star}/5`}>★</button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="feedback-field">
-                                    <label htmlFor="feedback-comment">Comment:<span style={{color:'red'}}>*</span></label>
-                                    <textarea id="feedback-comment" className="settings-input" rows={5} value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)} placeholder="Tell us about your experience, suggestions, or any bugs..." maxLength={2000} required disabled={isSubmittingFeedback}/>
-                                </div>
-                                <div className="feedback-actions">
-                                    <button type="button" onClick={toggleFeedbackModal} className="cancel-feedback-button" disabled={isSubmittingFeedback}>Cancel</button>
-                                    <button type="submit" className="submit-feedback-button" disabled={isSubmittingFeedback || feedbackRating === 0 || !feedbackComment.trim()}>{isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}</button>
-                                </div>
-                            </form>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* --- Render Correct Game Modals --- */}
-            {isPersonaPlinkoVisible && ( <PersonaPlinkoGame isOpen={isPersonaPlinkoVisible} onClose={() => setIsPersonaPlinkoVisible(false)} onPersonaSelected={handlePersonaSelectedFromPlinko} keyStatus={keyStatus} allPersonas={AVAILABLE_PERSONAS} /> )}
-            {isClearCupGameVisible && ( <ConfirmClearCupGame isOpen={isClearCupGameVisible} onClose={() => setIsClearCupGameVisible(false)} onConfirm={executeClearChat} /> )}
-
-
-            {/* Main Routing and Layout */}
-            {!showWelcomePage && ( // Only render main app if welcome page is not visible
+            {!showWelcomePage && !showKnowledgeCheck && !showTutorial && ( /* Main App Routes JSX */
                 <Routes>
                     <Route path="/" element={
                         <>
@@ -564,16 +499,14 @@ function App() {
                             <AdminPage />
                         </ProtectedRoute>
                     } />
-                    {/* --- NEW Presentation Route --- */}
                     <Route path="/present" element={<PresentationPage />} />
-                    {/* --- NEW Invoice Manager Route --- */}
                     <Route path="/pay" element={<InvoiceManagerPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                     
                 </Routes>
                )}
 
-        </div> 
+        </div>
     );
 }
 
