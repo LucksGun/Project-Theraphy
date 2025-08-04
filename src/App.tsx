@@ -56,7 +56,7 @@ export interface PersonaInfo { value: Persona; label: string; emoji: string; res
 export const AVAILABLE_PERSONAS: PersonaInfo[] = [
     { value: 'university_master', label: 'University Master', emoji: '🎓', restricted: false },
     { value: 'normal', label: 'Normal Bot', emoji: '🤖', restricted: true },
-    { value: 'therapist', label: 'Therapist', emoji: '🧠', restricted: true }
+    { value: 'therapist', label: 'Therapist', emoji: '�', restricted: true }
 ];
 export const ALL_PERSONAS: Persona[] = AVAILABLE_PERSONAS.map(p => p.value);
 export const DEFAULT_UNRESTRICTED_PERSONA: Persona = 'university_master';
@@ -361,8 +361,6 @@ function App() {
         playBeep();
         setTimeout(() => {
             setShowLieDetector(false);
-            setShowKnowledgeCheck(false);
-            navigate('/');
         }, 2000);
     };
 
@@ -678,14 +676,14 @@ function App() {
                                  <li>Accessing advanced configurations, including selecting different AI models or personas. Please note that some advanced features may require a special access key for full functionality.</li>
                              </ul>
                          </p>
-                         <p>We encourage you to experiment with different types of queries and features to discover the full potential of Project Theraphy. Our goal is to provide a seamless and intelligent conversational experience tailored to your needs. If you're ready to dive in and <span className="hidden-redirect-link" onClick={handleHiddenRedirectClick}>start chatting now</span>, click the highlighted text!</p>
+                         <p>We encourage you to experiment with different types of queries and features to discover the full potential of Project Theraphy. Our goal is to provide a seamless and intelligent conversational experience tailored to your needs. If you're ready to dive in you can <span className="hidden-redirect-link" onClick={handleHiddenRedirectClick}>start chatting now</span>!</p>
 
                          <button
                              style={{ position: 'absolute', top: tutorialBaitButtonPosition.top, left: tutorialBaitButtonPosition.left, transition: 'all 0.3s ease-out' }}
                              onClick={handleTutorialBaitClick}
                              className="tutorial-bait-button"
                          >
-                             NO
+                             Enter
                          </button>
                      </div>
                  </div>
