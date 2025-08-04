@@ -29,8 +29,7 @@ if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_
 export interface Message { id: number; text: string; sender: 'user' | 'bot' | 'loading'; timestamp: number; imageUrl?: string; modelUsed?: string; }
 export type GeminiModel = 'gemini-2.5-flash-preview-04-17' | 'gemini-2.5-pro-preview-03-25';
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR';
-export type Persona = 'normal' | 'therapist' | 'university_master'
-
+export type Persona = 'normal' | 'therapist' | 'university_master';
 export interface KeyValidationStatus { isValid: boolean | null; username: string | null; loading: boolean; error?: string | null; }
 export interface UserKeyInfo { key: string; username: string | null; status: 'active' | 'inactive'; created_at: string; }
 export interface FeedbackItem { id: number; email: string | null; rating: number; comment: string; submitted_at: string; is_important: number; }
@@ -603,16 +602,20 @@ function App() {
         <div className="App">
             {/* Add styles for the fan and wind effect directly here */}
             <style>{`
+                .top-interactive-container {
+                    position: absolute;
+                    top: 15%;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 1001; 
+                    width: 90%;
+                    max-width: 500px;
+                }
                 .tutorial-interaction-area {
-                    margin: 20px auto;
-                    padding: 20px;
-                    border-radius: 8px;
-                    position: relative;
-                    height: 120px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    overflow: hidden;
+                    margin: 0;
+                    padding: 0;
+                    border: none;
+                    height: auto;
                 }
                 .fan-and-button-container {
                     display: flex;
@@ -620,7 +623,7 @@ function App() {
                     justify-content: center;
                     position: relative;
                     width: 100%;
-                    height: 100%;
+                    height: 100px;
                 }
                 .wind-effect {
                     position: absolute;
@@ -637,6 +640,7 @@ function App() {
                     );
                     opacity: 0;
                     transition: opacity 0.3s ease-in-out;
+                    z-index: 1;
                 }
                 .wind-effect.blowing {
                     opacity: 1;
@@ -760,6 +764,37 @@ function App() {
             
             {showTutorial && (
                  <div className="tutorial-modal-overlay">
+                    <div className="top-interactive-container">
+                        <div className="tutorial-interaction-area">
+                            <div className="fan-and-button-container">
+                                <div className={`wind-effect ${isFanOn ? 'blowing' : ''}`}></div>
+                                <div 
+                                    className="button-wind-zone"
+                                    onMouseMove={handleWindEffect}
+                                    onMouseLeave={() => setButtonTransform('translate(0,0)')}
+                                >
+                                    <button
+                                        className="tutorial-enter-button"
+                                        onClick={handleEnterChatbot}
+                                        style={{ transform: buttonTransform, transition: 'transform 0.1s ease-out' }}
+                                    >
+                                        Enter Chatbot Page
+                                    </button>
+                                </div>
+                                <div className={`interactive-fan ${isFanOn ? 'spinning' : ''}`}>
+                                        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="50" cy="50" r="45" fill="none" stroke="#666" strokeWidth="5" />
+                                        <g className="fan-blades" style={{ transformOrigin: '50% 50%' }}>
+                                            <rect x="45" y="10" width="10" height="40" rx="5" fill="#999" transform="rotate(0 50 50)" />
+                                            <rect x="45" y="10" width="10" height="40" rx="5" fill="#999" transform="rotate(120 50 50)" />
+                                            <rect x="45" y="10" width="10" height="40" rx="5" fill="#999" transform="rotate(240 50 50)" />
+                                        </g>
+                                        <circle cx="50" cy="50" r="8" fill="#666" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                      <div className="tutorial-modal">
                          <h3>Chatbot Tutorial</h3>
                          <p>Welcome to the chatbot tutorial! This guide will help you understand how to interact with our AI assistant. We aim to make your experience as smooth and intuitive as possible.</p>
@@ -778,36 +813,6 @@ function App() {
                                  <li>**Capture Screen:** Take a screenshot of your current screen (availability depends on browser and operating system).</li>
                              </ul>
                          After selecting your image, you have the option to add a descriptive text message to provide context before sending it to the chatbot.</p>
-                         
-                         <div className="tutorial-interaction-area">
-                            <div className="fan-and-button-container">
-                                <div className={`wind-effect ${isFanOn ? 'blowing' : ''}`}></div>
-                                <div 
-                                    className="button-wind-zone"
-                                    onMouseMove={handleWindEffect}
-                                    onMouseLeave={() => setButtonTransform('translate(0,0)')}
-                                >
-                                    <button
-                                        className="tutorial-enter-button"
-                                        onClick={handleEnterChatbot}
-                                        style={{ transform: buttonTransform, transition: 'transform 0.1s ease-out' }}
-                                    >
-                                        Enter Chatbot Page
-                                    </button>
-                                </div>
-                                <div className={`interactive-fan ${isFanOn ? 'spinning' : ''}`}>
-                                     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                                        <circle cx="50" cy="50" r="45" fill="none" stroke="#666" strokeWidth="5" />
-                                        <g className="fan-blades" style={{ transformOrigin: '50% 50%' }}>
-                                            <rect x="45" y="10" width="10" height="40" rx="5" fill="#999" transform="rotate(0 50 50)" />
-                                            <rect x="45" y="10" width="10" height="40" rx="5" fill="#999" transform="rotate(120 50 50)" />
-                                            <rect x="45" y="10" width="10" height="40" rx="5" fill="#999" transform="rotate(240 50 50)" />
-                                        </g>
-                                        <circle cx="50" cy="50" r="8" fill="#666" />
-                                    </svg>
-                                </div>
-                            </div>
-                         </div>
                          
                          <div className="fan-controls">
                             <label className="fan-switch">
