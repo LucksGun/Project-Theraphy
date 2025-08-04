@@ -29,7 +29,8 @@ if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_
 export interface Message { id: number; text: string; sender: 'user' | 'bot' | 'loading'; timestamp: number; imageUrl?: string; modelUsed?: string; }
 export type GeminiModel = 'gemini-2.5-flash-preview-04-17' | 'gemini-2.5-pro-preview-03-25';
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR';
-export type Persona = 'normal' | 'therapist' | 'university_master';
+export type Persona = 'normal' | 'therapist' | 'university_master'
+
 export interface KeyValidationStatus { isValid: boolean | null; username: string | null; loading: boolean; error?: string | null; }
 export interface UserKeyInfo { key: string; username: string | null; status: 'active' | 'inactive'; created_at: string; }
 export interface FeedbackItem { id: number; email: string | null; rating: number; comment: string; submitted_at: string; is_important: number; }
@@ -380,18 +381,17 @@ function App() {
 
     const handleWindEffect = (e: React.MouseEvent<HTMLDivElement>) => {
         if (isFanOn) {
-            const windZone = e.currentTarget;
-            const button = windZone.firstChild as HTMLElement;
+            const zone = e.currentTarget;
+            const button = zone.querySelector('button');
             if (!button) return;
 
-            const rect = windZone.getBoundingClientRect();
-            const x = e.clientX - rect.left - rect.width / 2;
-            const y = e.clientY - rect.top - rect.height / 2;
-
-            const moveX = -x * 0.5;
-            const moveY = -y * 0.5;
-
-            setButtonTransform(`translate(${moveX}px, ${moveY}px)`);
+            const zoneRect = zone.getBoundingClientRect();
+            const cursorX = e.clientX - zoneRect.left;
+            const pushStrength = 40; 
+            
+            const moveX = - (zoneRect.width - cursorX) / zoneRect.width * pushStrength;
+            
+            setButtonTransform(`translateX(${moveX}px)`);
         }
     };
 
@@ -603,53 +603,64 @@ function App() {
         <div className="App">
             {/* Add styles for the fan and wind effect directly here */}
             <style>{`
-                .fan {
-                    width: 80px;
-                    height: 80px;
-                    position: absolute;
-                    top: 20px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    z-index: 10;
-                }
-                .fan-blade {
-                    position: absolute;
-                    width: 38px;
-                    height: 15px;
-                    background-color: #aaa;
-                    border-radius: 5px;
-                    top: 32.5px;
-                    left: 21px;
-                    transform-origin: 100% 50%;
-                }
-                .fan-blade:nth-child(1) { transform: rotate(0deg) translateX(20px); }
-                .fan-blade:nth-child(2) { transform: rotate(120deg) translateX(20px); }
-                .fan-blade:nth-child(3) { transform: rotate(240deg) translateX(20px); }
-                .fan.spinning .fan-blade {
-                    animation: spin 1s linear infinite;
-                }
-                @keyframes spin {
-                    from { transform: rotate(0deg) translateX(20px); }
-                    to { transform: rotate(360deg) translateX(20px); }
-                }
                 .tutorial-interaction-area {
-                    margin-top: 20px;
+                    margin: 20px auto;
                     padding: 20px;
-                    border: 1px dashed #ccc;
                     border-radius: 8px;
                     position: relative;
                     height: 120px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                    overflow: hidden;
                 }
-                .wind-zone {
+                .fan-and-button-container {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    position: relative;
                     width: 100%;
                     height: 100%;
+                }
+                .wind-effect {
                     position: absolute;
                     top: 0;
                     left: 0;
-                    cursor: not-allowed;
+                    width: 200%; 
+                    height: 100%;
+                    background-image: repeating-linear-gradient(
+                        -45deg,
+                        transparent,
+                        transparent 10px,
+                        rgba(173, 216, 230, 0.5) 10px,
+                        rgba(173, 216, 230, 0.5) 20px
+                    );
+                    opacity: 0;
+                    transition: opacity 0.3s ease-in-out;
+                }
+                .wind-effect.blowing {
+                    opacity: 1;
+                    animation: wind-blow 2s linear infinite;
+                }
+                @keyframes wind-blow {
+                    from { transform: translateX(0%); }
+                    to { transform: translateX(-50%); }
+                }
+                .button-wind-zone {
+                    z-index: 2;
+                }
+                .interactive-fan {
+                    width: 80px;
+                    height: 80px;
+                    z-index: 3;
+                    margin-left: 20px;
+                }
+                .interactive-fan.spinning .fan-blades {
+                    animation: spin 0.5s linear infinite;
+                }
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
                 }
                 .fan-controls {
                     margin-top: 20px;
@@ -750,11 +761,6 @@ function App() {
             {showTutorial && (
                  <div className="tutorial-modal-overlay">
                      <div className="tutorial-modal">
-                        <div className={`fan ${isFanOn ? 'spinning' : ''}`}>
-                            <div className="fan-blade"></div>
-                            <div className="fan-blade"></div>
-                            <div className="fan-blade"></div>
-                        </div>
                          <h3>Chatbot Tutorial</h3>
                          <p>Welcome to the chatbot tutorial! This guide will help you understand how to interact with our AI assistant. We aim to make your experience as smooth and intuitive as possible.</p>
 
@@ -774,18 +780,32 @@ function App() {
                          After selecting your image, you have the option to add a descriptive text message to provide context before sending it to the chatbot.</p>
                          
                          <div className="tutorial-interaction-area">
-                            <div 
-                                className="wind-zone"
-                                onMouseMove={handleWindEffect}
-                                onMouseLeave={() => setButtonTransform('translate(0,0)')}
-                            >
-                                <button
-                                    className="tutorial-enter-button"
-                                    onClick={handleEnterChatbot}
-                                    style={{ transform: buttonTransform, transition: 'transform 0.1s ease-out' }}
+                            <div className="fan-and-button-container">
+                                <div className={`wind-effect ${isFanOn ? 'blowing' : ''}`}></div>
+                                <div 
+                                    className="button-wind-zone"
+                                    onMouseMove={handleWindEffect}
+                                    onMouseLeave={() => setButtonTransform('translate(0,0)')}
                                 >
-                                    Enter Chatbot Page
-                                </button>
+                                    <button
+                                        className="tutorial-enter-button"
+                                        onClick={handleEnterChatbot}
+                                        style={{ transform: buttonTransform, transition: 'transform 0.1s ease-out' }}
+                                    >
+                                        Enter Chatbot Page
+                                    </button>
+                                </div>
+                                <div className={`interactive-fan ${isFanOn ? 'spinning' : ''}`}>
+                                     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="50" cy="50" r="45" fill="none" stroke="#666" strokeWidth="5" />
+                                        <g className="fan-blades" style={{ transformOrigin: '50% 50%' }}>
+                                            <rect x="45" y="10" width="10" height="40" rx="5" fill="#999" transform="rotate(0 50 50)" />
+                                            <rect x="45" y="10" width="10" height="40" rx="5" fill="#999" transform="rotate(120 50 50)" />
+                                            <rect x="45" y="10" width="10" height="40" rx="5" fill="#999" transform="rotate(240 50 50)" />
+                                        </g>
+                                        <circle cx="50" cy="50" r="8" fill="#666" />
+                                    </svg>
+                                </div>
                             </div>
                          </div>
                          
