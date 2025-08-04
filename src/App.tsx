@@ -9,6 +9,7 @@ import PersonaPlinkoGame from './PersonaPlinkoGame';
 import InterviewMode from './InterviewMode';
 import PresentationPage from './PresentationPage';
 import InvoiceManagerPage from './InvoiceManagerPage';
+import lieDetectorImage from './LIE.jpg'; // Import the local image
 
 // --- GA Initialization ---
 const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
@@ -377,11 +378,20 @@ function App() {
         }
     };
 
-    const handleWindEffect = () => {
+    const handleWindEffect = (e: React.MouseEvent<HTMLDivElement>) => {
         if (isFanOn) {
-            const x = (Math.random() - 0.5) * 100;
-            const y = (Math.random() - 0.5) * 50;
-            setButtonTransform(`translate(${x}px, ${y}px)`);
+            const windZone = e.currentTarget;
+            const button = windZone.firstChild as HTMLElement;
+            if (!button) return;
+
+            const rect = windZone.getBoundingClientRect();
+            const x = e.clientX - rect.left - rect.width / 2;
+            const y = e.clientY - rect.top - rect.height / 2;
+
+            const moveX = -x * 0.5;
+            const moveY = -y * 0.5;
+
+            setButtonTransform(`translate(${moveX}px, ${moveY}px)`);
         }
     };
 
@@ -591,6 +601,108 @@ function App() {
     // --- JSX ---
     return (
         <div className="App">
+            {/* Add styles for the fan and wind effect directly here */}
+            <style>{`
+                .fan {
+                    width: 80px;
+                    height: 80px;
+                    position: absolute;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 10;
+                }
+                .fan-blade {
+                    position: absolute;
+                    width: 38px;
+                    height: 15px;
+                    background-color: #aaa;
+                    border-radius: 5px;
+                    top: 32.5px;
+                    left: 21px;
+                    transform-origin: 100% 50%;
+                }
+                .fan-blade:nth-child(1) { transform: rotate(0deg) translateX(20px); }
+                .fan-blade:nth-child(2) { transform: rotate(120deg) translateX(20px); }
+                .fan-blade:nth-child(3) { transform: rotate(240deg) translateX(20px); }
+                .fan.spinning .fan-blade {
+                    animation: spin 1s linear infinite;
+                }
+                @keyframes spin {
+                    from { transform: rotate(0deg) translateX(20px); }
+                    to { transform: rotate(360deg) translateX(20px); }
+                }
+                .tutorial-interaction-area {
+                    margin-top: 20px;
+                    padding: 20px;
+                    border: 1px dashed #ccc;
+                    border-radius: 8px;
+                    position: relative;
+                    height: 120px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .wind-zone {
+                    width: 100%;
+                    height: 100%;
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    cursor: not-allowed;
+                }
+                .fan-controls {
+                    margin-top: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                }
+                .fan-switch {
+                  position: relative;
+                  display: inline-block;
+                  width: 60px;
+                  height: 34px;
+                }
+                .fan-switch input { 
+                  opacity: 0;
+                  width: 0;
+                  height: 0;
+                }
+                .slider {
+                  position: absolute;
+                  cursor: pointer;
+                  top: 0;
+                  left: 0;
+                  right: 0;
+                  bottom: 0;
+                  background-color: #ccc;
+                  transition: .4s;
+                }
+                .slider:before {
+                  position: absolute;
+                  content: "";
+                  height: 26px;
+                  width: 26px;
+                  left: 4px;
+                  bottom: 4px;
+                  background-color: white;
+                  transition: .4s;
+                }
+                input:checked + .slider {
+                  background-color: #2196F3;
+                }
+                input:checked + .slider:before {
+                  transform: translateX(26px);
+                }
+                .slider.round {
+                  border-radius: 34px;
+                }
+                .slider.round:before {
+                  border-radius: 50%;
+                }
+            `}</style>
+
             {/* Onboarding Flow */}
             {showWelcomePage && (
                 <div className="welcome-overlay">
@@ -629,7 +741,7 @@ function App() {
 
                     {showLieDetector && (
                         <div className="lie-detector-overlay">
-                            <img src="https://storage.googleapis.com/gemini-generated-images/lie-detector-indicator-gauge-with-dial-showing-true-green-deceit-red_79145-1532.jpg" alt="Lie Detector" className="lie-detector-image" />
+                            <img src={lieDetectorImage} alt="Lie Detector" className="lie-detector-image" />
                         </div>
                     )}
                 </div>
@@ -644,11 +756,23 @@ function App() {
                             <div className="fan-blade"></div>
                         </div>
                          <h3>Chatbot Tutorial</h3>
-                         <p>This guide will help you understand how to interact with our AI assistant.</p>
-                         
-                         {/* Tutorial Content Shortened for brevity in example */}
-                         <p>To send messages, type in the input field. Use the microphone for voice commands and the paperclip to attach images. You can find more options in the settings menu (⚙️).</p>
+                         <p>Welcome to the chatbot tutorial! This guide will help you understand how to interact with our AI assistant. We aim to make your experience as smooth and intuitive as possible.</p>
 
+                         <h4>1. Sending Messages:</h4>
+                         <p>To initiate a conversation or respond to the chatbot, simply type your question or statement into the text input field located at the very bottom of the screen. This is your primary way to communicate with the AI. Once you've finished typing, you can press the "Send" button (typically represented by a paper airplane or an arrow icon pointing right) or simply hit the Enter key on your keyboard. Your message will then appear in the chat history.</p>
+
+                         <h4>2. Using Voice Input:</h4>
+                         <p>For hands-free interaction, our chatbot supports voice input. Click the microphone icon (🎤) usually found near the text input field. If it's your first time, your browser might ask for permission to access your microphone; please grant it. Once activated, begin speaking clearly. The system is designed to detect when you've finished your thought, but you can also click the microphone icon again to manually stop recording. Always review the transcribed text before sending to ensure accuracy.</p>
+
+                         <h4>3. Image Input:</h4>
+                         <p>Our advanced chatbot can process and understand images, making your interactions richer! To send an image, click the paperclip icon (📎) or a similar attachment button. You'll typically have options to:
+                             <ul>
+                                 <li>**Upload from Device:** Select an image file directly from your computer or phone.</li>
+                                 <li>**Use Camera:** Capture a live photo using your device's camera.</li>
+                                 <li>**Capture Screen:** Take a screenshot of your current screen (availability depends on browser and operating system).</li>
+                             </ul>
+                         After selecting your image, you have the option to add a descriptive text message to provide context before sending it to the chatbot.</p>
+                         
                          <div className="tutorial-interaction-area">
                             <div 
                                 className="wind-zone"
@@ -658,7 +782,7 @@ function App() {
                                 <button
                                     className="tutorial-enter-button"
                                     onClick={handleEnterChatbot}
-                                    style={{ transform: buttonTransform, transition: 'transform 0.2s ease-out' }}
+                                    style={{ transform: buttonTransform, transition: 'transform 0.1s ease-out' }}
                                 >
                                     Enter Chatbot Page
                                 </button>
@@ -667,7 +791,7 @@ function App() {
                          
                          <div className="fan-controls">
                             <label className="fan-switch">
-                                <input type="checkbox" checked={isFanOn} onChange={() => setIsFanOn(!isFanOn)} />
+                                <input type="checkbox" checked={!isFanOn} onChange={() => setIsFanOn(!isFanOn)} />
                                 <span className="slider round"></span>
                             </label>
                             <span>Turn Off Fan To Enter</span>
