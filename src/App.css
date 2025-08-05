@@ -251,7 +251,7 @@ html, body, #root { height: 100%; margin: 0; padding: 0; font-family: 'Inter', s
 button, input, select, textarea { font-family: inherit; color: inherit; background-color: transparent; box-sizing: border-box; }
 
 /* --- Main App Layout Fix --- */
-.App { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+.App { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
 
 /* Add transitions to other elements */
 .App, .App-header, .chatbot-container, .chatbot-input-area, .settings-menu, .staff-panel-modal, .feedback-modal, .analysis-form-modal, input, select, textarea, button, .message, .welcome-modal, .knowledge-check-modal, .tutorial-modal { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
