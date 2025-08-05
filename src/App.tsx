@@ -602,20 +602,17 @@ function App() {
         <div className="App">
             {/* Add styles for the fan and wind effect directly here */}
             <style>{`
-                .top-interactive-container {
-                    position: absolute;
-                    top: 15%;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    z-index: 1001; 
-                    width: 90%;
-                    max-width: 500px;
+                .tutorial-modal {
+                    position: relative;
+                    padding-top: 140px; 
                 }
                 .tutorial-interaction-area {
-                    margin: 0;
-                    padding: 0;
-                    border: none;
-                    height: auto;
+                    position: absolute;
+                    top: 50px;
+                    left: 0;
+                    width: 100%;
+                    height: 100px;
+                    z-index: 10;
                 }
                 .fan-and-button-container {
                     display: flex;
@@ -623,7 +620,7 @@ function App() {
                     justify-content: center;
                     position: relative;
                     width: 100%;
-                    height: 100px;
+                    height: 100%;
                 }
                 .wind-effect {
                     position: absolute;
@@ -764,7 +761,7 @@ function App() {
             
             {showTutorial && (
                  <div className="tutorial-modal-overlay">
-                    <div className="top-interactive-container">
+                     <div className="tutorial-modal">
                         <div className="tutorial-interaction-area">
                             <div className="fan-and-button-container">
                                 <div className={`wind-effect ${isFanOn ? 'blowing' : ''}`}></div>
@@ -794,8 +791,6 @@ function App() {
                                 </div>
                             </div>
                         </div>
-                    </div>
-                     <div className="tutorial-modal">
                          <h3>Chatbot Tutorial</h3>
                          <p>Welcome to the chatbot tutorial! This guide will help you understand how to interact with our AI assistant. We aim to make your experience as smooth and intuitive as possible.</p>
 
