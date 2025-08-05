@@ -27,7 +27,7 @@ if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_
 
 // --- Types & Interfaces ---
 export interface Message { id: number; text: string; sender: 'user' | 'bot' | 'loading'; timestamp: number; imageUrl?: string; modelUsed?: string; }
-export type GeminiModel = 'gemini-2.5-flash-preview-04-17' | 'gemini-2.5-pro-preview-03-25';
+export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.5-flash-lite';
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR';
 export type Persona = 'normal' | 'therapist' | 'university_master';
 export interface KeyValidationStatus { isValid: boolean | null; username: string | null; loading: boolean; error?: string | null; }
@@ -48,8 +48,9 @@ const WELCOME_SEEN_KEY = 'welcomePageSeenV1';
 // --- Configurations ---
 export interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
 export const ALL_AVAILABLE_MODELS_FRONTEND: ModelInfo[] = [
-    { value: 'gemini-2.5-flash-preview-04-17', label: 'Gemini 2.5 Flash Preview', restricted: false },
-    { value: 'gemini-2.5-pro-preview-03-25', label: 'Gemini 2.5 Pro Preview', restricted: true }
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', restricted: false },
+    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', restricted: false },
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', restricted: true }
 ];
 export const ALL_MODEL_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.map(m => m.value);
 
@@ -157,7 +158,7 @@ function App() {
     const [isFanOn, setIsFanOn] = useState(true);
     const [buttonTransform, setButtonTransform] = useState('translate(0, 0)');
     const [enteredKey, setEnteredKey] = useState<string>(() => localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '');
-    const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.5-flash-preview-04-17');
+    const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.5-flash');
     const [sttLang, setSttLang] = useState<SpeechLanguage>(() => {
         const stored = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null;
         if (stored && ['en-US', 'th-TH', 'es-ES', 'fr-FR'].includes(stored)) {
@@ -204,7 +205,7 @@ function App() {
 
         if (!keyTrimmed) {
             setKeyStatus({ isValid: null, username: null, loading: false, error: null });
-            if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.5-flash-preview-04-17');
+            if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.5-flash');
             if (RESTRICTED_PERSONAS_VALUES.includes(currentPersonaBeforeValidation)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
             return;
         }
@@ -222,13 +223,13 @@ function App() {
                     setSelectedPersona(currentPersonaBeforeValidation);
                 } else {
                     setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key.' });
-                    if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.5-flash-preview-04-17');
+                    if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.5-flash');
                     if (RESTRICTED_PERSONAS_VALUES.includes(currentPersonaBeforeValidation)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
                 }
             } catch (e) {
                 const msg = e instanceof Error ? e.message : "Validation network error.";
                 setKeyStatus({ isValid: false, username: null, loading: false, error: msg });
-                if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.5-flash-preview-04-17');
+                if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.5-flash');
                 if (RESTRICTED_PERSONAS_VALUES.includes(currentPersonaBeforeValidation)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
             }
         }, VALIDATION_DEBOUNCE_MS);
@@ -246,7 +247,7 @@ function App() {
         const initialKey = localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '';
         const storedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null;
         const storedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null;
-        let initialModel: GeminiModel = 'gemini-2.5-flash-preview-04-17';
+        let initialModel: GeminiModel = 'gemini-2.5-flash';
         if (storedModel && ALL_MODEL_VALUES.includes(storedModel)) initialModel = storedModel;
         let initialPersona: Persona = DEFAULT_UNRESTRICTED_PERSONA;
         if (storedPersona && ALL_PERSONAS.includes(storedPersona)) initialPersona = storedPersona;
@@ -266,18 +267,18 @@ function App() {
                         setSelectedPersona(p);
                     } else {
                         setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key' });
-                        if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.5-flash-preview-04-17');
+                        if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.5-flash');
                         if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
                     }
                 } catch (e) {
                     setKeyStatus({ isValid: false, username: null, loading: false, error: 'Validation failed' });
-                    if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.5-flash-preview-04-17');
+                    if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.5-flash');
                     if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
                 }
             };
             validateInitialKey(initialKey, initialModel, initialPersona);
         } else {
-            if (RESTRICTED_MODELS_VALUES.includes(initialModel)) setSelectedModel('gemini-2.5-flash-preview-04-17');
+            if (RESTRICTED_MODELS_VALUES.includes(initialModel)) setSelectedModel('gemini-2.5-flash');
             if (RESTRICTED_PERSONAS_VALUES.includes(initialPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
         }
     }, []);
