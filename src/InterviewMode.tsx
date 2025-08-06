@@ -117,6 +117,8 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
 
     const stopRecordingAndClearData = useCallback(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            // Stop the tracks of the stream associated with the recorder, which are the cloned tracks.
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
             mediaRecorderRef.current.stop();
         }
         if (recordingTimeoutRef.current) {
@@ -228,28 +230,34 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             setError("Microphone source not available or not active."); setStage('error'); initialSessionSetupDone.current = true; return;
         }
         const audioTracks = cameraStream.getAudioTracks();
-        if (audioTracks.length === 0 || !audioTracks.find(track => track.enabled && !track.muted && track.readyState === 'live')) {
+        const liveAudioTrack = audioTracks.find(track => track.enabled && !track.muted && track.readyState === 'live');
+        if (!liveAudioTrack) {
             console.error("startListening Error: No active/enabled audio track.");
             setError("Audio input is muted, disabled, or has ended."); setStage('error'); initialSessionSetupDone.current = true; return;
         }
         if (isSttActive || (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording")) { console.warn("startListening: Already recording."); return; }
         
-        // FIX: Clear any lingering timeout from a previous attempt.
         if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
 
         console.log(`InterviewMode: Attempting to start audio recording for STT. Lang: ${sttLang}`);
         setError(null); setStage('listening'); audioChunksRef.current = [];
         try {
+            // FINAL FIX: Clone the audio track to create a clean, temporary stream for each recording.
+            // This prevents any buffered data from a previous recording attempt from accumulating.
+            const clonedTrack = liveAudioTrack.clone();
+            const cleanStream = new MediaStream([clonedTrack]);
+            
             const options = undefined;
-            console.log("InterviewMode: Initializing MediaRecorder with stream ID:", cameraStream.id, "Active:", cameraStream.active, "Options: BROWSER DEFAULT");
-            mediaRecorderRef.current = new MediaRecorder(cameraStream, options);
+            mediaRecorderRef.current = new MediaRecorder(cleanStream, options);
 
             mediaRecorderRef.current.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
 
             mediaRecorderRef.current.onstop = async () => {
-                // FIX: Create a copy of the chunks and clear the ref immediately to prevent race conditions.
                 const chunksToProcess = audioChunksRef.current.slice();
                 audioChunksRef.current = [];
+
+                // Stop the cloned track to release its resources.
+                clonedTrack.stop();
 
                 console.log(`InterviewMode: MediaRecorder stopped. Processing ${chunksToProcess.length} chunks.`);
                 if (chunksToProcess.length === 0 && stageRef.current !== 'error') {
@@ -320,6 +328,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 if (typedEvent.error) { specificError = `Name: ${typedEvent.error.name}, Msg: ${typedEvent.error.message}`; }
                 else if ((event.target as any)?.error) { specificError = `Target Error: Name: ${(event.target as any).error.name}, Msg: ${(event.target as any).error.message}`; }
                 console.error("Specific MediaRecorder error:", specificError);
+                clonedTrack.stop(); // Also stop the track on error
                 setError(`Mic recording failed: ${specificError}. Check permissions or try another browser.`);
                 setIsSttActive(false); setStage('error'); initialSessionSetupDone.current = true; stopRecordingAndClearData();
             };
