@@ -1,0 +1,203 @@
+/* src/InterviewReport.css */
+
+.interview-report-container {
+    padding: 10px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+}
+
+.report-header {
+    text-align: center;
+    border-bottom: 2px solid var(--border-color, #eee);
+    padding-bottom: 15px;
+}
+
+.report-header h2 {
+    margin: 0 0 10px 0;
+    font-size: 1.8em;
+    color: var(--text-primary);
+}
+
+.report-result {
+    font-size: 1.2em;
+    font-weight: bold;
+    padding: 8px 15px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.report-result.pass {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+:root[data-theme='dark'] .report-result.pass {
+    background-color: #1c3c30;
+    color: #75b798;
+}
+
+.report-result.fail {
+    background-color: #f8d7da;
+    color: #842029;
+}
+:root[data-theme='dark'] .report-result.fail {
+    background-color: #4d2d30;
+    color: #f5c2c7;
+}
+
+.report-section {
+    background: var(--button-secondary-bg, #f9f9f9);
+    border: 1px solid var(--border-color, #eee);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.report-section h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-color, #eee);
+    padding-bottom: 8px;
+}
+
+.report-summary {
+    font-style: italic;
+    line-height: 1.5;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.metric-card {
+    background: var(--container-bg);
+    padding: 15px;
+    border-radius: 6px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+}
+
+.metric-card h4 {
+    margin: 0 0 5px 0;
+    font-size: 1em;
+    color: var(--text-secondary);
+}
+
+.metric-card p {
+    margin: 0;
+    font-size: 2em;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.metric-card p span {
+    font-size: 0.5em;
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+
+.metric-card small {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+}
+
+.filler-word-details {
+    margin-top: 15px;
+    font-size: 0.9em;
+}
+
+.filler-word-details ul {
+    padding-left: 20px;
+    margin: 5px 0 0 0;
+}
+
+.report-transcript {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 6px;
+    padding: 10px;
+    background: var(--container-bg);
+}
+
+.transcript-message {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border-color, #eee);
+}
+.transcript-message:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.transcript-message .sender-label {
+    font-weight: bold;
+    font-size: 0.9em;
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-secondary);
+}
+
+.transcript-bot .sender-label {
+    color: var(--user-bubble-bg);
+}
+
+.transcript-message p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.report-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.report-button {
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid var(--border-color);
+}
+
+.report-button.print {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+.report-button.print:hover {
+    background-color: #0b5ed7;
+}
+
+.report-button.close {
+    background-color: var(--button-secondary-bg);
+    color: var(--text-primary);
+}
+.report-button.close:hover {
+    background-color: var(--button-secondary-hover-bg);
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .interview-report-container, .interview-report-container * {
+        visibility: visible;
+    }
+    .interview-report-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+    .report-actions {
+        display: none;
+    }
+}
