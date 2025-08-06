@@ -12,7 +12,7 @@
     align-items: center;
     justify-content: center;
     padding: 10px;
-    box-sizing: border-box; /* FIX: Corrected typo here */
+    box-sizing: border-box;
 }
 
 .interview-mode-modal {
@@ -216,6 +216,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
+    flex-shrink: 0; /* FIX: Added this line */
 }
 
 .interview-controls {
