@@ -7,7 +7,8 @@ import './InterviewMode.css'; // Make sure this CSS file exists
 
 // --- Constants ---
 const INTERVIEWER_PERSONA_ID = 'interviewer';
-const MAX_RECORDING_DURATION = 5000; // 5 seconds for user to speak
+// FIX: Increased recording duration and added a precaution buffer.
+const MAX_RECORDING_DURATION = 55000; // 55 seconds for user to speak
 
 // GOOGLE_STT_ENCODING_MAP to map browser MIME types to Google STT encodings
 const GOOGLE_STT_ENCODING_MAP: Record<string, string> = {
@@ -90,6 +91,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
     const [error, setError] = useState<string | null>(null);
     const [isSttActive, setIsSttActive] = useState(false);
     const [isGoogleTtsPlaying, setIsGoogleTtsPlaying] = useState(false);
+    const [showTryAgain, setShowTryAgain] = useState(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -107,7 +109,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
 
     const handleUserSpeechRef = useRef<(userText: string) => Promise<void>>(async () => {});
     const startListeningRef = useRef<() => void>(() => {});
-    const playGoogleCloudTTSRef = useRef<(text: string, lang: string) => Promise<void>>(async () => {});
+    const playGoogleCloudTTSRef = useRef<(text: string) => Promise<void>>(async () => {});
 
     const scrollToBottom = useCallback(() => {
         setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, 100);
@@ -117,7 +119,6 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
 
     const stopRecordingAndClearData = useCallback(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-            // Stop the tracks of the stream associated with the recorder, which are the cloned tracks.
             mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
             mediaRecorderRef.current.stop();
         }
@@ -177,7 +178,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         if (isOpen) {
             if (!initialSessionSetupDone.current) {
                 console.log("InterviewMode: isOpen is true AND initial session setup not done. Resetting and starting setup.");
-                setMessages([]); messageHistoryRef.current = []; setError(null); setResult(null);
+                setMessages([]); messageHistoryRef.current = []; setError(null); setResult(null); setShowTryAgain(false);
                 stopStreamsAndTTS();
                 setStage('idle'); startInterviewSetup(); initialSessionSetupDone.current = true;
             }
@@ -208,6 +209,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
 
     const startListening = useCallback(() => {
         if (stageRef.current === 'error' && initialSessionSetupDone.current) { console.warn("startListening: Aborted, initial setup failed."); return; }
+        setShowTryAgain(false);
 
         let canProceed = stageRef.current === 'user_turn';
         if (isGoogleTtsPlaying && googleTtsAudioRef.current) {
@@ -242,8 +244,6 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         console.log(`InterviewMode: Attempting to start audio recording for STT. Lang: ${sttLang}`);
         setError(null); setStage('listening'); audioChunksRef.current = [];
         try {
-            // FINAL FIX: Clone the audio track to create a clean, temporary stream for each recording.
-            // This prevents any buffered data from a previous recording attempt from accumulating.
             const clonedTrack = liveAudioTrack.clone();
             const cleanStream = new MediaStream([clonedTrack]);
             
@@ -255,14 +255,15 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             mediaRecorderRef.current.onstop = async () => {
                 const chunksToProcess = audioChunksRef.current.slice();
                 audioChunksRef.current = [];
-
-                // Stop the cloned track to release its resources.
                 clonedTrack.stop();
 
                 console.log(`InterviewMode: MediaRecorder stopped. Processing ${chunksToProcess.length} chunks.`);
                 if (chunksToProcess.length === 0 && stageRef.current !== 'error') {
                     console.warn("InterviewMode: No audio chunks recorded.");
-                    setError("I didn't hear anything. Please try speaking again."); setStage('user_turn'); return;
+                    setError("I didn't hear anything. Please try speaking again.");
+                    setShowTryAgain(true); // FIX: Show "Try Again" button
+                    setStage('user_turn');
+                    return;
                 }
                 const actualMimeType = mediaRecorderRef.current?.mimeType || 'application/octet-stream';
                 const audioBlob = new Blob(chunksToProcess, { type: actualMimeType });
@@ -310,17 +311,36 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                         const sttResponse = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sttRequestBody)});
                         if (!sttResponse.ok) { const errData = await sttResponse.json().catch(() => ({error: `STT API Error via Worker: ${sttResponse.status}`})); throw new Error(errData.error || `STT API Error via Worker: ${sttResponse.status}`);}
                         const transcriptData = await sttResponse.json();
-                        if (transcriptData.error && !transcriptData.transcript) { console.error("InterviewMode: Transcription error from worker:", transcriptData.error); setError(transcriptData.error); setStage('user_turn'); return; }
+                        if (transcriptData.error && !transcriptData.transcript) {
+                            console.error("InterviewMode: Transcription error from worker:", transcriptData.error);
+                            setError(transcriptData.error);
+                            setShowTryAgain(true); // FIX: Show "Try Again" button
+                            setStage('user_turn');
+                            return;
+                        }
                         if (transcriptData.transcript && transcriptData.transcript.trim().length > 0) {
                             console.log("InterviewMode: Transcript received:", transcriptData.transcript);
-                            setStage('processing_user'); handleUserSpeechRef.current(transcriptData.transcript);
+                            setStage('processing_user');
+                            handleUserSpeechRef.current(transcriptData.transcript);
                         } else {
                             console.warn("InterviewMode: Empty transcript. Error from worker:", transcriptData.error);
-                            setError(transcriptData.error || "I couldn't understand what was said. Please try again."); setStage('user_turn');
+                            setError(transcriptData.error || "I couldn't understand what was said. Please try again.");
+                            setShowTryAgain(true); // FIX: Show "Try Again" button
+                            setStage('user_turn');
                         }
-                    } catch (transcribeError) { console.error("InterviewMode: Error during transcription request:", transcribeError); setError(`Transcription failed: ${(transcribeError as Error).message}`); setStage('user_turn');}
+                    } catch (transcribeError) {
+                        console.error("InterviewMode: Error during transcription request:", transcribeError);
+                        setError(`Transcription failed: ${(transcribeError as Error).message}`);
+                        setShowTryAgain(true); // FIX: Show "Try Again" button
+                        setStage('user_turn');
+                    }
                 };
-                reader.onerror = (readError) => { console.error("InterviewMode: Error reading audio blob:", readError); setError("Failed to process recorded audio."); setStage('user_turn');};
+                reader.onerror = (readError) => {
+                    console.error("InterviewMode: Error reading audio blob:", readError);
+                    setError("Failed to process recorded audio.");
+                    setShowTryAgain(true); // FIX: Show "Try Again" button
+                    setStage('user_turn');
+                };
             };
             mediaRecorderRef.current.onerror = (event: Event) => {
                 console.error("InterviewMode: MediaRecorder .onerror event triggered");
@@ -328,7 +348,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 if (typedEvent.error) { specificError = `Name: ${typedEvent.error.name}, Msg: ${typedEvent.error.message}`; }
                 else if ((event.target as any)?.error) { specificError = `Target Error: Name: ${(event.target as any).error.name}, Msg: ${(event.target as any).error.message}`; }
                 console.error("Specific MediaRecorder error:", specificError);
-                clonedTrack.stop(); // Also stop the track on error
+                clonedTrack.stop();
                 setError(`Mic recording failed: ${specificError}. Check permissions or try another browser.`);
                 setIsSttActive(false); setStage('error'); initialSessionSetupDone.current = true; stopRecordingAndClearData();
             };
@@ -347,14 +367,18 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
 
     useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
 
-    const playGoogleCloudTTS = useCallback(async (text: string, lang: string) => {
+    const playGoogleCloudTTS = useCallback(async (text: string) => {
         if (isSttActive) { await stopListeningAndProcessAudio(); }
         if (stageRef.current === 'error' && initialSessionSetupDone.current) { return; }
-        if (!text) { setStage('user_turn'); setTimeout(() => startListeningRef.current(), 300); return; }
+        if (!text) { setStage('user_turn'); return; }
         setStage('ai_speaking'); setIsGoogleTtsPlaying(true); setError(null);
         try {
+            // FIX: More robust language code check for Thai TTS
+            const languageCode = sttLang.toLowerCase().startsWith('th') ? 'th-TH' : 'en-US';
+            console.log(`TTS: Using language code ${languageCode} for text.`);
+
             const cleanText = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(\*|_)(.*?)\1/g, '$2').replace(/#/g, '');
-            const ttsRequestBody = { action: 'synthesize_speech', text: cleanText, languageCode: lang, accessKey: accessKey };
+            const ttsRequestBody = { action: 'synthesize_speech', text: cleanText, languageCode: languageCode, accessKey: accessKey };
             const response = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ttsRequestBody) });
             if (!response.ok) { const errorData = await response.json().catch(() => ({ error: `TTS Worker Error: ${response.status}` })); throw new Error(errorData.error || `TTS Worker Error: ${response.status}`);}
             const responseData = await response.json();
@@ -366,7 +390,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             audio.onended = () => {
                 setIsGoogleTtsPlaying(false);
                 if (stageRef.current === 'ai_speaking') {
-                    if (result) { setStage('finished'); } else { setStage('user_turn'); setTimeout(() => startListeningRef.current(), 300); }
+                    if (result) { setStage('finished'); } else { setStage('user_turn'); }
                 }
             };
             audio.onerror = (e) => { setIsGoogleTtsPlaying(false); console.error('TTS Playback Error:', e); setError(`TTS playback error.`); if (stageRef.current === 'ai_speaking') { if (result) setStage('finished'); else setStage('user_turn');}};
@@ -382,7 +406,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 setStage('user_turn');
             }
         }
-    }, [accessKey, isSttActive, result, stopListeningAndProcessAudio]);
+    }, [accessKey, isSttActive, result, sttLang, stopListeningAndProcessAudio]);
 
     useEffect(() => { playGoogleCloudTTSRef.current = playGoogleCloudTTS; }, [playGoogleCloudTTS]);
 
@@ -407,14 +431,14 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             else if (lowerText.includes("conclusion: fail") || lowerText.includes("final result: fail")) { endResult = 'fail'; }
             if (endResult) { console.log("InterviewMode: Gemini decided interview result:", endResult); setResult(endResult); }
             if (response.text.startsWith("Error:")) { setStage('error'); initialSessionSetupDone.current = true; }
-            else { playGoogleCloudTTSRef.current(response.text, sttLang.startsWith('th') ? 'th-TH' : 'en-US');}
+            else { playGoogleCloudTTSRef.current(response.text);}
         } catch (e) {
             const errorMsg = `Error with Gemini response: ${(e as Error).message}`; console.error(errorMsg); setError(errorMsg);
             const errorMessage: Message = { id: Date.now() + 2, text: errorMsg, sender: 'bot', timestamp: Date.now() + 2 };
             setMessages(prev => [...prev.filter(m => m.sender !== 'loading'), errorMessage]);
             setStage('error'); initialSessionSetupDone.current = true;
         }
-    }, [selectedModel, accessKey, sttLang]);
+    }, [selectedModel, accessKey]);
 
     useEffect(() => { handleUserSpeechRef.current = handleUserSpeech; }, [handleUserSpeech]);
 
@@ -431,13 +455,13 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             const firstBotMessage: Message = { id: Date.now(), text: response.text, sender: 'bot', timestamp: Date.now() };
             messageHistoryRef.current.push({ role: 'model', parts: [{ text: response.text }] });
             setMessages([firstBotMessage]);
-            playGoogleCloudTTSRef.current(response.text, sttLang.startsWith('th') ? 'th-TH' : 'en-US');
+            playGoogleCloudTTSRef.current(response.text);
         } catch (e) {
             const errorMsg = `Failed to start interview: ${(e as Error).message}`; console.error(errorMsg); setError(errorMsg);
             setMessages([{ id: Date.now(), text: errorMsg, sender: 'bot', timestamp: Date.now() }]);
             setStage('error'); initialSessionSetupDone.current = true;
         }
-    }, [selectedModel, accessKey, sttLang]);
+    }, [selectedModel, accessKey]);
 
     useEffect(() => { // Effect to attach stream to video element
         const videoElement = videoRef.current;
@@ -457,6 +481,32 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
     }, [isOpen, stage, cameraStream, startInterview]);
 
     if (!isOpen && !initialSessionSetupDone.current && stage === 'idle') return null;
+
+    // --- UI Rendering ---
+    const renderControls = () => {
+        if (stage === 'listening') {
+            return (
+                <button onClick={stopListeningAndProcessAudio} className="interview-control-button stop">
+                    Stop and Send
+                </button>
+            );
+        }
+        if (stage === 'user_turn') {
+            if (showTryAgain) {
+                return (
+                    <button onClick={startListening} className="interview-control-button retry">
+                        Try Again
+                    </button>
+                );
+            }
+            return (
+                <button onClick={startListening} className="interview-control-button start">
+                    Start Recording
+                </button>
+            );
+        }
+        return null;
+    };
 
     return (
         <div className="interview-mode-overlay">
@@ -493,19 +543,24 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                             ))}
                             <div ref={messagesEndRef} style={{ height: '1px' }} />
                         </div>
-                        <div className="interview-status">
-                            {stage === 'listening' && `Listening...`}
-                            {stage === 'processing_stt_audio' && "Processing your audio..."}
-                            {stage === 'ai_thinking' && "Interviewer Thinking..."}
-                            {stage === 'ai_speaking' && "Interviewer Speaking..."}
-                            {stage === 'finished' && `Interview Finished: ${result ? result.toUpperCase() : 'Concluded'}`}
-                            {stage === 'error' && (error || "An error occurred.")}
-                            {stage === 'user_turn' && "Your Turn (Speak now)"}
-                            {stage === 'starting' && "Starting Interview..."}
-                            {stage === 'requesting_perms' && "Requesting Permissions..."}
-                            {stage === 'processing_user' && "Sending to Interviewer..."}
-                            {stage === 'idle' && (isOpen ? "Initializing..." : "Closed")}
-                            {isSttActive && stage === 'listening' && <span className="recording-dot"></span>}
+                        <div className="interview-controls-and-status">
+                            <div className="interview-status">
+                                {stage === 'listening' && `Listening...`}
+                                {stage === 'processing_stt_audio' && "Processing your audio..."}
+                                {stage === 'ai_thinking' && "Interviewer Thinking..."}
+                                {stage === 'ai_speaking' && "Interviewer Speaking..."}
+                                {stage === 'finished' && `Interview Finished: ${result ? result.toUpperCase() : 'Concluded'}`}
+                                {stage === 'error' && "An error occurred."}
+                                {stage === 'user_turn' && (showTryAgain ? "Ready to try again." : "Your Turn.")}
+                                {stage === 'starting' && "Starting Interview..."}
+                                {stage === 'requesting_perms' && "Requesting Permissions..."}
+                                {stage === 'processing_user' && "Sending to Interviewer..."}
+                                {stage === 'idle' && (isOpen ? "Initializing..." : "Closed")}
+                                {isSttActive && stage === 'listening' && <span className="recording-dot"></span>}
+                            </div>
+                            <div className="interview-controls">
+                                {renderControls()}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -515,8 +570,8 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 <button
                     onClick={onClose}
                     className="interview-close-button"
-                    disabled={stage === 'ai_thinking' || (stage === 'ai_speaking' && isGoogleTtsPlaying) || stage === 'processing_stt_audio'}
-                    title={ (stage === 'ai_thinking' || (stage === 'ai_speaking' && isGoogleTtsPlaying) || stage === 'processing_stt_audio')
+                    disabled={stage === 'ai_thinking' || stage === 'processing_stt_audio'}
+                    title={ (stage === 'ai_thinking' || stage === 'processing_stt_audio')
                         ? "Please wait..." : (stage === 'finished' ? 'Close' : 'Leave Interview') } >
                     {stage === 'finished' || stage === 'error' || stage === 'idle' ? 'Close' : 'Leave Interview'}
                 </button>
