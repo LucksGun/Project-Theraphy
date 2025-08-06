@@ -234,6 +234,9 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         }
         if (isSttActive || (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording")) { console.warn("startListening: Already recording."); return; }
         
+        // FIX: Clear any lingering timeout from a previous attempt.
+        if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+
         console.log(`InterviewMode: Attempting to start audio recording for STT. Lang: ${sttLang}`);
         setError(null); setStage('listening'); audioChunksRef.current = [];
         try {
@@ -244,16 +247,19 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             mediaRecorderRef.current.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
 
             mediaRecorderRef.current.onstop = async () => {
-                console.log("InterviewMode: MediaRecorder stopped. Chunks:", audioChunksRef.current.length);
-                if (audioChunksRef.current.length === 0 && stageRef.current !== 'error') {
+                // FIX: Create a copy of the chunks and clear the ref immediately to prevent race conditions.
+                const chunksToProcess = audioChunksRef.current.slice();
+                audioChunksRef.current = [];
+
+                console.log(`InterviewMode: MediaRecorder stopped. Processing ${chunksToProcess.length} chunks.`);
+                if (chunksToProcess.length === 0 && stageRef.current !== 'error') {
                     console.warn("InterviewMode: No audio chunks recorded.");
                     setError("I didn't hear anything. Please try speaking again."); setStage('user_turn'); return;
                 }
                 const actualMimeType = mediaRecorderRef.current?.mimeType || 'application/octet-stream';
-                console.log("InterviewMode: Actual MIME type from MediaRecorder:", actualMimeType);
-                const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
-                console.log("InterviewMode: Audio Blob created. Size:", audioBlob.size, "Type:", audioBlob.type);
-                audioChunksRef.current = [];
+                const audioBlob = new Blob(chunksToProcess, { type: actualMimeType });
+                console.log(`InterviewMode: Audio Blob created. Size: ${audioBlob.size}, Type: ${audioBlob.type}`);
+                
                 const reader = new FileReader();
                 reader.readAsDataURL(audioBlob);
                 reader.onloadend = async () => {
@@ -285,8 +291,6 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                             accessKey: accessKey,
                         };
 
-                        // FINAL FIX: Always send the sample rate if we have it. The Google API needs it for Opus
-                        // and it doesn't hurt for other formats. This is the most robust approach.
                         if (currentAudioSampleRate.current) {
                             sttRequestBody.sampleRateHertz = currentAudioSampleRate.current;
                             console.log(`InterviewMode: Sending sampleRateHertz: ${sttRequestBody.sampleRateHertz} for encoding ${googleEncoding}.`);
@@ -321,7 +325,6 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             };
             mediaRecorderRef.current.start(); setIsSttActive(true);
             console.log("InterviewMode: MediaRecorder.start() called. Actual MIME type used:", mediaRecorderRef.current.mimeType);
-            if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
             recordingTimeoutRef.current = setTimeout(() => {
                 console.log("InterviewMode: Max recording duration reached.");
                 if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") { stopListeningAndProcessAudio(); }
