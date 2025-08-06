@@ -7,7 +7,6 @@ import './InterviewMode.css'; // Make sure this CSS file exists
 
 // --- Constants ---
 const INTERVIEWER_PERSONA_ID = 'interviewer';
-// FIX: Increased recording duration and added a precaution buffer.
 const MAX_RECORDING_DURATION = 55000; // 55 seconds for user to speak
 
 // GOOGLE_STT_ENCODING_MAP to map browser MIME types to Google STT encodings
@@ -261,7 +260,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 if (chunksToProcess.length === 0 && stageRef.current !== 'error') {
                     console.warn("InterviewMode: No audio chunks recorded.");
                     setError("I didn't hear anything. Please try speaking again.");
-                    setShowTryAgain(true); // FIX: Show "Try Again" button
+                    setShowTryAgain(true);
                     setStage('user_turn');
                     return;
                 }
@@ -314,7 +313,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                         if (transcriptData.error && !transcriptData.transcript) {
                             console.error("InterviewMode: Transcription error from worker:", transcriptData.error);
                             setError(transcriptData.error);
-                            setShowTryAgain(true); // FIX: Show "Try Again" button
+                            setShowTryAgain(true);
                             setStage('user_turn');
                             return;
                         }
@@ -325,20 +324,20 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                         } else {
                             console.warn("InterviewMode: Empty transcript. Error from worker:", transcriptData.error);
                             setError(transcriptData.error || "I couldn't understand what was said. Please try again.");
-                            setShowTryAgain(true); // FIX: Show "Try Again" button
+                            setShowTryAgain(true);
                             setStage('user_turn');
                         }
                     } catch (transcribeError) {
                         console.error("InterviewMode: Error during transcription request:", transcribeError);
                         setError(`Transcription failed: ${(transcribeError as Error).message}`);
-                        setShowTryAgain(true); // FIX: Show "Try Again" button
+                        setShowTryAgain(true);
                         setStage('user_turn');
                     }
                 };
                 reader.onerror = (readError) => {
                     console.error("InterviewMode: Error reading audio blob:", readError);
                     setError("Failed to process recorded audio.");
-                    setShowTryAgain(true); // FIX: Show "Try Again" button
+                    setShowTryAgain(true);
                     setStage('user_turn');
                 };
             };
@@ -373,12 +372,21 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         if (!text) { setStage('user_turn'); return; }
         setStage('ai_speaking'); setIsGoogleTtsPlaying(true); setError(null);
         try {
-            // FIX: More robust language code check for Thai TTS
             const languageCode = sttLang.toLowerCase().startsWith('th') ? 'th-TH' : 'en-US';
-            console.log(`TTS: Using language code ${languageCode} for text.`);
+            const voiceName = languageCode === 'th-TH' ? 'th-TH-Wavenet-A' : 'en-US-Wavenet-D';
+            console.log(`TTS: Using language '${languageCode}' and voice '${voiceName}'.`);
 
             const cleanText = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(\*|_)(.*?)\1/g, '$2').replace(/#/g, '');
-            const ttsRequestBody = { action: 'synthesize_speech', text: cleanText, languageCode: languageCode, accessKey: accessKey };
+            const ttsRequestBody = {
+                action: 'synthesize_speech',
+                text: cleanText,
+                languageCode: languageCode,
+                accessKey: accessKey,
+                voice: {
+                    languageCode: languageCode,
+                    name: voiceName
+                }
+            };
             const response = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ttsRequestBody) });
             if (!response.ok) { const errorData = await response.json().catch(() => ({ error: `TTS Worker Error: ${response.status}` })); throw new Error(errorData.error || `TTS Worker Error: ${response.status}`);}
             const responseData = await response.json();

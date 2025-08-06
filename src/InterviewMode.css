@@ -161,20 +161,66 @@
     align-items: center;
 }
 
-.interview-status {
-    padding: 8px 10px;
+/* --- NEW and UPDATED Styles for Controls --- */
+.interview-controls-and-status {
+    display: flex;
+    border-top: 1px solid var(--border-color, #ccc);
     background: var(--button-secondary-bg, #eee);
+    align-items: stretch; /* Make children same height */
+}
+
+.interview-status {
+    flex-grow: 1; /* Take up available space */
+    padding: 8px 10px;
     text-align: center;
     font-style: italic;
     color: var(--text-secondary);
     font-size: 0.9em;
-    border-top: 1px solid var(--border-color, #ccc);
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    flex-shrink: 0; /* Prevent shrinking */
 }
+
+.interview-controls {
+    flex-shrink: 0; /* Prevent button container from shrinking */
+    display: flex;
+    align-items: center;
+    padding: 5px;
+    border-left: 1px solid var(--border-color, #ccc);
+}
+
+.interview-control-button {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #fff;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.interview-control-button.start {
+    background-color: #0d6efd; /* Blue */
+}
+.interview-control-button.start:hover {
+    background-color: #0b5ed7;
+}
+
+.interview-control-button.stop {
+    background-color: #dc3545; /* Red */
+}
+.interview-control-button.stop:hover {
+    background-color: #bb2d3b;
+}
+
+.interview-control-button.retry {
+    background-color: #198754; /* Green */
+}
+.interview-control-button.retry:hover {
+    background-color: #157347;
+}
+/* --- End of new styles --- */
 
 .recording-dot {
     width: 10px;
@@ -268,5 +314,13 @@
     }
     .interview-chat-view {
         flex: 3; /* Give chat more space when stacked */
+    }
+    .interview-controls-and-status {
+        flex-direction: column; /* Stack status and controls */
+    }
+    .interview-controls {
+        border-left: none;
+        border-top: 1px solid var(--border-color, #ccc);
+        justify-content: center; /* Center the button */
     }
 }
