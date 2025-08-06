@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 // Assuming types and constants can be imported from App or another shared location
 import { Message, GeminiModel, SpeechLanguage, ApiRequestBody, WORKER_URL } from './App';
+import InterviewReport from './InterviewReport'; // Import the new component
 import './InterviewMode.css'; // Make sure this CSS file exists
 
 // --- Constants ---
@@ -45,11 +46,18 @@ type InterviewStage =
     | 'ai_thinking'
     | 'ai_speaking'
     | 'finished'
+    | 'generating_report'
+    | 'report_ready'
     | 'error'
     | 'user_turn';
 
 type InterviewResult = 'pass' | 'fail' | null;
-type HistoryItem = { role: 'user' | 'model'; parts: { text: string }[] };
+export type HistoryItem = { role: 'user' | 'model'; parts: { text: string }[] };
+export interface InterviewReportData {
+    result: InterviewResult;
+    summary: string;
+    transcript: Message[];
+}
 
 // --- Reusable fetch logic for Gemini ---
 async function getBotResponseInterview(
@@ -57,10 +65,21 @@ async function getBotResponseInterview(
     history: HistoryItem[],
     model: GeminiModel,
     persona: string,
-    accessKey: string
+    accessKey: string,
+    isReportGeneration: boolean = false
 ): Promise<{ text: string; imageUrl: string | null }> {
+    // Modify the prompt for report generation
+    const finalPrompt = isReportGeneration
+        ? `Based on the entire conversation history provided, please act as the hiring manager. First, on a new line, write a final conclusion of either "Conclusion: Pass" or "Conclusion: Fail". Then, on another new line, provide a 2-3 sentence summary explaining your decision and offering constructive feedback on the candidate's performance.`
+        : userInput;
+
     const requestBody: ApiRequestBody = {
-        action: 'chat', prompt: userInput, model: model, persona: persona as any, accessKey: accessKey || undefined, history: history,
+        action: 'chat',
+        prompt: finalPrompt,
+        model: model,
+        persona: persona as any,
+        accessKey: accessKey || undefined,
+        history: history,
     };
     try {
         const response = await fetch(WORKER_URL, {
@@ -91,6 +110,8 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
     const [isSttActive, setIsSttActive] = useState(false);
     const [isGoogleTtsPlaying, setIsGoogleTtsPlaying] = useState(false);
     const [showTryAgain, setShowTryAgain] = useState(false);
+    const [recordingTimeLeft, setRecordingTimeLeft] = useState(MAX_RECORDING_DURATION / 1000);
+    const [reportData, setReportData] = useState<InterviewReportData | null>(null);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -102,7 +123,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
     const googleTtsAudioRef = useRef<HTMLAudioElement | null>(null);
     const initialSessionSetupDone = useRef(false);
     const currentAudioSampleRate = useRef<number | undefined>(undefined);
-
+    const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => { stageRef.current = stage; }, [stage]);
 
@@ -117,6 +138,10 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
     useEffect(() => { if (messages.length > 0) scrollToBottom(); }, [messages, scrollToBottom]);
 
     const stopRecordingAndClearData = useCallback(() => {
+        if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+        }
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
             mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
             mediaRecorderRef.current.stop();
@@ -177,7 +202,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         if (isOpen) {
             if (!initialSessionSetupDone.current) {
                 console.log("InterviewMode: isOpen is true AND initial session setup not done. Resetting and starting setup.");
-                setMessages([]); messageHistoryRef.current = []; setError(null); setResult(null); setShowTryAgain(false);
+                setMessages([]); messageHistoryRef.current = []; setError(null); setResult(null); setShowTryAgain(false); setReportData(null);
                 stopStreamsAndTTS();
                 setStage('idle'); startInterviewSetup(); initialSessionSetupDone.current = true;
             }
@@ -202,6 +227,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             mediaRecorderRef.current.stop();
         }
         if (recordingTimeoutRef.current) { clearTimeout(recordingTimeoutRef.current); recordingTimeoutRef.current = null; }
+        if (timerIntervalRef.current) { clearInterval(timerIntervalRef.current); timerIntervalRef.current = null; }
         setIsSttActive(false);
         if (stageRef.current === 'listening') { setStage('processing_stt_audio'); }
     }, []);
@@ -239,9 +265,16 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         if (isSttActive || (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording")) { console.warn("startListening: Already recording."); return; }
         
         if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
         console.log(`InterviewMode: Attempting to start audio recording for STT. Lang: ${sttLang}`);
         setError(null); setStage('listening'); audioChunksRef.current = [];
+        
+        setRecordingTimeLeft(MAX_RECORDING_DURATION / 1000);
+        timerIntervalRef.current = setInterval(() => {
+            setRecordingTimeLeft(prev => Math.max(0, prev - 1));
+        }, 1000);
+
         try {
             const clonedTrack = liveAudioTrack.clone();
             const cleanStream = new MediaStream([clonedTrack]);
@@ -398,10 +431,14 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             audio.onended = () => {
                 setIsGoogleTtsPlaying(false);
                 if (stageRef.current === 'ai_speaking') {
-                    if (result) { setStage('finished'); } else { setStage('user_turn'); }
+                    if (result) {
+                        setStage('generating_report');
+                    } else {
+                        setStage('user_turn');
+                    }
                 }
             };
-            audio.onerror = (e) => { setIsGoogleTtsPlaying(false); console.error('TTS Playback Error:', e); setError(`TTS playback error.`); if (stageRef.current === 'ai_speaking') { if (result) setStage('finished'); else setStage('user_turn');}};
+            audio.onerror = (e) => { setIsGoogleTtsPlaying(false); console.error('TTS Playback Error:', e); setError(`TTS playback error.`); if (stageRef.current === 'ai_speaking') { if (result) setStage('generating_report'); else setStage('user_turn');}};
             await audio.play();
         } catch (error) {
             setIsGoogleTtsPlaying(false);
@@ -409,7 +446,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             console.error('TTS fetch/setup error:', msg);
             setError(`TTS Error: ${msg}. The interviewer's response is above. Please continue.`);
             if (result) {
-                setStage('finished');
+                setStage('generating_report');
             } else {
                 setStage('user_turn');
             }
@@ -435,8 +472,8 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             setMessages(prev => [...prev.filter(m => m.sender !== 'loading'), botMessage]);
             let endResult: InterviewResult = null;
             const lowerText = response.text.toLowerCase();
-            if (lowerText.includes("conclusion: pass") || lowerText.includes("final result: pass")) { endResult = 'pass'; }
-            else if (lowerText.includes("conclusion: fail") || lowerText.includes("final result: fail")) { endResult = 'fail'; }
+            if (lowerText.includes("conclusion: pass")) { endResult = 'pass'; }
+            else if (lowerText.includes("conclusion: fail")) { endResult = 'fail'; }
             if (endResult) { console.log("InterviewMode: Gemini decided interview result:", endResult); setResult(endResult); }
             if (response.text.startsWith("Error:")) { setStage('error'); initialSessionSetupDone.current = true; }
             else { playGoogleCloudTTSRef.current(response.text);}
@@ -471,6 +508,40 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         }
     }, [selectedModel, accessKey]);
 
+    const generateReport = useCallback(async () => {
+        console.log("Generating interview report...");
+        try {
+            const response = await getBotResponseInterview("", messageHistoryRef.current, selectedModel, INTERVIEWER_PERSONA_ID, accessKey, true);
+            if (response.text.startsWith("Error:")) {
+                throw new Error(response.text);
+            }
+
+            const lines = response.text.split('\n').filter(line => line.trim() !== '');
+            const conclusionLine = lines.find(line => line.toLowerCase().startsWith("conclusion:")) || "";
+            const finalResult: InterviewResult = conclusionLine.toLowerCase().includes("pass") ? 'pass' : 'fail';
+            const summary = lines.filter(line => !line.toLowerCase().startsWith("conclusion:")).join('\n');
+
+            setReportData({
+                result: finalResult,
+                summary: summary,
+                transcript: messages.filter(m => m.sender !== 'loading'),
+            });
+            setStage('report_ready');
+
+        } catch (e) {
+            const errorMsg = `Failed to generate report: ${(e as Error).message}`;
+            console.error(errorMsg);
+            setError(errorMsg);
+            setStage('error');
+        }
+    }, [accessKey, selectedModel, messages]);
+
+    useEffect(() => {
+        if (stage === 'generating_report') {
+            generateReport();
+        }
+    }, [stage, generateReport]);
+
     useEffect(() => { // Effect to attach stream to video element
         const videoElement = videoRef.current;
         if (cameraStream && videoElement) {
@@ -489,40 +560,19 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
     }, [isOpen, stage, cameraStream, startInterview]);
 
     if (!isOpen && !initialSessionSetupDone.current && stage === 'idle') return null;
-
+    
     // --- UI Rendering ---
-    const renderControls = () => {
-        if (stage === 'listening') {
-            return (
-                <button onClick={stopListeningAndProcessAudio} className="interview-control-button stop">
-                    Stop and Send
-                </button>
-            );
+    const renderMainContent = () => {
+        if (stage === 'report_ready' && reportData) {
+            return <InterviewReport data={reportData} onClose={onClose} />;
         }
-        if (stage === 'user_turn') {
-            if (showTryAgain) {
-                return (
-                    <button onClick={startListening} className="interview-control-button retry">
-                        Try Again
-                    </button>
-                );
-            }
-            return (
-                <button onClick={startListening} className="interview-control-button start">
-                    Start Recording
-                </button>
-            );
-        }
-        return null;
-    };
 
-    return (
-        <div className="interview-mode-overlay">
-            <div className="interview-mode-modal">
+        return (
+            <>
                 <h3>University Entrance Interview Simulation</h3>
                 {error && <p className="interview-error">{error}</p>}
                 <div className="interview-layout">
-                    <div className="interview-camera-view">
+                    <div className={`interview-camera-view ${stage === 'ai_thinking' ? 'thinking' : ''} ${stage === 'listening' ? 'listening' : ''}`}>
                         {(stage !== 'idle' && stage !== 'requesting_perms' && cameraStream) ? (
                             <video ref={videoRef} autoPlay playsInline muted={true} />
                         ) : (
@@ -553,11 +603,11 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                         </div>
                         <div className="interview-controls-and-status">
                             <div className="interview-status">
-                                {stage === 'listening' && `Listening...`}
+                                {stage === 'listening' && `Listening... (${recordingTimeLeft}s left)`}
                                 {stage === 'processing_stt_audio' && "Processing your audio..."}
                                 {stage === 'ai_thinking' && "Interviewer Thinking..."}
                                 {stage === 'ai_speaking' && "Interviewer Speaking..."}
-                                {stage === 'finished' && `Interview Finished: ${result ? result.toUpperCase() : 'Concluded'}`}
+                                {stage === 'generating_report' && "Generating Final Report..."}
                                 {stage === 'error' && "An error occurred."}
                                 {stage === 'user_turn' && (showTryAgain ? "Ready to try again." : "Your Turn.")}
                                 {stage === 'starting' && "Starting Interview..."}
@@ -572,17 +622,47 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                         </div>
                     </div>
                 </div>
-                {stage === 'finished' && result && (
-                    <div className={`interview-result ${result}`}>Result: {result.toUpperCase()}</div>
-                )}
                 <button
                     onClick={onClose}
                     className="interview-close-button"
-                    disabled={stage === 'ai_thinking' || stage === 'processing_stt_audio'}
-                    title={ (stage === 'ai_thinking' || stage === 'processing_stt_audio')
-                        ? "Please wait..." : (stage === 'finished' ? 'Close' : 'Leave Interview') } >
-                    {stage === 'finished' || stage === 'error' || stage === 'idle' ? 'Close' : 'Leave Interview'}
+                    disabled={stage === 'ai_thinking' || stage === 'processing_stt_audio' || stage === 'generating_report'}
+                    title={ (stage === 'ai_thinking' || stage === 'processing_stt_audio' || stage === 'generating_report')
+                        ? "Please wait..." : 'Leave Interview' } >
+                    Leave Interview
                 </button>
+            </>
+        );
+    };
+
+    const renderControls = () => {
+        if (stage === 'listening') {
+            return (
+                <button onClick={stopListeningAndProcessAudio} className="interview-control-button stop">
+                    Stop and Send
+                </button>
+            );
+        }
+        if (stage === 'user_turn') {
+            if (showTryAgain) {
+                return (
+                    <button onClick={startListening} className="interview-control-button retry">
+                        Try Again
+                    </button>
+                );
+            }
+            return (
+                <button onClick={startListening} className="interview-control-button start">
+                    Start Recording
+                </button>
+            );
+        }
+        return null;
+    };
+
+    return (
+        <div className="interview-mode-overlay">
+            <div className="interview-mode-modal">
+                {renderMainContent()}
             </div>
         </div>
     );
