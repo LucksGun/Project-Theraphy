@@ -1,6 +1,6 @@
 // src/InterviewMode.tsx - Full code with all recent fixes
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import  { useState, useEffect, useRef, useCallback } from 'react';
 // Assuming types and constants can be imported from App or another shared location
 import { Message, GeminiModel, SpeechLanguage, ApiRequestBody, WORKER_URL } from './App';
 import InterviewReport from './InterviewReport'; // Import the new component
@@ -68,7 +68,6 @@ async function getBotResponseInterview(
     accessKey: string,
     isReportGeneration: boolean = false
 ): Promise<{ text: string; imageUrl: string | null }> {
-    // Modify the prompt for report generation
     const finalPrompt = isReportGeneration
         ? `Based on the entire conversation history provided, please act as the hiring manager. First, on a new line, write a final conclusion of either "Conclusion: Pass" or "Conclusion: Fail". Then, on another new line, provide a 2-3 sentence summary explaining your decision and offering constructive feedback on the candidate's performance.`
         : userInput;
@@ -470,11 +469,25 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             if (!response.text.startsWith("Error:")) messageHistoryRef.current.push({ role: 'model', parts: [{ text: response.text }] });
             else { console.error("Gemini API error:", response.text); setError(response.text); }
             setMessages(prev => [...prev.filter(m => m.sender !== 'loading'), botMessage]);
-            let endResult: InterviewResult = null;
+            
+            // --- NEW: More flexible trigger word detection ---
             const lowerText = response.text.toLowerCase();
-            if (lowerText.includes("conclusion: pass")) { endResult = 'pass'; }
-            else if (lowerText.includes("conclusion: fail")) { endResult = 'fail'; }
-            if (endResult) { console.log("InterviewMode: Gemini decided interview result:", endResult); setResult(endResult); }
+            const passRegex = /(conclusion:\s*pass|\*\*pass\*\*)/i;
+            const failRegex = /(conclusion:\s*fail|\*\*fail\*\*)/i;
+
+            let endResult: InterviewResult = null;
+            if (passRegex.test(lowerText)) {
+                endResult = 'pass';
+            } else if (failRegex.test(lowerText)) {
+                endResult = 'fail';
+            }
+            
+            if (endResult) {
+                console.log("InterviewMode: Gemini decided interview result:", endResult);
+                setResult(endResult);
+            }
+            // --- End of new detection ---
+
             if (response.text.startsWith("Error:")) { setStage('error'); initialSessionSetupDone.current = true; }
             else { playGoogleCloudTTSRef.current(response.text);}
         } catch (e) {
