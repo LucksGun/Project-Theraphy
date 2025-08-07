@@ -8,7 +8,7 @@ import './InterviewMode.css'; // Make sure this CSS file exists
 
 // --- Constants ---
 const INTERVIEWER_PERSONA_ID = 'interviewer';
-const MAX_RECORDING_DURATION = 55000; // 55 seconds for user to speak
+const MAX_RECORDING_DURATION = 40000; // 55 seconds for user to speak
 
 // GOOGLE_STT_ENCODING_MAP to map browser MIME types to Google STT encodings
 const GOOGLE_STT_ENCODING_MAP: Record<string, string> = {
