@@ -286,6 +286,43 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     max-height: calc(100vh - 70px);
     overflow-y: auto;
 }
+/* --- Additions for Login System --- */
+
+/* 1. Update Header Spacer for Flexibility */
+/* This changes the right side of the header from a fixed-width spacer 
+   to a flexible container that pushes the login/profile to the far right. */
+.header-spacer-right {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-grow: 1; /* Allows it to take up available space */
+    min-width: 60px; /* Ensures it has at least some width */
+}
+
+/* 2. Enhance Buttons for Text */
+/* This adds padding and a subtle background on hover to your existing
+   .settings-button class, making it look better for "Login" and "Logout" text. */
+.settings-button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.settings-button:hover {
+    background-color: var(--button-secondary-bg);
+    color: var(--text-primary);
+}
+
+/* 3. Style for the Loading State */
+/* This provides basic styling for the "Loading Application..." message
+   that appears while Firebase is initializing. */
+.loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-size: 1.2em;
+    color: var(--text-secondary);
+}
 .settings-menu h3 { text-align: center; font-size: 1.1em; font-weight: 600; color: var(--text-primary); margin-top: 0; margin-bottom: 15px; flex-shrink: 0; }
 /* MODIFIED Settings Grid to be single column layout using flex */
 .settings-menu .settings-column {

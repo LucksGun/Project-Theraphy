@@ -13,6 +13,7 @@
     "@mui/icons-material": "^7.0.1",
     "@types/qrcode.react": "^1.0.5",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "firebase": "^12.1.0",
     "matter-js": "^0.20.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
