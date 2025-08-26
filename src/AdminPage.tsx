@@ -1,15 +1,54 @@
-// src/AdminPage.tsx - Fixed unused handleDeleteFeedback handler
-import { useState, useEffect, ChangeEvent } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './admin.css';
-import {
-    GeminiModel, Persona, UserKeyInfo, AVAILABLE_PERSONAS,
-    ALL_AVAILABLE_MODELS_FRONTEND, WORKER_URL, ApiRequestBody, FeedbackItem,
-    DEFAULT_BASE_SYSTEM_INSTRUCTION, DEFAULT_PERSONA_INSTRUCTIONS,
-    ALL_PERSONA_KEYS
-} from './App';
 
-type PersonaInstructionMap = { [key in Persona]?: string };
+// =================================================================
+// --- 1. Embedded Dependencies from App.tsx ---
+// =================================================================
+// To make this component self-contained, types and constants from App.tsx are included here.
+
+export const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
+
+// --- Types & Interfaces ---
+export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.5-flash-lite';
+export type Persona = 'normal' | 'therapist' | 'university_master';
+export interface UserKeyInfo { key: string; username: string | null; status: 'active' | 'inactive'; created_at: string; }
+export interface FeedbackItem { id: number; email: string | null; rating: number; comment: string; submitted_at: string; is_important: number; }
+export type PersonaInstructionMap = { [key in Persona]?: string };
+export interface ApiRequestBody {
+    action: string;
+    staffKey?: string;
+    userId?: string;
+    [key: string]: any; // Allow other properties
+}
+export interface PersonaInfo { value: Persona; label: string; emoji: string; restricted: boolean; }
+// ✨ ADD THIS INTERFACE
+export interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
+
+
+// --- Configurations & Constants ---
+// 🔧 ADD TYPE ANNOTATION HERE
+export const ALL_AVAILABLE_MODELS_FRONTEND: ModelInfo[] = [
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', restricted: false },
+    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', restricted: false },
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', restricted: true }
+];
+export const AVAILABLE_PERSONAS: PersonaInfo[] = [
+    { value: 'university_master', label: 'University Master', emoji: '🎓', restricted: false },
+    { value: 'normal', label: 'Normal Bot', emoji: '🤖', restricted: true },
+    { value: 'therapist', label: 'Therapist', emoji: '🧠', restricted: true }
+];
+export const DEFAULT_BASE_SYSTEM_INSTRUCTION = `You are a helpful AI assistant. Format responses using Markdown...`; // Truncated for brevity
+export const DEFAULT_PERSONA_INSTRUCTIONS: PersonaInstructionMap = {
+    normal: `Act as a general assistant...`,
+    therapist: `Roleplay as an empathetic therapist assistant...`,
+    university_master: `Roleplay as an expert academic advisor...`
+};
+export const ALL_PERSONA_KEYS = Object.keys(DEFAULT_PERSONA_INSTRUCTIONS);
+
+
+// =================================================================
+// --- 2. AdminPage Component ---
+// =================================================================
 
 function AdminPage() {
     const navigate = useNavigate();
@@ -29,6 +68,12 @@ function AdminPage() {
     const [personaPrompts, setPersonaPrompts] = useState<PersonaInstructionMap>({});
     const [initialBasePrompt, setInitialBasePrompt] = useState<string>('');
     const [initialPersonaPrompts, setInitialPersonaPrompts] = useState<PersonaInstructionMap>({});
+    const [searchUserId, setSearchUserId] = useState<string>('');
+    const [viewingHistory, setViewingHistory] = useState<any[] | null>(null);
+    const [viewingUserId, setViewingUserId] = useState<string | null>(null);
+    const [historyError, setHistoryError] = useState<string | null>(null);
+    const [isHistoryLoading, setIsHistoryLoading] = useState<boolean>(false);
+    
 
     // --- Effects ---
     useEffect(() => {
@@ -73,13 +118,16 @@ function AdminPage() {
     const handleEditUsernameChange = (e:ChangeEvent<HTMLInputElement>)=>{setEditUsernameValue(e.target.value);};
     const handleLogout = () => { sessionStorage.removeItem('staffKey'); navigate('/'); };
     const handleMarkImportant = async (feedbackId: number, currentIsImportant: number) => { if (!authenticatedStaffKey) return; const makeImportant = !currentIsImportant; setIsAdminLoading(true); setAdminError(null); setAdminSuccess(null); const requestBody: ApiRequestBody = { action: 'adminMarkFeedbackImportant', staffKey: authenticatedStaffKey, feedbackId: feedbackId, isImportant: makeImportant ? 1 : 0 }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) throw new Error(data?.error || `Update importance failed: ${res.status}`); setAdminSuccess(data.message || "Feedback importance updated."); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed update importance."); } finally { fetchAdminData(authenticatedStaffKey); } };
-    // This handler should now be used
     const handleDeleteFeedback = async (feedbackId: number) => { if (!authenticatedStaffKey) return; if (!window.confirm(`DELETE feedback entry #${feedbackId}?`)) return; setIsAdminLoading(true); setAdminError(null); setAdminSuccess(null); const requestBody: ApiRequestBody = { action: 'adminDeleteFeedback', staffKey: authenticatedStaffKey, feedbackId: feedbackId }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) throw new Error(data?.error || `Delete failed: ${res.status}`); setAdminSuccess(data.message || "Feedback deleted."); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed delete feedback."); } finally { fetchAdminData(authenticatedStaffKey); } };
     const handleBasePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => { setBasePrompt(e.target.value); setAdminError(null); setAdminSuccess(null); };
     const handlePersonaPromptChange = (personaKey: string, value: string) => { setPersonaPrompts(prev => ({ ...prev, [personaKey]: value })); setAdminError(null); setAdminSuccess(null); };
     const handleRevertPromptChanges = () => { if (window.confirm("Revert unsaved prompt changes?")) { setBasePrompt(initialBasePrompt); setPersonaPrompts(initialPersonaPrompts); setAdminError(null); setAdminSuccess("Changes reverted."); } };
     const handleSaveChanges = async () => { if (!authenticatedStaffKey) return; const baseChanged = basePrompt !== initialBasePrompt; const personasChanged = JSON.stringify(personaPrompts) !== JSON.stringify(initialPersonaPrompts); if (!baseChanged && !personasChanged) { setAdminError("No changes to save."); return; } if (!window.confirm("Save prompt changes?")) return; setIsAdminLoading(true); setAdminError(null); setAdminSuccess(null); const requestBody: ApiRequestBody = { action: 'adminSetPrompts', staffKey: authenticatedStaffKey, baseInstruction: basePrompt, personaInstructions: personaPrompts }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) { throw new Error(data?.error || `Save failed: ${res.status}`); } setAdminSuccess(data.message || "Prompts saved!"); setInitialBasePrompt(basePrompt); setInitialPersonaPrompts(personaPrompts); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed save prompts."); } finally { setIsAdminLoading(false); } };
     const hasPromptChanges = basePrompt !== initialBasePrompt || JSON.stringify(personaPrompts) !== JSON.stringify(initialPersonaPrompts);
+    const handleSearchIdChange = (e: ChangeEvent<HTMLInputElement>) => { setSearchUserId(e.target.value); setHistoryError(null); };
+    const handleFetchHistory = async (userIdToSearch: string) => { if (!authenticatedStaffKey || !userIdToSearch.trim()) { setHistoryError("Please enter a User ID to search."); return; } setIsHistoryLoading(true); setHistoryError(null); setViewingHistory(null); const requestBody: ApiRequestBody = { action: 'adminGetChatHistory', staffKey: authenticatedStaffKey, userId: userIdToSearch.trim() }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); const data = await res.json(); if (!res.ok || !data.success) throw new Error(data?.error || "Failed to fetch history."); setViewingHistory(data.history); setViewingUserId(userIdToSearch.trim()); if (data.history.length === 0) { setHistoryError("No chat history found for this user."); } } catch (e) { setHistoryError(e instanceof Error ? e.message : "An unknown error occurred."); } finally { setIsHistoryLoading(false); } };
+    const handleClearUserHistory = async (userIdToClear: string | null) => { if (!authenticatedStaffKey || !userIdToClear) return; if (!window.confirm(`Are you sure you want to permanently delete all chat history for user ID "${userIdToClear}"?`)) return; setIsAdminLoading(true); const requestBody: ApiRequestBody = { action: 'adminClearUserHistory', staffKey: authenticatedStaffKey, userId: userIdToClear }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); const data = await res.json(); if (!res.ok || !data.success) throw new Error(data?.error || "Failed to clear history."); setAdminSuccess(data.message || "History cleared successfully."); setViewingHistory(null); setViewingUserId(null); } catch (e) { setAdminError(e instanceof Error ? e.message : "An unknown error occurred while clearing history."); } finally { setIsAdminLoading(false); } };
+    const handleCloseHistoryView = () => { setViewingHistory(null); setViewingUserId(null); setHistoryError(null); };
     
 
 
@@ -90,6 +138,42 @@ function AdminPage() {
     const renderStars = (rating: number) => { const stars = []; for (let i = 1; i <= 5; i++) { stars.push(<span key={i} className={i <= rating ? 'star-filled' : 'star-empty'}>★</span>); } return <div className="rating-stars-display">{stars}</div>; };
 
     return (
+        <>
+        <style>{`
+            /* Basic Admin Styles */
+            .admin-page-container { padding: 20px; max-width: 1200px; margin: auto; }
+            .admin-page-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+            .admin-logout-button { padding: 8px 16px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; }
+            .staff-admin-section { display: flex; flex-direction: column; gap: 20px; }
+            .admin-feedback { padding: 10px; border-radius: 4px; }
+            .admin-feedback.success { background-color: #d4edda; color: #155724; }
+            .admin-feedback.error { background-color: #f8d7da; color: #721c24; }
+            .admin-data-section { border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
+            .staff-separator { border: none; border-top: 1px solid #eee; margin: 20px 0; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
+            th { background-color: #f7f7f7; }
+            .actions-column { width: 250px; }
+            .action-buttons-cell { display: flex; gap: 5px; }
+            .settings-input { width: 100%; padding: 8px; box-sizing: border-box; }
+            .add-key-form { display: flex; gap: 10px; align-items: flex-end; }
+            .add-key-button { padding: 8px 12px; }
+
+            /* Chat History Modal Styles */
+            .chat-history-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1050; }
+            .chat-history-modal { background-color: white; border-radius: 12px; width: 90%; max-width: 700px; height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
+            .chat-history-header { padding: 15px 20px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
+            .chat-history-header h3 { margin: 0; }
+            .close-history-button { background: none; border: none; font-size: 1.8em; cursor: pointer; }
+            .chat-history-content { flex-grow: 1; overflow-y: auto; padding: 20px; }
+            .chat-history-message { margin-bottom: 15px; }
+            .chat-history-role { font-weight: bold; font-size: 0.8em; text-transform: uppercase; margin-bottom: 4px; display: block; }
+            .chat-history-message.user { display: flex; flex-direction: column; align-items: flex-end; }
+            .chat-history-text { padding: 10px 15px; border-radius: 8px; background-color: #f1f1f1; max-width: 90%; }
+            .chat-history-message.user .chat-history-text { background-color: #0084ff; color: white; }
+            .chat-history-actions { padding: 15px 20px; border-top: 1px solid #ddd; text-align: right; }
+            .delete-button { background-color: #f44336; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+        `}</style>
         <div className="admin-page-container">
             <div className="admin-page-header"> <h1>Staff Admin Panel</h1> <button onClick={handleLogout} className="admin-logout-button">Logout</button> </div>
             <div className="staff-admin-section">
@@ -120,6 +204,37 @@ function AdminPage() {
                 </div>
 
                 <hr className="staff-separator" />
+                <h4>Manage Chat Histories</h4>
+                <div className="admin-data-section">
+                    <div className="add-key-form">
+                        <div className="settings-option" style={{flexGrow: 1}}>
+                            <label htmlFor="search-user-id">Search by User ID:</label>
+                            <input type="text" id="search-user-id" className="settings-input" value={searchUserId} onChange={handleSearchIdChange} placeholder="Enter a user's Database ID..." disabled={isHistoryLoading} />
+                        </div>
+                        <button onClick={() => handleFetchHistory(searchUserId)} className="add-key-button" disabled={isHistoryLoading || !searchUserId.trim()}>{isHistoryLoading ? 'Searching...' : '🔍 Search History'}</button>
+                    </div>
+                    {historyError && <p className="admin-feedback error" style={{marginTop: '10px'}}>{historyError}</p>}
+                </div>
+
+                {viewingHistory && viewingUserId && (
+                    <div className="chat-history-overlay">
+                        <div className="chat-history-modal">
+                            <div className="chat-history-header">
+                                <h3>Chat History for User:</h3>
+                                <code>{viewingUserId}</code>
+                                <button onClick={handleCloseHistoryView} className="close-history-button">×</button>
+                            </div>
+                            <div className="chat-history-content">
+                                {viewingHistory.length > 0 ? ( viewingHistory.map((msg, index) => ( <div key={index} className={`chat-history-message ${msg.role}`}> <span className="chat-history-role">{msg.role === 'user' ? 'User' : 'Bot'}</span> <div className="chat-history-text"> {msg.parts.map((part: any, pIndex: number) => <p key={pIndex}>{part.text}</p>)} </div> </div> )) ) : ( <p>No messages in this history.</p> )}
+                            </div>
+                            <div className="chat-history-actions">
+                                <button onClick={() => handleClearUserHistory(viewingUserId)} className="delete-button" disabled={isAdminLoading}> 🗑️ Clear This User's History </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <hr className="staff-separator" />
                 <h4>Manage AI Prompts</h4>
                  <div className="admin-prompt-warning">⚠️ **Caution:** Editing prompts directly affects AI behavior. Incorrect formatting can break functionality.</div>
                 <div className="admin-data-section prompt-editing-section">
@@ -136,6 +251,7 @@ function AdminPage() {
 
              </div>
         </div>
+        </>
     );
 }
 
