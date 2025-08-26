@@ -62,7 +62,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const result = await signInWithPopup(auth, provider);
       const firebaseIdToken = await result.user.getIdToken();
       
-      // Call your worker to verify the token and create a user profile
       await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -227,7 +226,7 @@ const getInitialTheme = (): AppTheme => {
 };
 
 
-// --- NEW: User Profile & Login Button Components ---
+// --- User Profile & Login Button Components ---
 const UserProfile: React.FC = () => {
     const { user, logout } = useAuth();
     if (!user) return null;
@@ -256,30 +255,12 @@ const LoginButton: React.FC = () => {
 };
 
 
-// --- MainApp Component (Contains your original App logic) ---
+// --- MainApp Component ---
 function MainApp() {
     const { user, loading } = useAuth();
     
     // --- State ---
-    const [messages, setMessages] = useState<Message[]>(() => {
-        const stored = localStorage.getItem(CHAT_STORAGE_KEY);
-        let initial: Message[] = [];
-        try {
-            initial = stored && stored !== '[]' ? JSON.parse(stored) : [];
-            if (!Array.isArray(initial)) throw new Error("Bad format");
-            initial = initial.filter(m => m.sender !== 'loading');
-        } catch (e) {
-            console.error("Bad stored msgs:", e);
-            localStorage.removeItem(CHAT_STORAGE_KEY);
-            initial = [];
-        }
-        if (initial.length === 0) {
-            const ts = Date.now();
-            return [{ id: ts, text: "Welcome!", sender: 'bot', timestamp: ts }];
-        } else {
-            return initial;
-        }
-    });
+    const [messages, setMessages] = useState<Message[]>([]); // Simplified initializer
     const [showWelcomePage, setShowWelcomePage] = useState<boolean>(false);
     const [showKnowledgeCheck, setShowKnowledgeCheck] = useState<boolean>(false);
     const [showLieDetector, setShowLieDetector] = useState<boolean>(false);
@@ -324,6 +305,67 @@ function MainApp() {
     const canAccessAdvanced = keyStatus.isValid === true;
 
     // --- Effects ---
+
+    // ✅ FIXED: This hook now reloads chat data when user logs in or out
+    useEffect(() => {
+        if (loading) {
+            return; // Wait until auth state is confirmed
+        }
+        
+        const loadChatData = async () => {
+            if (user) {
+                // User is logged in, fetch from DB
+                try {
+                    const token = await user.getIdToken();
+                    const response = await fetch(WORKER_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'getChatHistory', token })
+                    });
+                    if (!response.ok) throw new Error('Failed to fetch chat history');
+                    
+                    const data = await response.json();
+                    if (data.history && data.history.length > 0) {
+                        const loadedMessages = data.history.map((item: any, index: number) => ({
+                            id: Date.now() + index,
+                            text: item.parts[0].text,
+                            sender: item.role === 'user' ? 'user' : 'bot',
+                            timestamp: Date.now() + index,
+                        }));
+                        setMessages(loadedMessages);
+                    } else {
+                        const ts = Date.now();
+                        setMessages([{ id: ts, text: `Welcome back, ${user.displayName || 'User'}!`, sender: 'bot', timestamp: ts }]);
+                    }
+                } catch (error) {
+                    console.error("Error loading DB chat history:", error);
+                    const ts = Date.now();
+                    setMessages([{ id: ts, text: "Welcome! Couldn't load previous chat.", sender: 'bot', timestamp: ts }]);
+                }
+            } else {
+                // User is a guest, load from localStorage
+                const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+                try {
+                    const initial = stored && stored !== '[]' ? JSON.parse(stored) : [];
+                    if (Array.isArray(initial) && initial.length > 0) {
+                        setMessages(initial.filter(m => m.sender !== 'loading'));
+                    } else {
+                        const ts = Date.now();
+                        setMessages([{ id: ts, text: "Welcome!", sender: 'bot', timestamp: ts }]);
+                    }
+                } catch (e) {
+                    console.error("Bad stored msgs:", e);
+                    localStorage.removeItem(CHAT_STORAGE_KEY);
+                    const ts = Date.now();
+                    setMessages([{ id: ts, text: "Welcome!", sender: 'bot', timestamp: ts }]);
+                }
+            }
+        };
+
+        loadChatData();
+    }, [user, loading]);
+
+
     useEffect(() => {
         const keyTrimmed = enteredKey.trim();
         if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
@@ -411,13 +453,16 @@ function MainApp() {
     }, []);
 
     useEffect(() => {
-        const messagesToSave = messages.filter(m => m.sender !== 'loading');
-        if (messagesToSave.length > 1 || (messagesToSave.length === 1 && messagesToSave[0].sender !== 'bot')) {
-            localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave));
-        } else if (messagesToSave.length === 0 || (messagesToSave.length === 1 && messagesToSave[0].sender === 'bot' && messagesToSave[0].text === "Chat cleared.")) {
-            localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([]));
+        // Only save to localStorage for guests
+        if (!user) {
+            const messagesToSave = messages.filter(m => m.sender !== 'loading');
+            if (messagesToSave.length > 1 || (messagesToSave.length === 1 && messagesToSave[0].sender !== 'bot')) {
+                localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave));
+            } else if (messagesToSave.length === 0 || (messagesToSave.length === 1 && messagesToSave[0].sender === 'bot' && messagesToSave[0].text === "Chat cleared.")) {
+                localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([]));
+            }
         }
-    }, [messages]);
+    }, [messages, user]);
 
     useEffect(() => { localStorage.setItem(MODEL_STORAGE_KEY, selectedModel); }, [selectedModel]);
     useEffect(() => { localStorage.setItem(STT_LANG_STORAGE_KEY, sttLang); }, [sttLang]);
@@ -518,14 +563,42 @@ function MainApp() {
     const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => { const newModel = event.target.value as GeminiModel; setSelectedModel(newModel); };
     const openInterviewMode = () => { closeAllModals(); setIsInterviewModeOpen(true); };
     const closeInterviewMode = () => { setIsInterviewModeOpen(false); };
-    const executeClearChat = () => {
+    
+    // ✅ FIXED: This function now handles both logged-in and guest users correctly.
+    const executeClearChat = async () => {
         console.log("Executing clear chat logic after confirmation.");
+        closeAllModals();
+        
+        // Update UI immediately for better user experience
         const timestamp = Date.now();
         const clearMessage: Message = { id: timestamp, text: "Chat cleared.", sender: 'bot', timestamp: timestamp };
         setMessages([clearMessage]);
-        localStorage.removeItem(CHAT_STORAGE_KEY);
-        closeAllModals();
+
+        if (user) {
+            // Logged-in user: clear history in the database
+            try {
+                const token = await user.getIdToken();
+                const response = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'clearChatHistory', token })
+                });
+                if (!response.ok) {
+                    throw new Error("Failed to clear history on the server.");
+                }
+                console.log("Database chat history cleared successfully.");
+            } catch (error) {
+                console.error("Could not clear DB history:", error);
+                alert("Could not clear your saved chat history. Please try again.");
+                // Optionally, you could restore the messages here if the call fails
+            }
+        } else {
+            // Guest user: clear history in localStorage
+            localStorage.removeItem(CHAT_STORAGE_KEY);
+            console.log("Guest chat history cleared from localStorage.");
+        }
     };
+    
     const handleAccessKeyChange = (e: ChangeEvent<HTMLInputElement>) => { setEnteredKey(e.target.value); };
     const handleExportChat = () => {
         const msgs = messages.filter(m => m.sender !== 'loading');
@@ -640,7 +713,7 @@ function MainApp() {
     
     // --- JSX ---
     if (loading) {
-        return <div>Loading Application...</div>; // Or a proper spinner component
+        return <div>Loading Application...</div>;
     }
     
     return (
@@ -936,7 +1009,6 @@ function MainApp() {
                                 </div>
                                 <h1>Project Theraphy</h1>
                                 <div className="header-spacer-right">
-                                    {/* NEW: Conditional Login/Profile UI */}
                                     {user ? <UserProfile /> : <LoginButton />}
                                 </div>
                             </header>
