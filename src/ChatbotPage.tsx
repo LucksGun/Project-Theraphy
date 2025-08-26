@@ -1,20 +1,24 @@
+// src/ChatbotPage.tsx - MODIFIED Version with "+" Action Menu
+
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import ReactGA from 'react-ga4';
-// Import necessary types and the useAuth hook
-import { Message, GeminiModel, SpeechLanguage, Persona, WORKER_URL, ApiRequestBody, useAuth } from './App';
+// Import necessary types
+import { Message, GeminiModel, SpeechLanguage, Persona, WORKER_URL, ApiRequestBody } from './App'; // Assuming App.tsx exports these
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import MediaCaptureModal from './MediaCaptureModal';
-import { FaUserTie, FaPlus, FaPaperclip, FaCamera, FaDesktop, FaEdit, FaMicrophone, FaPaperPlane, FaStopCircle } from 'react-icons/fa';
-import { User } from 'firebase/auth'; // Import User type
+import MediaCaptureModal from './MediaCaptureModal'; // Ensure this component exists
+import { FaUserTie, /* other icons */ } from 'react-icons/fa';
+
+// Import icons (using react-icons as an example)
+import { FaPlus, FaPaperclip, FaCamera, FaDesktop, FaEdit, FaMicrophone, FaPaperPlane, FaStopCircle } from 'react-icons/fa';
 
 // --- Constants ---
 const SEND_COOLDOWN_MS = 1500;
 const MAX_HISTORY = 30;
 const MAX_IMAGE_SIZE_MB = 3.8;
-const GA_MEASUREMENT_ID = "G-JX58QMMKZY";
+const GA_MEASUREMENT_ID = "G-JX58QMMKZY"; // Ensure consistency if used here
 
 // History type expected by the worker
 type HistoryItem = {
@@ -22,7 +26,7 @@ type HistoryItem = {
     parts: { text: string }[];
 }
 
-// --- Helper Functions ---
+// --- Helper Functions (Keep existing or ensure they are correct) ---
 function readFileAsBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -32,30 +36,11 @@ function readFileAsBase64(file: File): Promise<string> {
     });
 }
 
-async function getBotResponse(
-    userInput: string, 
-    imageData: { type: string; dataUrl: string } | null, 
-    history: HistoryItem[], 
-    model: GeminiModel, 
-    persona: Persona, 
-    accessKey: string, 
-    firebaseUser: User | null // <-- MODIFIED: Pass the user object
-): Promise<{ text: string; imageUrl: string | null; modelUsed?: string; username?: string }> {
+async function getBotResponse(userInput: string, imageData: { type: string; dataUrl: string } | null, history: HistoryItem[], model: GeminiModel, persona: Persona, accessKey: string): Promise<{ text: string; imageUrl: string | null; modelUsed?: string; username?: string }> {
     const promptToSend = userInput || (imageData ? "Describe this image." : "");
     if (!promptToSend && !imageData) {
         return { text: "Error: Cannot send empty message.", imageUrl: null };
     }
-
-    // <-- MODIFIED: Get token if user exists
-    let userToken: string | null = null;
-    if (firebaseUser) {
-        try {
-            userToken = await firebaseUser.getIdToken();
-        } catch (error) {
-            console.error("Failed to get Firebase ID token:", error);
-        }
-    }
-
     const requestBody: ApiRequestBody = {
         action: 'chat',
         prompt: promptToSend,
@@ -64,11 +49,9 @@ async function getBotResponse(
         accessKey: accessKey || undefined,
         history: history,
         imageMimeType: imageData?.type,
-        imageDataUrl: imageData?.dataUrl,
-        token: userToken // <-- MODIFIED: Include token in the request
+        imageDataUrl: imageData?.dataUrl
     };
-
-    console.log(`Sending Chat Req (Model: ${model}, Persona: ${persona}, History: ${history.length}, Img: ${!!imageData}, Token: ${!!userToken})`);
+    console.log(`Sending Chat Req (Model: ${model}, Persona: ${persona}, History: ${history.length}, Img: ${!!imageData})`);
     try {
         const response = await fetch(WORKER_URL, {
             method: 'POST',
@@ -91,35 +74,16 @@ async function getBotResponse(
     }
 }
 
-async function getBotResponseForAnalysis(
-    userInput: string, 
-    model: GeminiModel, 
-    persona: Persona, 
-    accessKey: string,
-    firebaseUser: User | null // <-- MODIFIED: Pass the user object
-): Promise<string> {
+async function getBotResponseForAnalysis(userInput: string, model: GeminiModel, persona: Persona, accessKey: string): Promise<string> {
     if (!userInput) return "Error: No analysis data provided.";
-    
-    // <-- MODIFIED: Get token if user exists
-    let userToken: string | null = null;
-    if (firebaseUser) {
-        try {
-            userToken = await firebaseUser.getIdToken();
-        } catch (error) {
-            console.error("Failed to get Firebase ID token for analysis:", error);
-        }
-    }
-    
     const requestBody: ApiRequestBody = {
-        action: 'chat',
+        action: 'chat', // Still use 'chat' action but with specific prompt
         prompt: userInput,
         model: model,
-        persona: persona,
-        accessKey: accessKey,
-        token: userToken // <-- MODIFIED: Include token in the request
+        persona: persona, // Use selected persona, backend might override based on prompt structure
+        accessKey: accessKey
     };
-
-    console.log(`Sending Analysis Request (Model: ${model}, Persona: ${persona}, Token: ${!!userToken})`);
+    console.log(`Sending Analysis Request (Model: ${model}, Persona: ${persona})`);
     try {
         const res = await fetch(WORKER_URL, {
             method: 'POST',
@@ -174,7 +138,7 @@ function formatTime(timestamp: number): string {
         return new Date(timestamp).toLocaleTimeString(navigator.language || 'en-US', {
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false
+            hour12: false // Use 24-hour format, adjust if needed
         });
     } catch (e) {
         console.error("Timestamp format error:", e);
@@ -196,7 +160,7 @@ interface ChatbotPageProps {
     sttLang: SpeechLanguage;
     selectedPersona: Persona;
     accessKey: string;
-    onTriggerInterview: () => void;
+    onTriggerInterview: () => void; // <<< ADD PROP for triggering interview
 }
 
 // --- ChatbotPage Component ---
@@ -217,9 +181,10 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
     const [captureMode, setCaptureMode] = useState<'camera' | 'screen' | null>(null);
     const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
     const [capturedImageDataUrl, setCapturedImageDataUrl] = useState<string | null>(null);
+    // *** State for the Action Menu ***
     const [isActionMenuOpen, setIsActionMenuOpen] = useState<boolean>(false);
     const handleMenuInterviewClick = () => {
-        onTriggerInterview();
+        onTriggerInterview(); // Call the function passed from App
         setIsActionMenuOpen(false);
     };
 
@@ -228,43 +193,42 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
     const recognitionRef = useRef<SpeechRecognition | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    // *** Ref for the Action Menu Popup ***
     const menuRef = useRef<HTMLDivElement>(null);
+    // *** Ref for the Action Menu Toggle Button ***
     const menuToggleRef = useRef<HTMLButtonElement>(null);
-    
-    // <-- MODIFIED: Get user from auth context
-    const { user } = useAuth();
 
     // --- Effects ---
     const scrollToBottom = useCallback(() => {
         setTimeout(() => {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-        }, 100);
+        }, 100); // Delay slightly to allow DOM updates
     }, []);
 
     useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
-    useEffect(() => {
+    useEffect(() => { // File Upload Preview cleanup
         return () => { if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); };
     }, [imagePreviewUrl]);
 
-    useEffect(() => {
+    useEffect(() => { // Cooldown Timer cleanup
         return () => { if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current); };
     }, []);
 
-    useEffect(() => {
+    useEffect(() => { // Speech Rec Setup/Cleanup
         if (!recognitionAvailable) return;
         if (!recognitionRef.current) {
             try {
                 const recognition = new SpeechRecognitionImpl();
-                recognition.continuous = false;
-                recognition.interimResults = false;
+                recognition.continuous = false; // Process speech after pause
+                recognition.interimResults = false; // Final results only
 
                 recognition.onresult = (event: SpeechRecognitionEvent) => {
                     const transcript = event.results[event.results.length - 1]?.[0]?.transcript;
                     if (transcript) {
-                        setInput(prev => (prev ? prev + ' ' : '') + transcript);
+                        setInput(prev => (prev ? prev + ' ' : '') + transcript); // Append transcript
                     }
-                    setIsRecording(false);
+                    setIsRecording(false); // Auto-stop visual indicator
                 };
                 recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
                     console.error('Speech Rec Error:', event.error, event.message);
@@ -277,32 +241,35 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                     setIsRecording(false);
                 };
                 recognition.onstart = () => setIsRecording(true);
-                recognition.onend = () => setIsRecording(false);
+                recognition.onend = () => setIsRecording(false); // Ensure indicator stops
                 recognitionRef.current = recognition;
             } catch (err) { console.error("Speech rec init error:", err); }
         }
+        // Cleanup function
         return () => {
             if (recognitionRef.current) {
-                try { recognitionRef.current.abort(); } catch (e) {}
+                try { recognitionRef.current.abort(); } catch (e) {/* ignore errors on cleanup */ }
+                // Remove listeners
                 recognitionRef.current.onresult = null;
                 recognitionRef.current.onerror = null;
                 recognitionRef.current.onstart = null;
                 recognitionRef.current.onend = null;
             }
-            setIsRecording(false);
+            setIsRecording(false); // Ensure recording state is reset
         };
-    }, []);
+    }, []); // Run only once
 
-    useEffect(() => {
+    useEffect(() => { // TTS Cleanup
         return () => { if (isSpeechSynthesisSupported && window.speechSynthesis.speaking) window.speechSynthesis.cancel(); };
     }, [isSpeechSynthesisSupported]);
 
-    useEffect(() => { }, [capturedImageDataUrl]);
+    useEffect(() => { /* Captured Image Preview Cleanup (Data URLs don't need revoke) */ }, [capturedImageDataUrl]);
 
-    useEffect(() => {
+    useEffect(() => { // Media Stream Cleanup
         return () => { if (activeStream) { activeStream.getTracks().forEach(track => track.stop()); setActiveStream(null); } };
     }, [activeStream]);
 
+     // *** Effect for closing menu on outside click ***
      useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if ( menuRef.current && !menuRef.current.contains(event.target as Node) &&
@@ -315,10 +282,11 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
         } else {
             document.removeEventListener("mousedown", handleClickOutside);
         }
+        // Cleanup listener on unmount or when menu closes
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, [isActionMenuOpen]);
+    }, [isActionMenuOpen]); // Re-run when menu visibility changes
 
     // --- Helper Functions ---
     const stopActiveStream = useCallback(() => {
@@ -334,7 +302,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
         setSelectedImage(null);
         if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
         setImagePreviewUrl(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
+        if (fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
     }, [imagePreviewUrl]);
 
     const removeCapturedImage = useCallback(() => {
@@ -355,7 +323,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
         let imageDataForApi: { type: string; dataUrl: string } | null = null;
         const historyToSend: HistoryItem[] = messages
             .filter(m => (m.sender === 'user' || m.sender === 'bot') && m.text && !m.text.startsWith('Error:'))
-            .slice(-MAX_HISTORY)
+            .slice(-MAX_HISTORY) // Get last N messages for history
             .map(m => ({
                 role: m.sender === 'user' ? 'user' : 'model',
                 parts: [{ text: m.text }]
@@ -364,6 +332,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
         let userMsgText = textTrimmed;
         let userMsgImageUrl: string | undefined = undefined;
 
+        // Handle image data (prioritize captured if both exist)
         if (capturedImage && imageFile) {
             console.warn("Both captured image and file upload exist, prioritizing captured image.");
             removeSelectedImage();
@@ -375,7 +344,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                 if (!capturedImage.startsWith('data:image/jpeg;base64,')) throw new Error("Invalid captured image data format.");
                 imageDataForApi = { type: 'image/jpeg', dataUrl: capturedImage };
                 userMsgText = textTrimmed || "(Captured Image)";
-                userMsgImageUrl = capturedImage;
+                userMsgImageUrl = capturedImage; // Use data URL for preview
             } catch (e) {
                 alert(`Error preparing captured image: ${(e as Error).message}`);
                 console.error("Capture Prep Error:", e);
@@ -389,7 +358,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                 const dataUrl = await readFileAsBase64(imageFile);
                 imageDataForApi = { type: imageFile.type, dataUrl: dataUrl };
                 userMsgText = textTrimmed || `(Image: ${imageFile.name})`;
-                userMsgImageUrl = dataUrl;
+                userMsgImageUrl = dataUrl; // Use data URL for preview
             } catch (e) {
                 alert(`Error preparing uploaded image: ${(e as Error).message}`);
                 removeSelectedImage();
@@ -397,36 +366,37 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
             }
         }
 
-        if (!userMsgText && !imageDataForApi) return;
+        if (!userMsgText && !imageDataForApi) return; // Should not happen if checks above work
 
         const userMsg: Message = { id: timestamp, text: userMsgText, sender: 'user', timestamp: timestamp, imageUrl: userMsgImageUrl };
         setMessages(prev => [...prev, userMsg]);
 
-        if (messageText === input) setInput('');
-        if (imageFile) removeSelectedImage();
-        if (capturedImage) removeCapturedImage();
+        // Clear inputs *after* adding user message
+        if (messageText === input) setInput(''); // Only clear if it was the main input text
+        if (imageFile) removeSelectedImage(); // Clear file input state
+        if (capturedImage) removeCapturedImage(); // Clear captured image state
 
+        // --- Loading state and API call ---
         setIsLoading(true);
         setIsOnCooldown(true);
         if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
         cooldownTimerRef.current = setTimeout(() => setIsOnCooldown(false), SEND_COOLDOWN_MS);
 
-        const loadingTimestamp = Date.now() + 1;
+        const loadingTimestamp = Date.now() + 1; // Ensure unique ID
         const loadingMsg: Message = { id: loadingTimestamp, text: 'Loading...', sender: 'loading', timestamp: loadingTimestamp };
         setMessages(prev => [...prev, loadingMsg]);
-        scrollToBottom();
+        scrollToBottom(); // Scroll after adding loading
 
         let botResponse: { text: string; imageUrl: string | null; modelUsed?: string; username?: string; } = { text: 'Error: Request failed.', imageUrl: null };
         try {
-            // <-- MODIFIED: Pass the user object to the API call
-            botResponse = await getBotResponse(textTrimmed, imageDataForApi, historyToSend, selectedModel, selectedPersona, accessKey, user);
+            botResponse = await getBotResponse(textTrimmed, imageDataForApi, historyToSend, selectedModel, selectedPersona, accessKey);
         } catch (error) {
             console.error("Critical sendMessage error:", error);
             botResponse.text = error instanceof Error ? `Error: ${error.message}` : "Error: Critical network error.";
             botResponse.imageUrl = null;
         } finally {
-            setIsLoading(false);
-            const botTimestamp = Date.now() + 2;
+            setIsLoading(false); // Stop loading indicator
+            const botTimestamp = Date.now() + 2; // Ensure unique ID
             if (botResponse.text || botResponse.imageUrl) {
                 const newBotMessage: Message = {
                     id: botTimestamp,
@@ -436,34 +406,35 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                     imageUrl: botResponse.imageUrl ?? undefined,
                     modelUsed: botResponse.modelUsed,
                 };
-                setMessages(prev => [...prev.filter(m => m.id !== loadingTimestamp), newBotMessage]);
+                setMessages(prev => [...prev.filter(m => m.id !== loadingTimestamp), newBotMessage]); // Replace loading with response
             } else {
                 console.warn("Received empty response from bot.");
-                setMessages(prev => prev.filter(m => m.id !== loadingTimestamp));
+                setMessages(prev => prev.filter(m => m.id !== loadingTimestamp)); // Remove loading if response is empty
             }
+             // scrollToBottom(); // Scroll again after adding bot message - already called in useEffect
         }
-    }, [messages, isLoading, isOnCooldown, input, selectedImage, capturedImageDataUrl, setMessages, selectedModel, selectedPersona, accessKey, scrollToBottom, isSpeechSynthesisSupported, removeSelectedImage, removeCapturedImage, user]); // <-- MODIFIED: Add user to dependency array
+    }, [messages, isLoading, isOnCooldown, input, selectedImage, capturedImageDataUrl, setMessages, selectedModel, selectedPersona, accessKey, scrollToBottom, isSpeechSynthesisSupported, removeSelectedImage, removeCapturedImage]);
 
     // --- Event Handlers ---
     const handleSend = () => sendMessage(input, selectedImage, capturedImageDataUrl);
     const handleSuggestionClick = useCallback((suggestionText: string) => sendMessage(suggestionText, null, null), [sendMessage]);
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value);
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => { // Handles file selection
         const file = e.target.files?.[0];
         if (file) {
              if (!file.type.startsWith('image/')) { alert("Invalid file type."); if (fileInputRef.current) fileInputRef.current.value = ""; return; }
              if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) { alert(`Image too large. Max: ${MAX_IMAGE_SIZE_MB}MB.`); if (fileInputRef.current) fileInputRef.current.value = ""; return; }
-            removeCapturedImage();
+            removeCapturedImage(); // Clear any captured image
             setSelectedImage(file);
-            if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+            if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); // Clean up old preview
             setImagePreviewUrl(URL.createObjectURL(file));
         } else {
-            removeSelectedImage();
+            removeSelectedImage(); // Clear if no file selected
         }
     };
-    const handleImageUploadClick = () => fileInputRef.current?.click();
-    const handleMicClick = () => {
+    const handleImageUploadClick = () => fileInputRef.current?.click(); // Programmatically click the hidden file input
+    const handleMicClick = () => { // Toggles speech recognition
         if (!recognitionRef.current || !recognitionAvailable) return alert("Speech recognition not available or not initialized.");
         if (isLoading || isOnCooldown) return;
         if (isRecording) {
@@ -471,7 +442,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
             catch (e) { console.warn("Error stopping mic:", e); setIsRecording(false); }
         } else {
             try {
-                recognitionRef.current.lang = sttLang;
+                recognitionRef.current.lang = sttLang; // Set language
                 recognitionRef.current.start();
             } catch (e) {
                  if (e instanceof DOMException && e.name === 'InvalidStateError') { alert("Please wait a moment before starting the microphone again."); }
@@ -481,20 +452,21 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
         }
     };
     const clearAnalysisForm = () => { setField1(''); setField2(''); setField3(''); setField4(''); setField5(''); };
-    const toggleAnalysisForm = () => {
+    const toggleAnalysisForm = () => { // Toggles the visibility of the analysis form modal
         setIsAnalysisFormVisible(p => !p);
-        if (isAnalysisFormVisible) {
+        if (isAnalysisFormVisible) { // If closing
             clearAnalysisForm();
-            setIsAnalyzing(false);
+            setIsAnalyzing(false); // Reset analyzing state
         }
     };
-    const handleAnalysisSubmit = async (e: React.FormEvent) => {
+    const handleAnalysisSubmit = async (e: React.FormEvent) => { // Submits the analysis form data
         e.preventDefault();
         const v1 = field1.trim(); const v2 = field2.trim(); const v3 = field3.trim(); const v4 = field4.trim(); const v5 = field5.trim();
         if (!v1 || !v2 || !v3 || !v4 || !v5) { alert("Please fill in all fields for analysis."); return; }
         if (isAnalyzing) return;
         setIsAnalyzing(true);
 
+        // Optional GA Event
         if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY") {
             try { ReactGA.event({ category: "Chat", action: "Submit Analysis Form" }); }
             catch (gaErr) { console.error("GA Error", gaErr); }
@@ -505,109 +477,120 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
         const ts = Date.now();
         const loadMsg: Message = { id: ts, text: `Analyzing...`, sender: 'loading', timestamp: ts };
         setMessages(p => [...p, loadMsg]);
-        toggleAnalysisForm();
+        toggleAnalysisForm(); // Close form after submit
 
-        // <-- MODIFIED: Pass the user object to the analysis API call
-        const result = await getBotResponseForAnalysis(analysisInput.trim(), selectedModel, selectedPersona, accessKey, user);
+        const result = await getBotResponseForAnalysis(analysisInput.trim(), selectedModel, selectedPersona, accessKey);
 
-        setMessages(p => p.filter(m => m.id !== ts));
+        setMessages(p => p.filter(m => m.id !== ts)); // Remove loading message
         const resultTimestamp = Date.now() + 1;
         const resultMsg: Message = { id: resultTimestamp, text: result, sender: 'bot', timestamp: resultTimestamp };
-        setMessages(p => [...p, resultMsg]);
-        setIsAnalyzing(false);
+        setMessages(p => [...p, resultMsg]); // Add result message
+        setIsAnalyzing(false); // Reset analyzing state
     };
-    const handlePlayTTS = useCallback((messageId: number, textToSpeak: string) => {
+    const handlePlayTTS = useCallback((messageId: number, textToSpeak: string) => { // Handles Text-to-Speech playback
         if (!isSpeechSynthesisSupported || !textToSpeak) return;
         const synth = window.speechSynthesis;
+        // Basic cleanup for Markdown emphasis
         const cleanText = textToSpeak
-            .replace(/(\*\*|__)(.*?)\1/g, '$2')
-            .replace(/(\*|_)(.*?)\1/g, '$2');
+            .replace(/(\*\*|__)(.*?)\1/g, '$2') // Remove bold
+            .replace(/(\*|_)(.*?)\1/g, '$2');   // Remove italics
 
+        // If currently speaking this message, stop it
         if (currentlySpeakingId === messageId && (synth.speaking || synth.pending)) {
             synth.cancel();
             setCurrentlySpeakingId(null);
             return;
         }
+        // If speaking anything else, stop that first
         if (synth.speaking || synth.pending) {
             synth.cancel();
         }
         const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.onend = () => { if (currentlySpeakingId === messageId) { setCurrentlySpeakingId(null); } };
-        utterance.onerror = (event) => { console.error('SpeechSynthesisUtterance.onerror', event); alert(`Speech error: ${event.error || 'Unknown error'}`); if (currentlySpeakingId === messageId) { setCurrentlySpeakingId(null); } };
+        utterance.onend = () => { if (currentlySpeakingId === messageId) { setCurrentlySpeakingId(null); } }; // Clear state on end
+        utterance.onerror = (event) => { console.error('SpeechSynthesisUtterance.onerror', event); alert(`Speech error: ${event.error || 'Unknown error'}`); if (currentlySpeakingId === messageId) { setCurrentlySpeakingId(null); } }; // Handle errors
         synth.speak(utterance);
-        setCurrentlySpeakingId(messageId);
+        setCurrentlySpeakingId(messageId); // Set currently speaking ID
     }, [currentlySpeakingId, isSpeechSynthesisSupported]);
 
+     // --- Handlers for Camera/Screen Capture ---
      const startMediaCapture = async (type: 'camera' | 'screen') => {
         console.log(`Attempting to start ${type} capture...`);
         removeCapturedImage();
-        removeSelectedImage();
-        stopActiveStream();
+        removeSelectedImage(); // Ensure only one image source is active
+        stopActiveStream(); // Stop any existing stream first
 
         try {
             let stream: MediaStream;
             if (type === 'camera') {
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("Camera access (getUserMedia) is not supported.");
                 stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            } else {
+            } else { // type === 'screen'
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) throw new Error("Screen capture (getDisplayMedia) is not supported.");
+                // Basic options, might need more robust type handling or specific options
                 stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+
+                 // Add handler to stop stream if user clicks browser's "Stop sharing" button
                  if (stream.getVideoTracks().length > 0) {
                     stream.getVideoTracks()[0].onended = () => {
                         console.log("Screen sharing stopped via browser UI.");
-                        stopActiveStream();
+                        stopActiveStream(); // Call our cleanup
                     };
                  }
             }
             console.log("Media stream obtained:", stream);
             setActiveStream(stream);
             setCaptureMode(type);
-            setIsCaptureModalOpen(true);
+            setIsCaptureModalOpen(true); // Open the modal with the stream
         } catch (err) {
             console.error(`Error starting ${type} capture:`, err);
             alert(`Could not start ${type === 'camera' ? 'camera' : 'screen sharing'}. Permission denied or no device found?\nError: ${(err as Error).message}`);
-            stopActiveStream();
+            stopActiveStream(); // Ensure cleanup on error
         }
     };
-    const handleCaptureComplete = (imageDataUrl: string) => {
+    const handleCaptureComplete = (imageDataUrl: string) => { // Called by Modal on successful capture
         console.log("Image captured successfully.");
-        removeSelectedImage();
+        removeSelectedImage(); // Ensure file upload is cleared
         setCapturedImageDataUrl(imageDataUrl);
-        stopActiveStream();
+        stopActiveStream(); // Close stream and modal
     };
-    const handleCaptureModalClose = () => {
+    const handleCaptureModalClose = () => { // Called by Modal if user closes it manually
         console.log("Capture modal closed by user.");
-        stopActiveStream();
+        stopActiveStream(); // Stop stream and close
     };
 
     // --- Action Menu Handlers ---
     const toggleActionMenu = () => {
         setIsActionMenuOpen(prev => !prev);
     };
+
     const handleMenuUploadClick = () => {
-        handleImageUploadClick();
+        handleImageUploadClick(); // Trigger hidden file input click
         setIsActionMenuOpen(false);
     };
+
     const handleMenuCameraClick = () => {
         startMediaCapture('camera');
         setIsActionMenuOpen(false);
     };
+
     const handleMenuScreenClick = () => {
         startMediaCapture('screen');
         setIsActionMenuOpen(false);
     };
+
     const handleMenuAnalysisClick = () => {
-        toggleAnalysisForm();
+        toggleAnalysisForm(); // Open the analysis form modal
         setIsActionMenuOpen(false);
     };
+
 
     // --- Custom Code Renderer for ReactMarkdown ---
     const CodeRenderer = memo(({ node, inline, className, children, ...props }: any) => {
         const match = /language-(\w+)/.exec(className || '');
-        const codeText = String(children).replace(/\n$/, '');
+        const codeText = String(children).replace(/\n$/, ''); // Remove trailing newline
         return !inline && match ? (
             <SyntaxHighlighter
-                style={prism}
+                style={prism} // Consider theme switching here
                 language={match[1]}
                 PreTag="div"
                 {...props}
@@ -679,9 +662,10 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                         </div>
                     );
                 })}
-                <div ref={messagesEndRef} style={{ height: '1px' }} />
+                <div ref={messagesEndRef} style={{ height: '1px' }} /> {/* Target for scrolling */}
             </div>
 
+            {/* Analysis Form Overlay */}
             {isAnalysisFormVisible && (
                 <div className="analysis-form-overlay">
                     <div className="analysis-form-modal">
@@ -703,6 +687,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                 </div>
             )}
 
+            {/* Media Capture Modal */}
             {isCaptureModalOpen && captureMode && (
                 <MediaCaptureModal
                     stream={activeStream}
@@ -712,7 +697,9 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                 />
             )}
 
+            {/* Input Area */}
             <div className="chatbot-input-area">
+                 {/* Image Previews */}
                  {imagePreviewUrl && selectedImage && (
                     <div className="image-preview-area">
                         <img src={imagePreviewUrl} alt={selectedImage.name} className="image-preview-thumbnail" />
@@ -728,22 +715,27 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                     </div>
                 )}
 
+                {/* Input Row Wrapper for positioning the menu */}
                 <div style={{ position: 'relative', width: '100%' }}>
+                    {/* Flex container for buttons and input */}
                     <div style={{ display: 'flex', alignItems: 'center', flexGrow: 1, gap: '5px' }}>
+                        {/* Action Menu Toggle Button */}
                         <button
-                            ref={menuToggleRef}
+                            ref={menuToggleRef} // Attach ref
                             onClick={toggleActionMenu}
-                            className="input-button action-menu-toggle-button"
+                            className="input-button action-menu-toggle-button" // Class for styling
                             title="More Actions"
                             disabled={isLoading || isOnCooldown}
                             aria-haspopup="true"
                             aria-expanded={isActionMenuOpen}
                         >
-                           <FaPlus />
+                           <FaPlus /> {/* Plus Icon */}
                         </button>
 
+                        {/* Hidden File Input */}
                         <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleImageChange}/>
 
+                        {/* Text Input */}
                         <input
                             type="text"
                             className="chatbot-input"
@@ -753,9 +745,10 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                             placeholder={isLoading ? "Waiting..." : (imagePreviewUrl || capturedImageDataUrl ? "Add text or send image..." : "Type your message...")}
                             disabled={isLoading || isOnCooldown}
                             aria-label="Chat input"
-                            style={{ flexGrow: 1 }}
+                            style={{ flexGrow: 1 }} // Ensure input takes available space
                         />
 
+                        {/* Mic Button */}
                         {recognitionAvailable && (
                             <button
                                 onClick={handleMicClick}
@@ -767,18 +760,20 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                             </button>
                         )}
 
+                        {/* Send Button */}
                         <button
                             onClick={handleSend}
                             className="send-button"
                             title="Send"
                             disabled={(!input.trim() && !selectedImage && !capturedImageDataUrl) || isLoading || isOnCooldown}
                         >
-                            <FaPaperPlane/>
+                            <FaPaperPlane/> {/* Send Icon */}
                         </button>
                     </div>
 
+                    {/* Action Menu Popup */}
                     {isActionMenuOpen && (
-                        <div className="action-menu-popup" ref={menuRef}>
+                        <div className="action-menu-popup" ref={menuRef}> {/* Attach ref */}
                             <button onClick={handleMenuUploadClick} className="action-menu-item" disabled={isLoading || isOnCooldown}>
                                 <FaPaperclip /> Upload Image
                             </button>
@@ -798,7 +793,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                     )}
                 </div>
             </div>
-        </div>
+        </div> // End chatbot-container
     );
 }
 
