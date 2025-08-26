@@ -1113,6 +1113,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 .message-wrapper-bot, .message-wrapper-loading {
     align-items: flex-start;
 }
+
 .message {
     padding: 10px 15px;
     border-radius: 16px;

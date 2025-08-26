@@ -1,6 +1,7 @@
 import React, { useState, useEffect, ChangeEvent, useRef, useCallback, createContext, useContext } from 'react';
 import ReactGA from 'react-ga4';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import Barcode from 'react-barcode'; // ✨ NEW: Import for barcode generation
 import './App.css';
 import ChatbotPage from './ChatbotPage';
 import AdminPage from './AdminPage';
@@ -141,6 +142,7 @@ const THEME_STORAGE_KEY = 'selectedAppTheme';
 const WELCOME_SEEN_KEY = 'welcomePageSeenV1';
 
 // --- Configurations ---
+export const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
 export interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
 export const ALL_AVAILABLE_MODELS_FRONTEND: ModelInfo[] = [
     { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', restricted: false },
@@ -169,7 +171,6 @@ export const DEFAULT_PERSONA_INSTRUCTIONS: PersonaInstructionMap = {
 export const ALL_PERSONA_KEYS = Object.keys(DEFAULT_PERSONA_INSTRUCTIONS);
 
 // --- API ---
-export const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
 export interface ApiRequestBody {
     action: string;
     prompt?: string;
@@ -227,18 +228,25 @@ const getInitialTheme = (): AppTheme => {
 
 
 // --- User Profile & Login Button Components ---
-const UserProfile: React.FC = () => {
+const UserProfile: React.FC<{ onProfileClick: () => void }> = ({ onProfileClick }) => {
     const { user, logout } = useAuth();
     if (!user) return null;
 
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div onClick={onProfileClick} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} title="View User Info">
             <img 
                 src={user.photoURL || undefined} 
                 alt={user.displayName || 'User'} 
                 style={{ width: '32px', height: '32px', borderRadius: '50%' }}
             />
-            <button onClick={logout} className="settings-button" title="Logout">
+            <button 
+                onClick={(e) => {
+                    e.stopPropagation(); // Prevent modal from opening when clicking logout
+                    logout();
+                }} 
+                className="settings-button" 
+                title="Logout"
+            >
                 Logout
             </button>
         </div>
@@ -260,7 +268,7 @@ function MainApp() {
     const { user, loading } = useAuth();
     
     // --- State ---
-    const [messages, setMessages] = useState<Message[]>([]); // Simplified initializer
+    const [messages, setMessages] = useState<Message[]>([]);
     const [showWelcomePage, setShowWelcomePage] = useState<boolean>(false);
     const [showKnowledgeCheck, setShowKnowledgeCheck] = useState<boolean>(false);
     const [showLieDetector, setShowLieDetector] = useState<boolean>(false);
@@ -296,6 +304,7 @@ function MainApp() {
     const [currentTheme, setCurrentTheme] = useState<AppTheme>(getInitialTheme);
     const [isPersonaPlinkoVisible, setIsPersonaPlinkoVisible] = useState<boolean>(false);
     const [isClearCupGameVisible, setIsClearCupGameVisible] = useState(false);
+    const [isUserInfoModalVisible, setIsUserInfoModalVisible] = useState<boolean>(false); // ✨ NEW
 
     const navigate = useNavigate();
 
@@ -305,16 +314,13 @@ function MainApp() {
     const canAccessAdvanced = keyStatus.isValid === true;
 
     // --- Effects ---
-
-    // ✅ FIXED: This hook now reloads chat data when user logs in or out
     useEffect(() => {
         if (loading) {
-            return; // Wait until auth state is confirmed
+            return;
         }
         
         const loadChatData = async () => {
             if (user) {
-                // User is logged in, fetch from DB
                 try {
                     const token = await user.getIdToken();
                     const response = await fetch(WORKER_URL, {
@@ -343,7 +349,6 @@ function MainApp() {
                     setMessages([{ id: ts, text: "Welcome! Couldn't load previous chat.", sender: 'bot', timestamp: ts }]);
                 }
             } else {
-                // User is a guest, load from localStorage
                 const stored = localStorage.getItem(CHAT_STORAGE_KEY);
                 try {
                     const initial = stored && stored !== '[]' ? JSON.parse(stored) : [];
@@ -453,7 +458,6 @@ function MainApp() {
     }, []);
 
     useEffect(() => {
-        // Only save to localStorage for guests
         if (!user) {
             const messagesToSave = messages.filter(m => m.sender !== 'loading');
             if (messagesToSave.length > 1 || (messagesToSave.length === 1 && messagesToSave[0].sender !== 'bot')) {
@@ -493,6 +497,15 @@ function MainApp() {
         setShowKnowledgeCheck(false);
         setShowLieDetector(false);
         setShowTutorial(false);
+        setIsUserInfoModalVisible(false); // ✨ NEW
+    };
+
+    const toggleUserInfoModal = () => { // ✨ NEW
+        const currentlyVisible = isUserInfoModalVisible;
+        closeAllModals();
+        if (!currentlyVisible) {
+            setIsUserInfoModalVisible(true);
+        }
     };
 
     const handleAcceptWelcome = () => {
@@ -564,18 +577,15 @@ function MainApp() {
     const openInterviewMode = () => { closeAllModals(); setIsInterviewModeOpen(true); };
     const closeInterviewMode = () => { setIsInterviewModeOpen(false); };
     
-    // ✅ FIXED: This function now handles both logged-in and guest users correctly.
     const executeClearChat = async () => {
         console.log("Executing clear chat logic after confirmation.");
         closeAllModals();
         
-        // Update UI immediately for better user experience
         const timestamp = Date.now();
         const clearMessage: Message = { id: timestamp, text: "Chat cleared.", sender: 'bot', timestamp: timestamp };
         setMessages([clearMessage]);
 
         if (user) {
-            // Logged-in user: clear history in the database
             try {
                 const token = await user.getIdToken();
                 const response = await fetch(WORKER_URL, {
@@ -590,10 +600,8 @@ function MainApp() {
             } catch (error) {
                 console.error("Could not clear DB history:", error);
                 alert("Could not clear your saved chat history. Please try again.");
-                // Optionally, you could restore the messages here if the call fails
             }
         } else {
-            // Guest user: clear history in localStorage
             localStorage.removeItem(CHAT_STORAGE_KEY);
             console.log("Guest chat history cleared from localStorage.");
         }
@@ -998,6 +1006,53 @@ function MainApp() {
                 {isPersonaPlinkoVisible && (<PersonaPlinkoGame isOpen={isPersonaPlinkoVisible} onClose={() => setIsPersonaPlinkoVisible(false)} onPersonaSelected={handlePersonaSelectedFromPlinko} keyStatus={keyStatus} allPersonas={AVAILABLE_PERSONAS} />)}
                 {isClearCupGameVisible && (<ConfirmClearCupGame isOpen={isClearCupGameVisible} onClose={() => setIsClearCupGameVisible(false)} onConfirm={executeClearChat} />)}
 
+                {/* ✨ NEW: User Info Modal */}
+                {isUserInfoModalVisible && user && (
+                    <div className="settings-menu" role="dialog" aria-labelledby="user-info-title">
+                        <h3 id="user-info-title">User Information</h3>
+                        <div className="settings-column" style={{ alignItems: 'center', gap: '15px' }}>
+                            <img 
+                                src={user.photoURL || undefined} 
+                                alt={user.displayName || 'User'} 
+                                className="user-info-avatar"
+                            />
+                            <div style={{ textAlign: 'center' }}>
+                                <p className="user-info-name">{user.displayName}</p>
+                                <p className="user-info-email">{user.email}</p>
+                            </div>
+                            
+                            <div className="user-info-box">
+                                <label className="user-info-label">User ID</label>
+                                <p className="user-info-uid">{user.uid}</p>
+                                <div className="user-info-barcode-container">
+                                    <Barcode 
+                                        value={user.uid} 
+                                        width={1.5}
+                                        height={50}
+                                        displayValue={false}
+                                        background="transparent"
+                                        lineColor={currentTheme === 'dark' ? '#FFFFFF' : '#000000'}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="user-info-box">
+                                <label className="user-info-label">Stored Chat Data</label>
+                                <p className="user-info-data">
+                                    <strong>{messages.length}</strong> messages
+                                </p>
+                                <p className="user-info-data-size">
+                                    Approx. <strong>{(JSON.stringify(messages).length / 1024).toFixed(2)} KB</strong>
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <hr className="settings-separator" />
+                        <button onClick={toggleUserInfoModal} className="close-settings-button">Close</button>
+                    </div>
+                )}
+
+
                 {/* Main Routing and Layout */}
                 <Routes>
                     <Route path="/" element={
@@ -1009,7 +1064,7 @@ function MainApp() {
                                 </div>
                                 <h1>Project Theraphy</h1>
                                 <div className="header-spacer-right">
-                                    {user ? <UserProfile /> : <LoginButton />}
+                                    {user ? <UserProfile onProfileClick={toggleUserInfoModal} /> : <LoginButton />}
                                 </div>
                             </header>
                             <ChatbotPage
