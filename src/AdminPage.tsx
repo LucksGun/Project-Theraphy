@@ -141,7 +141,16 @@ function AdminPage() {
         <>
         <style>{`
             /* Basic Admin Styles */
-            .admin-page-container { padding: 20px; max-width: 1200px; margin: auto; }
+            .admin-page-container { 
+        /* ADD THESE TWO LINES: */
+        height: 100%; 
+        overflow-y: auto;
+
+        box-sizing: border-box; /* Good to have */
+        padding: 20px; 
+        max-width: 1200px; 
+        margin: 0 auto; /* Use 0 for top/bottom margin */
+    }
             .admin-page-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
             .admin-logout-button { padding: 8px 16px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; }
             .staff-admin-section { display: flex; flex-direction: column; gap: 20px; }
