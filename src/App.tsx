@@ -195,6 +195,7 @@ export interface ApiRequestBody {
     baseInstruction?: string;
     personaInstructions?: PersonaInstructionMap;
     fileId?: string;
+    token?: string | null;
 }
 
 // --- Constants ---
