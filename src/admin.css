@@ -10,7 +10,7 @@
   /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07); */ /* Optional: Remove */
   /* border: 1px solid var(--border-color, #dee2e6); */ /* Optional: Remove */
 
-  min-height: calc(100vh - 1px); /* Try to fill viewport height */
+  height: 100vh; /* Try to fill viewport height */
   overflow-y: auto; /* Add vertical scrollbar ONLY when needed */
   box-sizing: border-box;
 }
