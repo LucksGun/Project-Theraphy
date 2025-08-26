@@ -1,154 +1,505 @@
-/* src/admin.css */
+/* src/admin.css - Full width Admin Page */
 
-.admin-page {
-  padding: 20px;
-  font-family: 'Inter', sans-serif;
-  color: var(--text-primary, #212529);
+/* Overall Admin Page Container */
+.admin-page-container {
+  /* max-width: 1100px; */ /* Removed for full width */
+  margin: 0; /* Use padding for spacing */
+  padding: 25px 35px; /* Padding inside the container */
+  background-color: var(--container-bg, #ffffff);
+  /* border-radius: 8px; */ /* Optional: Remove for full width */
+  /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07); */ /* Optional: Remove */
+  /* border: 1px solid var(--border-color, #dee2e6); */ /* Optional: Remove */
+
+  min-height: calc(100vh - 1px); /* Try to fill viewport height */
+  overflow-y: auto; /* Add vertical scrollbar ONLY when needed */
+  box-sizing: border-box;
 }
+/* === Chat History Viewer Styles === */
 
-.admin-page h2 {
-  margin-bottom: 15px;
-}
-
-.admin-error {
-  color: #dc3545;
-  font-weight: 500;
-  margin-bottom: 10px;
-}
-
-.admin-success {
-  color: #198754;
-  font-weight: 500;
-  margin-bottom: 10px;
-}
-
-.admin-data-section {
-  margin-top: 10px;
-  margin-bottom: 25px;
-}
-
-.staff-separator {
-  margin: 25px 0;
-  border: none;
-  border-top: 1px solid #ccc;
-}
-
-/* Feedback Table */
-.feedback-table {
+.chat-history-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 12px;
-  background: #fff;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
 }
 
-.feedback-table th,
-.feedback-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  font-size: 0.9em;
+.chat-history-modal {
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 700px;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.feedback-table th {
-  background: #f8f9fa;
-  font-weight: 600;
-}
-
-/* Chat History */
-.chat-history-list {
-  margin-top: 10px;
-  max-height: 500px;
-  overflow-y: auto;
-  border-radius: 6px;
-  background: #fafafa;
-  padding: 10px;
-}
-
-.chat-user-section {
-  margin-bottom: 20px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.chat-user-header {
+.chat-history-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
-  background: #f0f0f0;
-  padding: 6px 10px;
-  border-radius: 6px;
+}
+
+.chat-history-header h3 {
+  margin: 0;
+  font-size: 1.1em;
+}
+
+.chat-history-header code {
+  background-color: var(--background-color-secondary);
+  padding: 3px 6px;
+  border-radius: 4px;
   font-size: 0.9em;
 }
 
-.chat-entry {
-  margin-bottom: 10px;
-  padding: 8px;
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+.close-history-button {
+  background: none;
+  border: none;
+  font-size: 1.8em;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  line-height: 1;
 }
 
-.chat-entry .chat-meta {
+.chat-history-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.chat-history-message {
+  margin-bottom: 15px;
+}
+
+.chat-history-role {
+  font-weight: bold;
   font-size: 0.8em;
-  color: #666;
+  text-transform: uppercase;
+  color: var(--text-color-secondary);
   margin-bottom: 4px;
+  display: block;
+}
+
+.chat-history-message.user .chat-history-role {
+  text-align: right;
+}
+
+.chat-history-text {
+  padding: 10px 15px;
+  border-radius: 8px;
+  background-color: var(--background-color-secondary);
+  width: fit-content;
+  max-width: 90%;
+}
+
+.chat-history-message.user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.chat-history-message.user .chat-history-text {
+  background-color: var(--primary-accent-color);
+  color: white;
+}
+
+.chat-history-text p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.chat-history-actions {
+  padding: 15px 20px;
+  border-top: 1px solid var(--border-color);
+  text-align: right;
+}
+/* Admin Page Header (Title + Logout) */
+.admin-page-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px; /* Spacing below header */
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color, #dee2e6);
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
-.chat-entry .chat-content {
-  font-size: 0.95em;
-  white-space: pre-wrap;
+.admin-page-header h1 {
+  margin: 0;
+  font-size: 1.8em;
+  color: var(--text-primary, #212529);
+  font-weight: 600;
 }
 
-.role-user .chat-content {
-  color: #222;
-}
-
-.role-assistant .chat-content {
-  color: #004085;
-  background: #e9f5ff;
-  padding: 6px;
-  border-radius: 4px;
-}
-
-.role-system .chat-content {
-  color: #6b3e00;
-  background: #fff3cd;
-  padding: 6px;
-  border-radius: 4px;
-}
-
-.refresh-button {
-  margin-bottom: 10px;
-  padding: 6px 12px;
-  border-radius: 4px;
-  border: 1px solid #aaa;
-  background: #f4f4f4;
-  cursor: pointer;
-}
-
-.refresh-button:hover {
-  background: #e6e6e6;
-}
-
-.clear-history-button {
-  padding: 4px 10px;
-  font-size: 0.8em;
-  border-radius: 4px;
-  border: 1px solid #d33;
-  background: #f8d7da;
-  color: #721c24;
-  cursor: pointer;
-}
-
-.clear-history-button:hover {
-  background: #f5c6cb;
-}
-
-.admin-loading-text {
+.admin-logout-button {
+  width: auto;
+  margin-top: 0;
+  padding: 8px 16px;
   font-size: 0.9em;
-  color: #666;
+  background-color: var(--button-secondary-bg, #e9ecef);
+  border: 1px solid var(--border-color, #dee2e6);
+  color: var(--text-primary, #212529);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.admin-logout-button:hover {
+  background-color: var(--button-secondary-hover-bg, #dee2e6);
+}
+
+/* Admin Section Styling */
+.staff-admin-section h4 {
+  font-size: 1.3em;
+  margin-top: 35px;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color, #dee2e6);
+  color: var(--text-primary, #212529);
+  font-weight: 600;
+}
+.staff-admin-section h4:first-of-type {
+  margin-top: 0;
+}
+
+.admin-data-section {
+  margin-bottom: 30px;
+}
+
+.admin-data-section > p { /* Loading/error/no data text */
+  font-style: italic;
+  color: var(--text-secondary, #6c757d);
+  padding: 15px 5px;
+  text-align: center;
+}
+
+/* Feedback Messages (Success/Error) */
+.admin-feedback {
+  text-align: center;
+  margin-bottom: 15px;
+  padding: 10px 15px;
+  border-radius: 4px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  font-size: 0.9em;
+  min-height: 40px; /* Reserve space */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.admin-feedback:empty { min-height: 0; padding: 0; margin-bottom: 0; border: none; }
+.admin-feedback.success { color: var(--key-valid-color, #198754); background-color: #d1e7dd; border-color: #badbcc; }
+.admin-feedback.error { color: var(--key-invalid-color, #dc3545); background-color: #f8d7da; border-color: #f5c6cb; }
+
+
+/* User Keys Table Enhancements */
+.user-keys-list {
+  border: 1px solid var(--border-color, #dee2e6);
+  border-radius: 6px;
+  overflow-x: auto; /* Horizontal scroll for table if needed */
+  background-color: #fff;
+}
+.user-keys-list table { width: 100%; border-collapse: collapse; }
+.user-keys-list th,
+.user-keys-list td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color, #dee2e6); font-size: 0.9em; vertical-align: middle; word-break: break-word; }
+.user-keys-list th { background-color: #f8f9fa; font-weight: 600; white-space: nowrap; color: var(--text-secondary); position: sticky; top: 0; z-index: 1; }
+.user-keys-list tr:last-child td { border-bottom: none; }
+.user-keys-list tr:hover td:not(.editing-row td) { background-color: #fcfcfc; }
+.user-keys-list .actions-column { width: 220px; white-space: nowrap; }
+.user-keys-list .no-username { color: var(--text-secondary, #888); font-style: italic; }
+.key-cell-content { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+.key-cell-content code { font-family: monospace; background-color: #e9ecef; padding: 3px 6px; border-radius: 3px; font-size: 0.95em; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; max-width: 300px; display: inline-block; }
+.copy-button { background: none; border: none; cursor: pointer; font-size: 1.1em; padding: 0 3px; color: var(--text-secondary); line-height: 1; flex-shrink: 0; }
+.copy-button:hover { color: var(--text-primary); }
+.status-active { color: var(--key-valid-color, #198754); font-weight: 500; }
+.status-inactive { color: var(--key-invalid-color, #dc3545); font-weight: 500; }
+
+/* Action Buttons in Table */
+.action-buttons-cell { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
+.action-buttons-cell button { padding: 6px 10px; font-size: 0.85em; flex-grow: 0; flex-shrink: 0; white-space: nowrap; border-radius: 4px; cursor: pointer; border: 1px solid; transition: all 0.2s ease; }
+.action-buttons-cell button:disabled { opacity: 0.5; cursor: not-allowed; }
+.action-buttons-cell .key-status-toggle-button.deactivate { background-color: var(--settings-clear-bg); color: var(--settings-clear-text); border-color: var(--settings-clear-border); }
+.action-buttons-cell .key-status-toggle-button.deactivate:hover:not(:disabled) { background-color: var(--settings-clear-hover-bg); }
+.action-buttons-cell .key-status-toggle-button.activate { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
+.action-buttons-cell .key-status-toggle-button.activate:hover:not(:disabled) { background-color: #b6dfc8; }
+.action-buttons-cell .edit-button { background-color: var(--button-secondary-bg); border-color: var(--input-border-color); color: var(--text-secondary); padding: 5px 8px; }
+.action-buttons-cell .edit-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); border-color: #adb5bd; }
+.action-buttons-cell .delete-button { background-color: #fff0f1; border-color: var(--settings-clear-border); color: var(--settings-clear-text); padding: 5px 8px; }
+.action-buttons-cell .delete-button:hover:not(:disabled) { background-color: var(--settings-clear-hover-bg); }
+.action-buttons-cell .save-button { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; flex-grow: 1; }
+.action-buttons-cell .save-button:hover:not(:disabled) { background-color: #b6dfc8; }
+.action-buttons-cell .cancel-button { background-color: #e9ecef; border-color: #dee2e6; color: #495057; flex-grow: 1; }
+.action-buttons-cell .cancel-button:hover:not(:disabled) { background-color: #dee2e6; }
+
+/* Inline Editing Input */
+.inline-edit-input { padding: 4px 8px !important; font-size: 0.9em !important; height: 30px !important; min-height: 0 !important; box-shadow: 0 0 0 1px var(--input-focus-border-color) !important; border-color: var(--input-focus-border-color) !important; }
+.editing-row td { background-color: #fff9e4; }
+
+/* Add Key Section Styling */
+.add-key-section { margin-top: 25px; padding: 20px 25px; border: 1px solid var(--border-color, #dee2e6); border-radius: 6px; background-color: #f8f9fa; }
+.add-key-section h5 { margin-top: 0; margin-bottom: 15px; font-size: 1.15em; font-weight: 600; }
+.add-key-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.add-key-form .settings-option { margin-bottom: 0; flex-grow: 1; }
+.add-key-form .settings-option label { display: block; margin-bottom: 5px; font-size: 0.85em; font-weight: 500; color: var(--settings-label-text); }
+.add-key-button { padding: 8px 18px; border: none; background-color: var(--beta-button-bg, #0d6efd); color: var(--beta-button-text, #fff); border-radius: 5px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: background-color 0.2s ease; height: 35px; align-self: flex-end; flex-shrink: 0; }
+.add-key-button:hover:not(:disabled) { background-color: var(--beta-button-hover-bg, #0b5ed7); }
+.add-key-button:disabled { opacity: 0.6; cursor: default; background-color: var(--button-disabled-bg, #cfe2ff) !important; color: var(--button-disabled-text, #6c757d) !important; }
+
+/* Restriction Lists Styling */
+.restricted-items-list { margin-top: 10px; border: 1px solid var(--border-color, #dee2e6); border-radius: 6px; max-height: 350px; overflow-y: auto; background-color: #ffffff; }
+.restriction-description { font-size: 0.9em; color: var(--text-secondary, #6c757d); margin-bottom: 0px; padding: 10px 15px; border-bottom: 1px solid var(--border-color, #dee2e6); background-color: #f8f9fa; }
+.restriction-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid var(--border-color, #dee2e6); font-size: 0.9em; min-height: 44px; }
+.restriction-item:last-child { border-bottom: none; }
+.restriction-item span { flex-grow: 1; margin-right: 15px; word-break: break-word; display: flex; align-items: center; gap: 8px; }
+.restriction-item code { background-color: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.9em; }
+.restriction-toggle-button { padding: 6px 12px; font-size: 0.85em; flex-shrink: 0;} /* Adjust padding as needed */
+.restriction-toggle-button.deactivate { background-color: var(--settings-clear-bg); color: var(--settings-clear-text); border-color: var(--settings-clear-border); }
+.restriction-toggle-button.deactivate:hover:not(:disabled) { background-color: var(--settings-clear-hover-bg); }
+.restriction-toggle-button.activate { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
+.restriction-toggle-button.activate:hover:not(:disabled) { background-color: #b6dfc8; }
+
+
+
+/* src/admin.css - Add styles for Feedback Management Section */
+
+/* ... (Keep all existing styles for .admin-page-container, headers, user keys, restrictions, etc.) ... */
+
+/* --- Feedback List/Table --- */
+.feedback-list {
+  border: 1px solid var(--border-color, #dee2e6);
+  border-radius: 6px;
+  overflow-x: auto; /* Scroll horizontally if needed on small screens */
+  background-color: #ffffff;
+  margin-top: 10px; /* Space above the feedback table */
+}
+
+.feedback-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.feedback-list th,
+.feedback-list td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color, #dee2e6);
+  font-size: 0.85em; /* Slightly smaller font for feedback table */
+  vertical-align: top; /* Align content to the top, good for comments */
+}
+
+.feedback-list th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.feedback-list tr:last-child td {
+  border-bottom: none;
+}
+
+.feedback-list tr:hover td { /* Hover effect */
+  background-color: #fcfcfc;
+}
+
+/* Highlight important feedback rows */
+.feedback-item.important-feedback td {
+    background-color: #fff9e4; /* Light yellow highlight */
+    font-weight: 500; /* Make text slightly bolder */
+}
+.feedback-item.important-feedback code { /* Adjust code block if needed */
+    background-color: #fdf3d1;
+}
+
+
+/* Rating Stars Display */
+.rating-stars-display {
+    color: #ffc107; /* Gold color for stars */
+    font-size: 1.1em;
+    white-space: nowrap;
+}
+.rating-stars-display .star-empty {
+    color: #e0e0e0; /* Light gray for empty stars */
+}
+
+/* Comment Cell */
+.feedback-comment-cell {
+    white-space: pre-wrap; /* Allow comment text to wrap */
+    max-height: 150px; /* Limit height */
+    overflow-y: auto; /* Allow scrolling for long comments */
+    font-size: 0.95em; /* Slightly larger comment text */
+    line-height: 1.5;
+}
+
+/* Feedback Action Buttons */
+.feedback-action-button {
+    padding: 5px 10px !important; /* Override any generic button padding */
+    font-size: 0.8em !important; /* Smaller action buttons */
+    margin-right: 5px; /* Space between buttons */
+}
+.feedback-action-button:last-child {
+    margin-right: 0;
+}
+
+/* Specific styles for Mark Important button */
+.mark-important {
+    background-color: #fffbe6; /* Light yellow background */
+    border-color: #ffe58f;
+    color: #856404;
+}
+.mark-important:hover:not(:disabled) { background-color: #fff3cd; }
+
+.unmark-important {
+    background-color: #fff3cd; /* Darker yellow background */
+    border-color: #ffeeba;
+    color: #856404;
+    font-weight: bold; /* Indicate it's already marked */
+}
+.unmark-important:hover:not(:disabled) { background-color: #ffeeba; }
+
+/* Reuse delete button style */
+.feedback-delete-button {
+   /* Uses .delete-button styles defined earlier */
+   padding: 5px 8px !important; /* Adjust padding */
+}
+
+.prompt-editing-section {
+  margin-top: 10px;
+}
+
+.admin-prompt-warning {
+  background-color: #fff3cd; /* Light yellow */
+  border: 1px solid #ffeeba;
+  color: #856404; /* Dark yellow text */
+  padding: 15px 20px;
+  border-radius: 6px;
+  margin-bottom: 25px;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.admin-prompt-warning code {
+  background-color: rgba(0,0,0,0.05);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.95em;
+}
+
+.prompt-edit-area {
+  margin-bottom: 25px;
+}
+
+.prompt-edit-area label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  font-size: 1em;
+}
+
+.prompt-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--input-border-color, #ced4da);
+  border-radius: 4px;
+  font-family: monospace; /* Use monospace for prompts */
+  font-size: 0.9em;
+  line-height: 1.5;
+  background-color: #fff;
+  color: var(--text-primary);
+  resize: vertical; /* Allow vertical resize */
+  min-height: 150px; /* Default min height */
+}
+.prompt-textarea:focus {
+  outline: none;
+  border-color: var(--input-focus-border-color, #0d6efd);
+  box-shadow: 0 0 0 2px var(--input-focus-shadow, rgba(13, 110, 253, 0.2));
+}
+.prompt-textarea:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.persona-textarea {
+  min-height: 100px; /* Slightly smaller default for persona prompts */
+}
+
+.prompt-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end; /* Align buttons to the right */
+}
+.prompt-actions button {
+   padding: 8px 16px; /* Reuse button styles if possible */
+}
+.prompt-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments for feedback table */
+@media (max-width: 768px) {
+    .feedback-list th,
+    .feedback-list td {
+        padding: 8px 10px;
+        font-size: 0.8em;
+    }
+    .rating-stars-display {
+        font-size: 1em;
+    }
+    .feedback-comment-cell {
+         font-size: 0.9em;
+    }
+    .action-buttons-cell {
+        flex-wrap: nowrap; /* Try to keep feedback buttons on one line */
+    }
+     .feedback-action-button {
+         white-space: nowrap;
+     }
+}
+
+
+
+/* Loading Text */
+.admin-loading-text { padding: 20px; text-align: center; color: var(--text-secondary, #6c757d); font-style: italic; }
+
+/* Separator */
+.staff-separator { border: none; border-top: 1px solid var(--border-color, #dee2e6); margin: 35px 0; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .admin-page-container {
+        padding: 15px 20px;
+        margin: 0; /* Remove margin for full width */
+        min-height: 100vh; /* Ensure full height */
+        border-radius: 0; /* Remove radius */
+        border-left: none;
+        border-right: none;
+    }
+    .admin-page-header h1 { font-size: 1.5em; }
+    .user-keys-list th, .user-keys-list td { padding: 10px 8px; font-size: 0.85em; }
+    .action-buttons-cell { flex-wrap: wrap; }
+    .add-key-form { flex-direction: column; align-items: stretch; }
+    .add-key-button { margin-top: 10px; }
+}
+@media (max-width: 500px) {
+    .admin-page-container { padding: 10px 15px; }
+    .admin-page-header h1 { font-size: 1.3em; }
+    .user-keys-list th, .user-keys-list td { font-size: 0.8em; padding: 8px 6px;}
+    .key-cell-content code { max-width: 120px; /* Shorter ellipsis */ }
+    .restriction-item span { margin-right: 8px; gap: 5px;}
 }
