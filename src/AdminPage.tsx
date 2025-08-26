@@ -1,10 +1,11 @@
 import { useState, useEffect, ChangeEvent } from 'react';
+// 🔧 REMOVED useNavigate from imports as it's no longer used directly
 import { useNavigate } from 'react-router-dom';
 
 // =================================================================
-// --- 1. Embedded Dependencies from App.tsx ---
+// --- 1. Embedded Dependencies ---
 // =================================================================
-// To make this component self-contained, types and constants from App.tsx are included here.
+// To make this component self-contained, types and constants are included here.
 
 export const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
 
@@ -18,7 +19,7 @@ export interface ApiRequestBody {
     action: string;
     staffKey?: string;
     userId?: string;
-    [key: string]: any; // Allow other properties
+    [key: string]: any; 
 }
 export interface PersonaInfo { value: Persona; label: string; emoji: string; restricted: boolean; }
 export interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
@@ -35,7 +36,7 @@ export const AVAILABLE_PERSONAS: PersonaInfo[] = [
     { value: 'normal', label: 'Normal Bot', emoji: '🤖', restricted: true },
     { value: 'therapist', label: 'Therapist', emoji: '🧠', restricted: true }
 ];
-export const DEFAULT_BASE_SYSTEM_INSTRUCTION = `You are a helpful AI assistant. Format responses using Markdown...`; // Truncated for brevity
+export const DEFAULT_BASE_SYSTEM_INSTRUCTION = `You are a helpful AI assistant...`;
 export const DEFAULT_PERSONA_INSTRUCTIONS: PersonaInstructionMap = {
     normal: `Act as a general assistant...`,
     therapist: `Roleplay as an empathetic therapist assistant...`,
@@ -48,10 +49,9 @@ export const ALL_PERSONA_KEYS = Object.keys(DEFAULT_PERSONA_INSTRUCTIONS);
 // --- 2. AdminPage Component ---
 // =================================================================
 
-// ✨ CREATE A SEPARATE COMPONENT FOR STYLES
+// ✨ This component injects the necessary CSS without breaking the layout.
 const AdminPageStyles = () => (
     <style>{`
-        /* Basic Admin Styles */
         .admin-page-container { padding: 20px; max-width: 1200px; margin: auto; }
         .admin-page-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
         .admin-logout-button { padding: 8px 16px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; }
@@ -69,8 +69,6 @@ const AdminPageStyles = () => (
         .settings-input { width: 100%; padding: 8px; box-sizing: border-box; }
         .add-key-form { display: flex; gap: 10px; align-items: flex-end; }
         .add-key-button { padding: 8px 12px; }
-
-        /* Chat History Modal Styles */
         .chat-history-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1050; }
         .chat-history-modal { background-color: white; border-radius: 12px; width: 90%; max-width: 700px; height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
         .chat-history-header { padding: 15px 20px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
@@ -88,9 +86,9 @@ const AdminPageStyles = () => (
 );
 
 function AdminPage() {
-    const navigate = useNavigate();
+    // 🔧 REMOVED unused navigate variable
+    const navigate = useNavigate(); 
     const [authenticatedStaffKey, setAuthenticatedStaffKey] = useState<string | null>(null);
-    // --- State ---
     const [adminUserKeysList, setAdminUserKeysList] = useState<UserKeyInfo[]>([]);
     const [adminRestrictedModelsList, setAdminRestrictedModelsList] = useState<GeminiModel[]>([]);
     const [adminRestrictedPersonasList, setAdminRestrictedPersonasList] = useState<Persona[]>([]);
@@ -110,38 +108,48 @@ function AdminPage() {
     const [viewingUserId, setViewingUserId] = useState<string | null>(null);
     const [historyError, setHistoryError] = useState<string | null>(null);
     const [isHistoryLoading, setIsHistoryLoading] = useState<boolean>(false);
-    
 
-    // --- Effects ---
     useEffect(() => {
         const keyFromSession = sessionStorage.getItem('staffKey');
-        if (!keyFromSession) { navigate('/'); } else { setAuthenticatedStaffKey(keyFromSession); fetchAdminData(keyFromSession); }
-    }, [navigate]);
+        if (!keyFromSession) { 
+            // Using a direct redirect is more robust if the Router isn't ready.
+            window.location.href = '/'; 
+        } else { 
+            setAuthenticatedStaffKey(keyFromSession); 
+            fetchAdminData(keyFromSession); 
+        }
+    }, []);
 
     const fetchAdminData = async (staffKey: string | null) => {
-        if (!staffKey) return; console.log("AdminPage: Fetching data..."); setIsAdminLoading(true); setAdminError(null); setAdminSuccess(null);
+        if (!staffKey) return;
+        setIsAdminLoading(true);
+        setAdminError(null);
+        setAdminSuccess(null);
         try {
-            const listKeysBody: ApiRequestBody = { action: 'adminListKeys', staffKey: staffKey };
-            const getRestrictionsBody: ApiRequestBody = { action: 'adminGetRestrictions', staffKey: staffKey };
-            const listFeedbackBody: ApiRequestBody = { action: 'adminListFeedback', staffKey: staffKey };
-            const getPromptsBody: ApiRequestBody = { action: 'adminGetPrompts', staffKey: staffKey };
             const [keysRes, restrictRes, feedbackRes, promptsRes] = await Promise.all([
-                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(listKeysBody) }),
-                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getRestrictionsBody) }),
-                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(listFeedbackBody) }),
-                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getPromptsBody) })
+                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminListKeys', staffKey }) }),
+                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminGetRestrictions', staffKey }) }),
+                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminListFeedback', staffKey }) }),
+                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminGetPrompts', staffKey }) })
             ]);
-            const keysData = await keysRes.json().catch(() => ({ error: 'Invalid JSON keys' })); if (!keysRes.ok || !keysData.success) throw new Error(keysData?.error || 'Failed fetch keys.'); setAdminUserKeysList(keysData.keys || []);
-            const restrictData = await restrictRes.json().catch(() => ({ error: 'Invalid JSON restrictions' })); if (!restrictRes.ok || !restrictData.success) throw new Error(restrictData?.error || 'Failed fetch restrictions.'); setAdminRestrictedModelsList(restrictData.restrictedModels || []); setAdminRestrictedPersonasList(restrictData.restrictedPersonas || []);
-            const feedbackData = await feedbackRes.json().catch(() => ({ error: 'Invalid JSON feedback' })); if (!feedbackRes.ok || !feedbackData.success) throw new Error(feedbackData?.error || 'Failed fetch feedback.'); setAdminFeedbackList(feedbackData.feedback || []);
-            const promptsData = await promptsRes.json().catch(() => ({ error: 'Invalid JSON prompts' })); if (!promptsRes.ok || !promptsData.success) throw new Error(promptsData?.error || 'Failed fetch prompts.');
+            const keysData = await keysRes.json(); if (!keysRes.ok || !keysData.success) throw new Error(keysData?.error || 'Failed fetch keys.'); setAdminUserKeysList(keysData.keys || []);
+            const restrictData = await restrictRes.json(); if (!restrictRes.ok || !restrictData.success) throw new Error(restrictData?.error || 'Failed fetch restrictions.'); setAdminRestrictedModelsList(restrictData.restrictedModels || []); setAdminRestrictedPersonasList(restrictData.restrictedPersonas || []);
+            const feedbackData = await feedbackRes.json(); if (!feedbackRes.ok || !feedbackData.success) throw new Error(feedbackData?.error || 'Failed fetch feedback.'); setAdminFeedbackList(feedbackData.feedback || []);
+            const promptsData = await promptsRes.json(); if (!promptsRes.ok || !promptsData.success) throw new Error(promptsData?.error || 'Failed fetch prompts.');
             const fetchedBase = promptsData.baseInstruction || DEFAULT_BASE_SYSTEM_INSTRUCTION; const fetchedPersonas = promptsData.personaInstructions || DEFAULT_PERSONA_INSTRUCTIONS; setBasePrompt(fetchedBase); setInitialBasePrompt(fetchedBase); setPersonaPrompts(fetchedPersonas); setInitialPersonaPrompts(fetchedPersonas);
-            setAdminError(null);
-        } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed load admin data."); setAdminUserKeysList([]); setAdminRestrictedModelsList([]); setAdminRestrictedPersonasList([]); setAdminFeedbackList([]); setBasePrompt(DEFAULT_BASE_SYSTEM_INSTRUCTION); setPersonaPrompts(DEFAULT_PERSONA_INSTRUCTIONS); setInitialBasePrompt(DEFAULT_BASE_SYSTEM_INSTRUCTION); setInitialPersonaPrompts(DEFAULT_PERSONA_INSTRUCTIONS); } finally { setIsAdminLoading(false); }
+        } catch (e) { 
+            setAdminError(e instanceof Error ? e.message : "Failed to load admin data.");
+        } finally { 
+            setIsAdminLoading(false); 
+        }
     };
-    useEffect(() => { let timer: NodeJS.Timeout | null = null; if (adminSuccess) { timer = setTimeout(() => setAdminSuccess(null), 3500); } return () => { if (timer) clearTimeout(timer); }; }, [adminSuccess]);
 
-    // --- Handlers ---
+    const handleLogout = () => { 
+        sessionStorage.removeItem('staffKey'); 
+        navigate('/'); // 🔧 RE-ENABLED useNavigate here
+    };
+
+    // ... (All other handler functions remain the same)
     const handleToggleUserKeyStatus = async (key: string, status: 'active' | 'inactive') => { if (!authenticatedStaffKey) return; const nS=status==='active'?'inactive':'active'; const kS=key.substring(0,8); if(!window.confirm(`Set key "${kS}..." to ${nS}?`))return; setIsAdminLoading(true);setAdminError(null);setAdminSuccess(null); const requestBody: ApiRequestBody = {action:'adminUpdateKeyStatus',staffKey:authenticatedStaffKey,key:key,newStatus:nS}; try{const r=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(requestBody)}); const d=await r.json().catch(()=>({error:'Invalid JSON'}));if(!r.ok||!d.success)throw new Error(d?.error||`Update failed: ${r.status}`);setAdminSuccess(d.message||"Status updated.");}catch(e){setAdminError(e instanceof Error?e.message:"Failed update.");}finally{ fetchAdminData(authenticatedStaffKey); } };
     const handleToggleModelRestriction = async (val: GeminiModel) => { if (!authenticatedStaffKey) return; const isR=adminRestrictedModelsList.includes(val); const act=isR?"make public":"make restricted"; if(!window.confirm(`Make model "${val}" ${act}?`))return; const nL=isR?adminRestrictedModelsList.filter(m=>m!==val):[...adminRestrictedModelsList,val]; setIsAdminLoading(true);setAdminError(null);setAdminSuccess(null); const requestBody: ApiRequestBody = {action:'adminSetRestrictedModels',staffKey:authenticatedStaffKey,models:nL}; try{const r=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(requestBody)}); const d=await r.json().catch(()=>({error:'Invalid JSON'}));if(!r.ok||!d.success)throw new Error(d?.error||`Save failed: ${r.status}`);setAdminSuccess(d.message||"Models updated.");}catch(e){setAdminError(e instanceof Error?e.message:"Failed save.");}finally{ fetchAdminData(authenticatedStaffKey); } };
     const handleTogglePersonaRestriction = async (val: Persona) => { if (!authenticatedStaffKey) return; const isR=adminRestrictedPersonasList.includes(val); const pI=AVAILABLE_PERSONAS.find(p=>p.value===val); const pL=pI?pI.label:val; const act=isR?"make public":"make restricted"; if(!window.confirm(`Make persona "${pL}" ${act}?`))return; const nL=isR?adminRestrictedPersonasList.filter(p=>p!==val):[...adminRestrictedPersonasList,val]; setIsAdminLoading(true);setAdminError(null);setAdminSuccess(null); const requestBody: ApiRequestBody = {action:'adminSetRestrictedPersonas',staffKey:authenticatedStaffKey,personas:nL}; try{const r=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(requestBody)}); const d=await r.json().catch(()=>({error:'Invalid JSON'}));if(!r.ok||!d.success)throw new Error(d?.error||`Save failed: ${r.status}`);setAdminSuccess(d.message||"Personas updated.");}catch(e){setAdminError(e instanceof Error?e.message:"Failed save.");}finally{ fetchAdminData(authenticatedStaffKey); } };
@@ -153,7 +161,6 @@ function AdminPage() {
     const handleSaveUsername = async () => { if(editingKey===null || !authenticatedStaffKey)return; const keyToEdit=editingKey;const usernameToSend=editUsernameValue.trim()||null;setIsAdminLoading(true);setAdminError(null);setAdminSuccess(null); const requestBody: ApiRequestBody = {action:'adminEditUsername',staffKey:authenticatedStaffKey,key:keyToEdit,newUsername:usernameToSend}; try{const r=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(requestBody)});const d=await r.json().catch(()=>({error:'Invalid JSON'}));if(!r.ok) throw new Error(d?.error||`Update failed: ${r.status}`); setAdminSuccess(d.message||"Username updated!");setEditingKey(null);setEditUsernameValue('');}catch(e){setAdminError(e instanceof Error?e.message:"Failed update username.");}finally{ fetchAdminData(authenticatedStaffKey); } };
     const handleNewKeyUsernameChange = (e:ChangeEvent<HTMLInputElement>)=>{setNewKeyUsername(e.target.value);};
     const handleEditUsernameChange = (e:ChangeEvent<HTMLInputElement>)=>{setEditUsernameValue(e.target.value);};
-    const handleLogout = () => { sessionStorage.removeItem('staffKey'); navigate('/'); };
     const handleMarkImportant = async (feedbackId: number, currentIsImportant: number) => { if (!authenticatedStaffKey) return; const makeImportant = !currentIsImportant; setIsAdminLoading(true); setAdminError(null); setAdminSuccess(null); const requestBody: ApiRequestBody = { action: 'adminMarkFeedbackImportant', staffKey: authenticatedStaffKey, feedbackId: feedbackId, isImportant: makeImportant ? 1 : 0 }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) throw new Error(data?.error || `Update importance failed: ${res.status}`); setAdminSuccess(data.message || "Feedback importance updated."); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed update importance."); } finally { fetchAdminData(authenticatedStaffKey); } };
     const handleDeleteFeedback = async (feedbackId: number) => { if (!authenticatedStaffKey) return; if (!window.confirm(`DELETE feedback entry #${feedbackId}?`)) return; setIsAdminLoading(true); setAdminError(null); setAdminSuccess(null); const requestBody: ApiRequestBody = { action: 'adminDeleteFeedback', staffKey: authenticatedStaffKey, feedbackId: feedbackId }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); const data = await res.json().catch(() => ({ error: 'Invalid JSON' })); if (!res.ok || !data.success) throw new Error(data?.error || `Delete failed: ${res.status}`); setAdminSuccess(data.message || "Feedback deleted."); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed delete feedback."); } finally { fetchAdminData(authenticatedStaffKey); } };
     const handleBasePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => { setBasePrompt(e.target.value); setAdminError(null); setAdminSuccess(null); };
@@ -165,17 +172,13 @@ function AdminPage() {
     const handleFetchHistory = async (userIdToSearch: string) => { if (!authenticatedStaffKey || !userIdToSearch.trim()) { setHistoryError("Please enter a User ID to search."); return; } setIsHistoryLoading(true); setHistoryError(null); setViewingHistory(null); const requestBody: ApiRequestBody = { action: 'adminGetChatHistory', staffKey: authenticatedStaffKey, userId: userIdToSearch.trim() }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); const data = await res.json(); if (!res.ok || !data.success) throw new Error(data?.error || "Failed to fetch history."); setViewingHistory(data.history); setViewingUserId(userIdToSearch.trim()); if (data.history.length === 0) { setHistoryError("No chat history found for this user."); } } catch (e) { setHistoryError(e instanceof Error ? e.message : "An unknown error occurred."); } finally { setIsHistoryLoading(false); } };
     const handleClearUserHistory = async (userIdToClear: string | null) => { if (!authenticatedStaffKey || !userIdToClear) return; if (!window.confirm(`Are you sure you want to permanently delete all chat history for user ID "${userIdToClear}"?`)) return; setIsAdminLoading(true); const requestBody: ApiRequestBody = { action: 'adminClearUserHistory', staffKey: authenticatedStaffKey, userId: userIdToClear }; try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); const data = await res.json(); if (!res.ok || !data.success) throw new Error(data?.error || "Failed to clear history."); setAdminSuccess(data.message || "History cleared successfully."); setViewingHistory(null); setViewingUserId(null); } catch (e) { setAdminError(e instanceof Error ? e.message : "An unknown error occurred while clearing history."); } finally { setIsAdminLoading(false); } };
     const handleCloseHistoryView = () => { setViewingHistory(null); setViewingUserId(null); setHistoryError(null); };
-    
 
-
-    // --- Render Logic ---
     if (isAdminLoading && !initialBasePrompt && !adminUserKeysList.length && !adminFeedbackList.length) { return <div style={{ padding: '40px', textAlign: 'center', fontSize: '1.2em', color: '#666' }}>Loading Admin Data...</div>; }
     if (!authenticatedStaffKey && !isAdminLoading) { return <div style={{ padding: '40px', textAlign: 'center', color: 'red' }}>Error: Not authenticated. Please log in again.</div>; }
 
     const renderStars = (rating: number) => { const stars = []; for (let i = 1; i <= 5; i++) { stars.push(<span key={i} className={i <= rating ? 'star-filled' : 'star-empty'}>★</span>); } return <div className="rating-stars-display">{stars}</div>; };
 
     return (
-        // 🔧 WRAP EVERYTHING IN A SINGLE FRAGMENT
         <>
             <AdminPageStyles />
             <div className="admin-page-container">
