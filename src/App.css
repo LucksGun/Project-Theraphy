@@ -283,7 +283,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     max-width: 700px; /* <<< CONFIRM THIS VALUE IS INCREASED (e.g., 700px) */
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 70px);
+    max-height: calc(100dvh - 70px);
     overflow-y: auto;
 }
 /* --- Additions for Login System --- */
@@ -319,7 +319,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    height: 100dvh;
     font-size: 1.2em;
     color: var(--text-secondary);
 }

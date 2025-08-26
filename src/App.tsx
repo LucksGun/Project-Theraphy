@@ -1127,7 +1127,7 @@ function MainApp() {
                             />
                         </>
                     } />
-                    <Route path="/admin" element={ <ProtectedRoute> <AdminPage /> </ProtectedRoute> } />
+                    <Route path="/admin" element={ <ProtectedRoute> <AdminPage WORKER_URL={''} authenticatedStaffKey={null} /> </ProtectedRoute> } />
                     <Route path="/present" element={<PresentationPage />} />
                     <Route path="/pay" element={<InvoiceManagerPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
