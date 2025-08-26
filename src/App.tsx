@@ -35,9 +35,23 @@ const auth: Auth = getAuth(app);
 // =================================================================
 // --- 2. Authentication Context (AuthContext.tsx) ---
 // =================================================================
+// =================================================================
+// --- 2. Authentication Context (AuthContext.tsx) ---
+// =================================================================
 
+// ✨ ADD THIS INTERFACE
+export interface DbUser {
+  id: string;
+  firebase_uid: string;
+  username: string;
+  email: string | null;
+  avatar_url: string | null;
+}
+
+// 🔧 MODIFY THIS INTERFACE
 interface AuthContextType {
   user: User | null;
+  dbUser: DbUser | null; // ✨ ADD THIS LINE
   loading: boolean;
   login: () => Promise<void>;
   logout: () => Promise<void>;
@@ -47,15 +61,50 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [dbUser, setDbUser] = useState<DbUser | null>(null); // ✨ ADD THIS LINE
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
+      // ✨ ADD THIS IF-STATEMENT
+      if (!currentUser) {
+        setDbUser(null);
+        setLoading(false);
+      }
     });
     return () => unsubscribe();
   }, []);
+
+  // ✨ ADD THIS ENTIRE useEffect BLOCK
+  useEffect(() => {
+    const fetchDbUser = async () => {
+      if (user) {
+        setLoading(true);
+        try {
+          const token = await user.getIdToken();
+          const response = await fetch(WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'getUserProfile', token })
+          });
+          if (!response.ok) throw new Error('Failed to fetch user profile');
+          const data = await response.json();
+          if (data.success && data.user) {
+            setDbUser(data.user);
+          } else {
+            setDbUser(null);
+          }
+        } catch (error) {
+          console.error("Error fetching DB user profile:", error);
+          setDbUser(null);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    fetchDbUser();
+  }, [user]);
 
   const login = async () => {
     const provider = new GoogleAuthProvider();
@@ -85,7 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const value = { user, loading, login, logout };
+  // 🔧 MODIFY THIS LINE
+  const value = { user, dbUser, loading, login, logout };
 
   return (
     <AuthContext.Provider value={value}>
@@ -101,7 +151,6 @@ export const useAuth = () => {
   }
   return context;
 };
-
 
 // =================================================================
 // --- 3. Main Application Logic (App.tsx) ---
