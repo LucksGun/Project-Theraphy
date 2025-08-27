@@ -364,60 +364,61 @@ function MainApp() {
 
     // --- Effects ---
     useEffect(() => {
-        if (loading) {
-            return;
-        }
-        
-        const loadChatData = async () => {
-            if (user) {
-                try {
-                    const token = await user.getIdToken();
-                    const response = await fetch(WORKER_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'getChatHistory', token })
-                    });
-                    if (!response.ok) throw new Error('Failed to fetch chat history');
-                    
-                    const data = await response.json();
-                    if (data.history && data.history.length > 0) {
-                        const loadedMessages = data.history.map((item: any, index: number) => ({
-                            id: Date.now() + index,
-                            text: item.parts[0].text,
-                            sender: item.role === 'user' ? 'user' : 'bot',
-                            timestamp: Date.now() + index,
-                        }));
-                        setMessages(loadedMessages);
-                    } else {
-                        const ts = Date.now();
-                        setMessages([{ id: ts, text: `Welcome back, ${user.displayName || 'User'}!`, sender: 'bot', timestamp: ts }]);
-                    }
-                } catch (error) {
-                    console.error("Error loading DB chat history:", error);
+    const loadChatData = async () => {
+        if (user) {
+            try {
+                const token = await user.getIdToken();
+                const response = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'getChatHistory', token })
+                });
+                if (!response.ok) throw new Error('Failed to fetch chat history');
+                
+                const data = await response.json();
+                
+                if (data.history && data.history.length > 0) {
+                    // ✨ FIX: The data is already in the correct format {sender, text, timestamp}.
+                    // We just need to add a unique 'id' for React's rendering.
+                    const loadedMessages = data.history.map((msg: any, index: number) => ({
+                        ...msg,
+                        id: msg.timestamp + index, // Create a unique ID
+                    }));
+                    setMessages(loadedMessages);
+                } else {
+                    // If the user has no history, give them a fresh welcome message.
                     const ts = Date.now();
-                    setMessages([{ id: ts, text: "Welcome! Couldn't load previous chat.", sender: 'bot', timestamp: ts }]);
+                    setMessages([{ id: ts, text: `Welcome, ${user.displayName || 'User'}! How can I help you today?`, sender: 'bot', timestamp: ts }]);
                 }
-            } else {
-                const stored = localStorage.getItem(CHAT_STORAGE_KEY);
-                try {
-                    const initial = stored && stored !== '[]' ? JSON.parse(stored) : [];
-                    if (Array.isArray(initial) && initial.length > 0) {
-                        setMessages(initial.filter(m => m.sender !== 'loading'));
-                    } else {
-                        const ts = Date.now();
-                        setMessages([{ id: ts, text: "Welcome!", sender: 'bot', timestamp: ts }]);
-                    }
-                } catch (e) {
-                    console.error("Bad stored msgs:", e);
-                    localStorage.removeItem(CHAT_STORAGE_KEY);
+            } catch (error) {
+                console.error("Error loading DB chat history:", error);
+                const ts = Date.now();
+                setMessages([{ id: ts, text: "Welcome! Couldn't load previous chat.", sender: 'bot', timestamp: ts }]);
+            }
+        } else {
+            // This logic for guests using localStorage is still fine.
+            const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+            try {
+                const initial = stored && stored !== '[]' ? JSON.parse(stored) : [];
+                if (Array.isArray(initial) && initial.length > 0) {
+                    setMessages(initial.filter(m => m.sender !== 'loading'));
+                } else {
                     const ts = Date.now();
                     setMessages([{ id: ts, text: "Welcome!", sender: 'bot', timestamp: ts }]);
                 }
+            } catch (e) {
+                console.error("Error parsing stored messages:", e);
+                localStorage.removeItem(CHAT_STORAGE_KEY);
+                const ts = Date.now();
+                setMessages([{ id: ts, text: "Welcome!", sender: 'bot', timestamp: ts }]);
             }
-        };
+        }
+    };
 
-        loadChatData();
-    }, [user, loading]);
+    if (!loading) { // Run only after the initial auth check is complete
+      loadChatData();
+    }
+}, [user, loading]);
 
 
     useEffect(() => {
