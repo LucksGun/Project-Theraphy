@@ -123,7 +123,22 @@
   --tutorial-link-color: #007bff;
   --tutorial-link-hover-color: #0056b3;
 }
+.premium-badge {
+  background-color: #FFD700; /* Gold color */
+  color: #333;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: 8px;
+  display: inline-block;
+}
 
+/* Optional: Dark mode styling for the badge */
+[data-theme='dark'] .premium-badge {
+  background-color: #E6C200;
+  color: #000;
+}
 /* Dark theme overrides */
 :root[data-theme='dark'] {
   --page-bg: #1a1a1a;

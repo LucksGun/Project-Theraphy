@@ -39,13 +39,13 @@ const auth: Auth = getAuth(app);
 // --- 2. Authentication Context (AuthContext.tsx) ---
 // =================================================================
 
-// ✨ ADD THIS INTERFACE
 export interface DbUser {
   id: string;
   firebase_uid: string;
   username: string;
   email: string | null;
   avatar_url: string | null;
+  has_premium_access: boolean; // ✨ ADD THIS LINE
 }
 
 // 🔧 MODIFY THIS INTERFACE
@@ -314,7 +314,7 @@ const LoginButton: React.FC = () => {
 
 // --- MainApp Component ---
 function MainApp() {
-    const { user, loading } = useAuth();
+    const { user, dbUser, loading } = useAuth();
     
     // --- State ---
     const [messages, setMessages] = useState<Message[]>([]);
@@ -359,8 +359,9 @@ function MainApp() {
 
     // --- Calculate derived state ---
     const availablePersonasForGame = AVAILABLE_PERSONAS.filter(p => !p.restricted || keyStatus.isValid === true);
-    const canChangePersona = keyStatus.isValid === true && availablePersonasForGame.length >= 1;
-    const canAccessAdvanced = keyStatus.isValid === true;
+    // --- Calculate derived state ---
+const canAccessAdvanced = (dbUser && dbUser.has_premium_access) || keyStatus.isValid === true;
+const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >= 1;
 
     // --- Effects ---
     useEffect(() => {
@@ -1067,9 +1068,16 @@ function MainApp() {
                                 className="user-info-avatar"
                             />
                             <div style={{ textAlign: 'center' }}>
-                                <p className="user-info-name">{user.displayName}</p>
-                                <p className="user-info-email">{user.email}</p>
-                            </div>
+    <p className="user-info-name">{user.displayName}</p>
+    <p className="user-info-email">{user.email}</p>
+</div>
+
+{/* ✨ ADD THIS BLOCK for the premium badge */}
+{dbUser?.has_premium_access && (
+    <div className="premium-badge">
+        ⭐ Premium Member
+    </div>
+)}
                             
                             <div className="user-info-box">
                                 <label className="user-info-label">User ID</label>
