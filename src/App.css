@@ -133,7 +133,22 @@
   margin-top: 8px;
   display: inline-block;
 }
+.non-premium-badge {
+  background-color: #e0e0e0; /* A light grey color */
+  color: #555;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: 8px;
+  display: inline-block;
+}
 
+/* Optional: Dark mode styling for the non-premium badge */
+[data-theme='dark'] .non-premium-badge {
+  background-color: #4a4a4a;
+  color: #ccc;
+}
 /* Optional: Dark mode styling for the badge */
 [data-theme='dark'] .premium-badge {
   background-color: #E6C200;

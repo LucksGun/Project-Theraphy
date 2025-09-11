@@ -38,7 +38,6 @@ async function getBotResponse(
     history: HistoryItem[], 
     model: GeminiModel, 
     persona: Persona, 
-    accessKey: string, 
     firebaseUser: User | null // <-- MODIFIED: Pass the user object
 ): Promise<{ text: string; imageUrl: string | null; modelUsed?: string; username?: string }> {
     const promptToSend = userInput || (imageData ? "Describe this image." : "");
@@ -61,7 +60,6 @@ async function getBotResponse(
         prompt: promptToSend,
         model: model,
         persona: persona,
-        accessKey: accessKey || undefined,
         history: history,
         imageMimeType: imageData?.type,
         imageDataUrl: imageData?.dataUrl,
@@ -95,7 +93,6 @@ async function getBotResponseForAnalysis(
     userInput: string, 
     model: GeminiModel, 
     persona: Persona, 
-    accessKey: string,
     firebaseUser: User | null // <-- MODIFIED: Pass the user object
 ): Promise<string> {
     if (!userInput) return "Error: No analysis data provided.";
@@ -115,7 +112,6 @@ async function getBotResponseForAnalysis(
         prompt: userInput,
         model: model,
         persona: persona,
-        accessKey: accessKey,
         token: userToken // <-- MODIFIED: Include token in the request
     };
 
@@ -195,12 +191,11 @@ interface ChatbotPageProps {
     selectedModel: GeminiModel;
     sttLang: SpeechLanguage;
     selectedPersona: Persona;
-    accessKey: string;
     onTriggerInterview: () => void;
 }
 
 // --- ChatbotPage Component ---
-function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona, accessKey, onTriggerInterview }: ChatbotPageProps) {
+function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona, onTriggerInterview }: ChatbotPageProps) {
     // --- State ---
     const [input, setInput] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -419,7 +414,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
         let botResponse: { text: string; imageUrl: string | null; modelUsed?: string; username?: string; } = { text: 'Error: Request failed.', imageUrl: null };
         try {
             // <-- MODIFIED: Pass the user object to the API call
-            botResponse = await getBotResponse(textTrimmed, imageDataForApi, historyToSend, selectedModel, selectedPersona, accessKey, user);
+            botResponse = await getBotResponse(textTrimmed, imageDataForApi, historyToSend, selectedModel, selectedPersona, user);
         } catch (error) {
             console.error("Critical sendMessage error:", error);
             botResponse.text = error instanceof Error ? `Error: ${error.message}` : "Error: Critical network error.";
@@ -442,7 +437,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                 setMessages(prev => prev.filter(m => m.id !== loadingTimestamp));
             }
         }
-    }, [messages, isLoading, isOnCooldown, input, selectedImage, capturedImageDataUrl, setMessages, selectedModel, selectedPersona, accessKey, scrollToBottom, isSpeechSynthesisSupported, removeSelectedImage, removeCapturedImage, user]); // <-- MODIFIED: Add user to dependency array
+    }, [messages, isLoading, isOnCooldown, input, selectedImage, capturedImageDataUrl, setMessages, selectedModel, selectedPersona, scrollToBottom, isSpeechSynthesisSupported, removeSelectedImage, removeCapturedImage, user]); // <-- MODIFIED: Add user to dependency array
 
     // --- Event Handlers ---
     const handleSend = () => sendMessage(input, selectedImage, capturedImageDataUrl);
@@ -508,7 +503,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
         toggleAnalysisForm();
 
         // <-- MODIFIED: Pass the user object to the analysis API call
-        const result = await getBotResponseForAnalysis(analysisInput.trim(), selectedModel, selectedPersona, accessKey, user);
+        const result = await getBotResponseForAnalysis(analysisInput.trim(), selectedModel, selectedPersona, user);
 
         setMessages(p => p.filter(m => m.id !== ts));
         const resultTimestamp = Date.now() + 1;

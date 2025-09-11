@@ -1,6 +1,6 @@
 // src/InterviewMode.tsx - Full code with all recent fixes
-
-import  { useState, useEffect, useRef, useCallback } from 'react';
+import { useAuth } from './App';
+import  { useState, useEffect, useRef, useCallback, useTransition } from 'react';
 // Assuming types and constants can be imported from App or another shared location
 import { Message, GeminiModel, SpeechLanguage, ApiRequestBody, WORKER_URL } from './App';
 import InterviewReport from './InterviewReport'; // Import the new component
@@ -31,7 +31,6 @@ interface InterviewModeProps {
     isOpen: boolean;
     onClose: () => void;
     selectedModel: GeminiModel;
-    accessKey: string;
     sttLang: SpeechLanguage;
 }
 
@@ -65,20 +64,23 @@ async function getBotResponseInterview(
     history: HistoryItem[],
     model: GeminiModel,
     persona: string,
-    accessKey: string,
+    user: any, // The user object from useAuth
     isReportGeneration: boolean = false
 ): Promise<{ text: string; imageUrl: string | null }> {
     const finalPrompt = isReportGeneration
         ? `Based on the entire conversation history provided, please act as the hiring manager. First, on a new line, write a final conclusion of either "Conclusion: Pass" or "Conclusion: Fail". Then, on another new line, provide a 2-3 sentence summary explaining your decision and offering constructive feedback on the candidate's performance.`
         : userInput;
 
+    // ✨ Get token from user object
+    const token = user ? await user.getIdToken() : null;
+
     const requestBody: ApiRequestBody = {
         action: 'chat',
         prompt: finalPrompt,
         model: model,
         persona: persona as any,
-        accessKey: accessKey || undefined,
         history: history,
+        token: token // ✨ Send token instead of accessKey
     };
     try {
         const response = await fetch(WORKER_URL, {
@@ -100,7 +102,8 @@ async function getBotResponseInterview(
 }
 
 // --- InterviewMode Component ---
-function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: InterviewModeProps) {
+function InterviewMode({ isOpen, onClose, selectedModel, sttLang }: InterviewModeProps) {
+    const { user } = useAuth(); // ✨ ADD THIS
     const [stage, setStage] = useState<InterviewStage>('idle');
     const [messages, setMessages] = useState<Message[]>([]);
     const [result, setResult] = useState<InterviewResult>(null);
@@ -322,13 +325,13 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                             }
                         }
                         console.log(`InterviewMode: Determined Google STT Encoding: ${googleEncoding} from MIME Type: ${actualMimeType}`);
-                        
+                        const token = user ? await user.getIdToken() : null; // ✨ ADD THIS LINE
                         const sttRequestBody: any = {
                             action: 'transcribe_speech',
                             audioData: base64AudioData,
                             languageCode: sttLang,
                             audioEncoding: googleEncoding,
-                            accessKey: accessKey,
+                            token: token,
                         };
 
                         if (currentAudioSampleRate.current) {
@@ -394,7 +397,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             setError(`Could not start mic recording: ${(e as Error).message}.`);
             setIsSttActive(false); setStage('error'); initialSessionSetupDone.current = true;
         }
-    }, [cameraStream, sttLang, accessKey, isGoogleTtsPlaying, stopListeningAndProcessAudio, stopRecordingAndClearData]);
+    }, [cameraStream, sttLang, user, isGoogleTtsPlaying, stopListeningAndProcessAudio, stopRecordingAndClearData]);
 
     useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
 
@@ -409,11 +412,12 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             console.log(`TTS: Using language '${languageCode}' and voice '${voiceName}'.`);
 
             const cleanText = text.replace(/(\*\*|__)(.*?)\1/g, '$2').replace(/(\*|_)(.*?)\1/g, '$2').replace(/#/g, '');
+            const token = user ? await user.getIdToken() : null; // ✨ ADD THIS LINE
             const ttsRequestBody = {
                 action: 'synthesize_speech',
                 text: cleanText,
                 languageCode: languageCode,
-                accessKey: accessKey,
+                token: token,
                 voice: {
                     languageCode: languageCode,
                     name: voiceName
@@ -450,7 +454,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
                 setStage('user_turn');
             }
         }
-    }, [accessKey, isSttActive, result, sttLang, stopListeningAndProcessAudio]);
+    }, [user, isSttActive, result, sttLang, stopListeningAndProcessAudio]);
 
     useEffect(() => { playGoogleCloudTTSRef.current = playGoogleCloudTTS; }, [playGoogleCloudTTS]);
 
@@ -464,7 +468,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         setMessages(prev => [...prev, loadingMessage]);
         const historyForApi = messageHistoryRef.current.slice(-10);
         try {
-            const response = await getBotResponseInterview(userText, historyForApi, selectedModel, INTERVIEWER_PERSONA_ID, accessKey);
+            const response = await getBotResponseInterview(userText, historyForApi, selectedModel, INTERVIEWER_PERSONA_ID, user);
             const botMessage: Message = { id: Date.now() + 2, text: response.text, sender: 'bot', timestamp: Date.now() + 2 };
             if (!response.text.startsWith("Error:")) messageHistoryRef.current.push({ role: 'model', parts: [{ text: response.text }] });
             else { console.error("Gemini API error:", response.text); setError(response.text); }
@@ -496,7 +500,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             setMessages(prev => [...prev.filter(m => m.sender !== 'loading'), errorMessage]);
             setStage('error'); initialSessionSetupDone.current = true;
         }
-    }, [selectedModel, accessKey]);
+    }, [selectedModel, user]);
 
     useEffect(() => { handleUserSpeechRef.current = handleUserSpeech; }, [handleUserSpeech]);
 
@@ -508,7 +512,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
         setMessages([startMessage]); messageHistoryRef.current = [];
         try {
             const initialPrompt = "Please begin the interview.";
-            const response = await getBotResponseInterview(initialPrompt, [], selectedModel, INTERVIEWER_PERSONA_ID, accessKey);
+            const response = await getBotResponseInterview(initialPrompt, [], selectedModel, INTERVIEWER_PERSONA_ID, user);
             if (response.text.startsWith("Error:")) { throw new Error(response.text.substring(7)); }
             const firstBotMessage: Message = { id: Date.now(), text: response.text, sender: 'bot', timestamp: Date.now() };
             messageHistoryRef.current.push({ role: 'model', parts: [{ text: response.text }] });
@@ -519,12 +523,12 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             setMessages([{ id: Date.now(), text: errorMsg, sender: 'bot', timestamp: Date.now() }]);
             setStage('error'); initialSessionSetupDone.current = true;
         }
-    }, [selectedModel, accessKey]);
+    }, [selectedModel, user]);
 
     const generateReport = useCallback(async () => {
         console.log("Generating interview report...");
         try {
-            const response = await getBotResponseInterview("", messageHistoryRef.current, selectedModel, INTERVIEWER_PERSONA_ID, accessKey, true);
+            const response = await getBotResponseInterview("", messageHistoryRef.current, selectedModel, INTERVIEWER_PERSONA_ID, useTransition, true);
             if (response.text.startsWith("Error:")) {
                 throw new Error(response.text);
             }
@@ -547,7 +551,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, accessKey, sttLang }: I
             setError(errorMsg);
             setStage('error');
         }
-    }, [accessKey, selectedModel, messages]);
+    }, [user, selectedModel, messages]);
 
     useEffect(() => {
         if (stage === 'generating_report') {

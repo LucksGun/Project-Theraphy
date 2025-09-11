@@ -4,13 +4,13 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Matter from 'matter-js';
 import './PersonaPlinkoGame.css'; // Ensure you have this CSS file
 // Make sure the path to App is correct for your project structure
-import { Persona, PersonaInfo, KeyValidationStatus } from './App';
+import { Persona, PersonaInfo } from './App';
 
 interface PersonaPlinkoGameProps {
     isOpen: boolean;
     onClose: () => void;
     onPersonaSelected: (persona: Persona) => void; // Callback for success
-    keyStatus: KeyValidationStatus;               // Needed for filtering personas
+    hasPremiumAccess: boolean;               // Needed for filtering personas
     allPersonas: PersonaInfo[];                   // Full list of personas with details
 }
 
@@ -92,7 +92,7 @@ function createArcVertices(cx: number, cy: number, startAngle: number, endAngle:
 
 // --- The Component ---
 const PersonaPlinkoGame: React.FC<PersonaPlinkoGameProps> = ({
-    isOpen, onClose, onPersonaSelected, keyStatus, allPersonas
+    isOpen, onClose, onPersonaSelected, hasPremiumAccess, allPersonas
 }) => {
     const sceneRef = useRef<HTMLDivElement>(null);
     const engineRef = useRef<Matter.Engine | null>(null);
@@ -107,9 +107,9 @@ const PersonaPlinkoGame: React.FC<PersonaPlinkoGameProps> = ({
     const [outcome, setOutcome] = useState<Persona | null>(null); // Store the selected Persona value
 
     // Determine available personas based on key status
-    const availablePersonas = useMemo(() => {
-        return allPersonas.filter(p => !p.restricted || keyStatus.isValid === true);
-    }, [allPersonas, keyStatus.isValid]);
+   const availablePersonas = useMemo(() => {
+    return allPersonas.filter(p => !p.restricted || hasPremiumAccess);
+}, [allPersonas, hasPremiumAccess]);
 
     // --- Cleanup Function ---
     const cleanupMatter = useCallback(() => {

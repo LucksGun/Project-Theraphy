@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ChangeEvent, useRef, useCallback, createContext, useContext } from 'react';
+import React, { useState, useEffect, ChangeEvent, useCallback, createContext, useContext } from 'react';
 import ReactGA from 'react-ga4';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Barcode from 'react-barcode'; // ✨ NEW: Import for barcode generation
@@ -10,7 +10,6 @@ import PersonaPlinkoGame from './PersonaPlinkoGame';
 import InterviewMode from './InterviewMode';
 import PresentationPage from './PresentationPage';
 import InvoiceManagerPage from './InvoiceManagerPage';
-import lieDetectorImage from './LIE.jpg'; // Import the local image
 
 // --- Firebase Imports ---
 import { initializeApp, FirebaseApp } from "firebase/app";
@@ -185,10 +184,8 @@ export type AppTheme = 'light' | 'dark';
 const CHAT_STORAGE_KEY = 'chatMessages';
 const MODEL_STORAGE_KEY = 'selectedApiModel';
 const STT_LANG_STORAGE_KEY = 'selectedSttLang';
-const ACCESS_KEY_STORAGE_KEY = 'userAccessKey';
 const PERSONA_STORAGE_KEY = 'selectedPersona';
 const THEME_STORAGE_KEY = 'selectedAppTheme';
-const WELCOME_SEEN_KEY = 'welcomePageSeenV1';
 
 // --- Configurations ---
 export const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.dev/';
@@ -247,8 +244,6 @@ export interface ApiRequestBody {
     token?: string | null;
 }
 
-// --- Constants ---
-const VALIDATION_DEBOUNCE_MS = 600;
 
 // --- Component for Protected Route ---
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -318,13 +313,6 @@ function MainApp() {
     
     // --- State ---
     const [messages, setMessages] = useState<Message[]>([]);
-    const [showWelcomePage, setShowWelcomePage] = useState<boolean>(false);
-    const [showKnowledgeCheck, setShowKnowledgeCheck] = useState<boolean>(false);
-    const [showLieDetector, setShowLieDetector] = useState<boolean>(false);
-    const [showTutorial, setShowTutorial] = useState<boolean>(false);
-    const [isFanOn, setIsFanOn] = useState(true);
-    const [buttonTransform, setButtonTransform] = useState('translate(0, 0)');
-    const [enteredKey, setEnteredKey] = useState<string>(() => localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '');
     const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.5-flash');
     const [sttLang, setSttLang] = useState<SpeechLanguage>(() => {
         const stored = localStorage.getItem(STT_LANG_STORAGE_KEY) as SpeechLanguage | null;
@@ -337,8 +325,6 @@ function MainApp() {
     const [isInterviewModeOpen, setIsInterviewModeOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState<boolean>(false);
-    const [keyStatus, setKeyStatus] = useState<KeyValidationStatus>({ isValid: null, username: null, loading: false, error: null });
-    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isStaffLoginModalVisible, setIsStaffLoginModalVisible] = useState<boolean>(false);
     const [enteredStaffKey, setEnteredStaffKey] = useState<string>('');
     const [isStaffLoginLoading, setIsStaffLoginLoading] = useState<boolean>(false);
@@ -358,9 +344,8 @@ function MainApp() {
     const navigate = useNavigate();
 
     // --- Calculate derived state ---
-    const availablePersonasForGame = AVAILABLE_PERSONAS.filter(p => !p.restricted || keyStatus.isValid === true);
-    // --- Calculate derived state ---
-const canAccessAdvanced = (dbUser && dbUser.has_premium_access) || keyStatus.isValid === true;
+const canAccessAdvanced = dbUser?.has_premium_access || false;
+const availablePersonasForGame = AVAILABLE_PERSONAS.filter(p => !p.restricted || canAccessAdvanced);
 const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >= 1;
 
     // --- Effects ---
@@ -421,92 +406,7 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
     }
 }, [user, loading]);
 
-
-    useEffect(() => {
-        const keyTrimmed = enteredKey.trim();
-        if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
-
-        const currentModelBeforeValidation = selectedModel;
-        const currentPersonaBeforeValidation = selectedPersona;
-
-        if (!keyTrimmed) {
-            setKeyStatus({ isValid: null, username: null, loading: false, error: null });
-            if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.5-flash');
-            if (RESTRICTED_PERSONAS_VALUES.includes(currentPersonaBeforeValidation)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
-            return;
-        }
-
-        setKeyStatus(p => ({ ...p, loading: true, isValid: null, error: null, username: null }));
-        debounceTimeoutRef.current = setTimeout(async () => {
-            try {
-                const r = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'validateKey', accessKey: keyTrimmed }) });
-                const d = await r.json().catch(() => ({ error: `Invalid JSON` }));
-                if (!r.ok) throw new Error(d?.error || `Validation failed: ${r.status}`);
-
-                if (d.isValid) {
-                    setKeyStatus({ isValid: true, username: d.username || 'User', loading: false, error: null });
-                    setSelectedModel(currentModelBeforeValidation);
-                    setSelectedPersona(currentPersonaBeforeValidation);
-                } else {
-                    setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key.' });
-                    if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.5-flash');
-                    if (RESTRICTED_PERSONAS_VALUES.includes(currentPersonaBeforeValidation)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
-                }
-            } catch (e) {
-                const msg = e instanceof Error ? e.message : "Validation network error.";
-                setKeyStatus({ isValid: false, username: null, loading: false, error: msg });
-                if (RESTRICTED_MODELS_VALUES.includes(currentModelBeforeValidation)) setSelectedModel('gemini-2.5-flash');
-                if (RESTRICTED_PERSONAS_VALUES.includes(currentPersonaBeforeValidation)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
-            }
-        }, VALIDATION_DEBOUNCE_MS);
-
-        return () => { if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current); };
-    }, [enteredKey]);
-
-    useEffect(() => {
-        const welcomeSeen = localStorage.getItem(WELCOME_SEEN_KEY);
-        if (welcomeSeen !== 'true') {
-            setShowWelcomePage(true);
-        }
-
-        const initialKey = localStorage.getItem(ACCESS_KEY_STORAGE_KEY) || '';
-        const storedModel = localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel | null;
-        const storedPersona = localStorage.getItem(PERSONA_STORAGE_KEY) as Persona | null;
-        let initialModel: GeminiModel = 'gemini-2.5-flash';
-        if (storedModel && ALL_MODEL_VALUES.includes(storedModel)) initialModel = storedModel;
-        let initialPersona: Persona = DEFAULT_UNRESTRICTED_PERSONA;
-        if (storedPersona && ALL_PERSONAS.includes(storedPersona)) initialPersona = storedPersona;
-
-        setSelectedModel(initialModel);
-        setSelectedPersona(initialPersona);
-
-        if (initialKey.trim()) {
-            const validateInitialKey = async (k: string, m: GeminiModel, p: Persona) => {
-                setKeyStatus(pr => ({ ...pr, loading: true }));
-                try {
-                    const r = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'validateKey', accessKey: k }) });
-                    const d = await r.json().catch(() => ({ error: 'Invalid JSON' }));
-                    if (r.ok && d.isValid) {
-                        setKeyStatus({ isValid: true, username: d.username || 'User', loading: false, error: null });
-                        setSelectedModel(m);
-                        setSelectedPersona(p);
-                    } else {
-                        setKeyStatus({ isValid: false, username: null, loading: false, error: d?.error || 'Invalid key' });
-                        if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.5-flash');
-                        if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
-                    }
-                } catch (e) {
-                    setKeyStatus({ isValid: false, username: null, loading: false, error: 'Validation failed' });
-                    if (RESTRICTED_MODELS_VALUES.includes(m)) setSelectedModel('gemini-2.5-flash');
-                    if (RESTRICTED_PERSONAS_VALUES.includes(p)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
-                }
-            };
-            validateInitialKey(initialKey, initialModel, initialPersona);
-        } else {
-            if (RESTRICTED_MODELS_VALUES.includes(initialModel)) setSelectedModel('gemini-2.5-flash');
-            if (RESTRICTED_PERSONAS_VALUES.includes(initialPersona)) setSelectedPersona(DEFAULT_UNRESTRICTED_PERSONA);
-        }
-    }, []);
+    
 
     useEffect(() => {
         if (!user) {
@@ -521,7 +421,6 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
 
     useEffect(() => { localStorage.setItem(MODEL_STORAGE_KEY, selectedModel); }, [selectedModel]);
     useEffect(() => { localStorage.setItem(STT_LANG_STORAGE_KEY, sttLang); }, [sttLang]);
-    useEffect(() => { localStorage.setItem(ACCESS_KEY_STORAGE_KEY, enteredKey); }, [enteredKey]);
     useEffect(() => { localStorage.setItem(PERSONA_STORAGE_KEY, selectedPersona); }, [selectedPersona]);
     useEffect(() => {
         localStorage.setItem(THEME_STORAGE_KEY, currentTheme);
@@ -545,9 +444,6 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
         setIsClearCupGameVisible(false);
         setIsPersonaPlinkoVisible(false);
         setIsInterviewModeOpen(false);
-        setShowKnowledgeCheck(false);
-        setShowLieDetector(false);
-        setShowTutorial(false);
         setIsUserInfoModalVisible(false); // ✨ NEW
     };
 
@@ -559,66 +455,12 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
         }
     };
 
-    const handleAcceptWelcome = () => {
-        localStorage.setItem(WELCOME_SEEN_KEY, 'true');
-        setShowWelcomePage(false);
-        setShowKnowledgeCheck(true);
-    };
+   
 
-    const playBeep = () => {
-        try {
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-            if (!audioContext) {
-                console.warn("AudioContext not supported in this browser.");
-                return;
-            }
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
-            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-            oscillator.start();
-            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.2);
-            oscillator.stop(audioContext.currentTime + 0.2);
-        } catch (e) {
-            console.error("Error playing beep:", e);
-        }
-    };
+    
+   
 
-    const handleYesClick = () => {
-        setShowLieDetector(true);
-        playBeep();
-        setTimeout(() => {
-            setShowLieDetector(false);
-        }, 2000);
-    };
-
-    const handleNoClick = () => {
-        setShowKnowledgeCheck(false);
-        setShowTutorial(true);
-    };
-
-    const handleEnterChatbot = () => {
-        if (!isFanOn) {
-            setShowTutorial(false);
-            navigate('/');
-        }
-    };
-
-    const handleWindEffect = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (isFanOn) {
-            const zone = e.currentTarget;
-            const button = zone.querySelector('button');
-            if (!button) return;
-            const zoneRect = zone.getBoundingClientRect();
-            const cursorX = e.clientX - zoneRect.left;
-            const pushStrength = 40;
-            const moveX = - (zoneRect.width - cursorX) / zoneRect.width * pushStrength;
-            setButtonTransform(`translateX(${moveX}px)`);
-        }
-    };
+    
 
     const handleSttLangChange = (e: ChangeEvent<HTMLSelectElement>) => { setSttLang(e.target.value as SpeechLanguage); };
     const toggleSettings = () => { const currentlyVisible = isSettingsOpen; closeAllModals(); if (!currentlyVisible) { setIsSettingsOpen(true); } };
@@ -658,14 +500,13 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
         }
     };
     
-    const handleAccessKeyChange = (e: ChangeEvent<HTMLInputElement>) => { setEnteredKey(e.target.value); };
     const handleExportChat = () => {
         const msgs = messages.filter(m => m.sender !== 'loading');
         if (msgs.length === 0 || (msgs.length === 1 && msgs[0].sender === 'bot' && msgs[0].text === "Welcome!")) {
             alert("Chat is empty or only contains the welcome message.");
             return;
         }
-        let c = `Chat Export\nTimestamp: ${new Date().toLocaleString()}\nModel: ${selectedModel}\nPersona: ${selectedPersona}\nUser: ${keyStatus.isValid ? keyStatus.username : 'N/A (No valid key)'}\nTheme: ${currentTheme}\n----\n\n`;
+       let c = `Chat Export\nTimestamp: ${new Date().toLocaleString()}\nModel: ${selectedModel}\nPersona: ${selectedPersona}\nUser: ${dbUser ? dbUser.username : 'Guest'}\nTheme: ${currentTheme}\n----\n\n`;
         msgs.forEach(m => {
             const t = new Date(m.timestamp).toLocaleString();
             c += `[${t}] ${m.sender === 'user' ? 'User' : 'Bot'}:\n${m.text}\n${m.imageUrl ? `(Image Attachment: ${m.imageUrl.substring(0, 50)}...)\n` : ''}\n`;
@@ -782,105 +623,10 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
             `}</style>
 
             {/* Onboarding Flow */}
-            {showWelcomePage && ( 
-                <div className="welcome-overlay">
-                    <div className="welcome-modal">
-                        <h1 className="welcome-title">Project Theraphy</h1>
-                        <p className="welcome-subtitle">
-                            Hi and welcome to Project Theraphy, <br />
-                            a chatbot which guide you thru entrace and admission steps of your desired collage
-                        </p>
-                        <p className="welcome-instructions">
-                            To get started, you accept our term of use/services by clicking button below.
-                        </p>
-                        <div className="welcome-button-container">
-                            <button onClick={() => { /* Do nothing */ }} className="welcome-main-button">
-                                NO
-                            </button>
-                        </div>
-                        <p className="welcome-bottom-text">
-                            Please click <span className="welcome-bottom-link" onClick={handleAcceptWelcome}>HERE</span> to Go to the next page
-                        </p>
-                    </div>
-                </div> 
-            )}
-            {showKnowledgeCheck && ( 
-                <div className="knowledge-check-overlay">
-                    {!showLieDetector && !showTutorial && (
-                        <div className="knowledge-check-modal">
-                            <h2>Do you know how to use this chatbot?</h2>
-                            <div className="knowledge-check-buttons">
-                                <button onClick={handleYesClick} className="knowledge-button yes">Yes</button>
-                                <button onClick={handleNoClick} className="knowledge-button no">No</button>
-                            </div>
-                        </div>
-                    )}
-                    {showLieDetector && (
-                        <div className="lie-detector-overlay">
-                            <img src={lieDetectorImage} alt="Lie Detector" className="lie-detector-image" />
-                        </div>
-                    )}
-                </div> 
-            )}
-            {showTutorial && ( 
-                <div className="tutorial-modal-overlay">
-                    <div className="tutorial-modal">
-                        <div className="tutorial-interaction-area">
-                            <div className="fan-and-button-container">
-                                <div className={`wind-effect ${isFanOn ? 'blowing' : ''}`}></div>
-                                <div 
-                                    className="button-wind-zone"
-                                    onMouseMove={handleWindEffect}
-                                    onMouseLeave={() => setButtonTransform('translate(0,0)')}
-                                >
-                                    <button
-                                        className="tutorial-enter-button"
-                                        onClick={handleEnterChatbot}
-                                        style={{ transform: buttonTransform, transition: 'transform 0.1s ease-out' }}
-                                    >
-                                        Enter Chatbot Page
-                                    </button>
-                                </div>
-                                <div className={`interactive-fan ${isFanOn ? 'spinning' : ''}`}>
-                                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="50" cy="50" r="45" fill="none" stroke="#666" strokeWidth="5" />
-                                    <g className="fan-blades" style={{ transformOrigin: '50% 50%' }}>
-                                        <rect x="45" y="10" width="10" height="40" rx="5" fill="#999" transform="rotate(0 50 50)" />
-                                        <rect x="45" y="10" width="10" height="40" rx="5" fill="#999" transform="rotate(120 50 50)" />
-                                        <rect x="45" y="10" width="10" height="40" rx="5" fill="#999" transform="rotate(240 50 50)" />
-                                    </g>
-                                    <circle cx="50" cy="50" r="8" fill="#666" />
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                        <h3>Chatbot Tutorial</h3>
-                        <p>Welcome to the chatbot tutorial! This guide will help you understand how to interact with our AI assistant. We aim to make your experience as smooth and intuitive as possible.</p>
-                        <h4>1. Sending Messages:</h4>
-                        <p>To initiate a conversation or respond to the chatbot, simply type your question or statement into the text input field located at the very bottom of the screen. This is your primary way to communicate with the AI. Once you've finished typing, you can press the "Send" button (typically represented by a paper airplane or an arrow icon pointing right) or simply hit the Enter key on your keyboard. Your message will then appear in the chat history.</p>
-                        <h4>2. Using Voice Input:</h4>
-                        <p>For hands-free interaction, our chatbot supports voice input. Click the microphone icon (🎤) usually found near the text input field. If it's your first time, your browser might ask for permission to access your microphone; please grant it. Once activated, begin speaking clearly. The system is designed to detect when you've finished your thought, but you can also click the microphone icon again to manually stop recording. Always review the transcribed text before sending to ensure accuracy.</p>
-                        <h4>3. Image Input:</h4>
-                        <p>Our advanced chatbot can process and understand images, making your interactions richer! To send an image, click the paperclip icon (📎) or a similar attachment button. You'll typically have options to:
-                            <ul>
-                                <li>**Upload from Device:** Select an image file directly from your computer or phone.</li>
-                                <li>**Use Camera:** Capture a live photo using your device's camera.</li>
-                                <li>**Capture Screen:** Take a screenshot of your current screen (availability depends on browser and operating system).</li>
-                            </ul>
-                        After selecting your image, you have the option to add a descriptive text message to provide context before sending it to the chatbot.</p>
-                        <div className="fan-controls">
-                            <label className="fan-switch">
-                                <input type="checkbox" checked={!isFanOn} onChange={() => setIsFanOn(!isFanOn)} />
-                                <span className="slider round"></span>
-                            </label>
-                            <span>Turn Off Fan To Enter</span>
-                        </div>
-                    </div>
-                </div> 
-            )}
+
 
             {/* Main App and Modals */}
-            {!showWelcomePage && !showKnowledgeCheck && !showTutorial && (
+            {(
             <>
                 {isSettingsOpen && ( 
                     <div className="settings-menu" role="dialog" aria-labelledby="settings-title">
@@ -934,24 +680,6 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                         <h3 id="advanced-settings-title">Advanced Settings</h3>
                         <div className="settings-column" style={{ gap: '20px' }}>
                             <div className="settings-option">
-                                <label htmlFor="access-key-input-adv">Access Key:</label>
-                                <input
-                                    type="password"
-                                    id="access-key-input-adv"
-                                    className="settings-input"
-                                    placeholder="Enter access key"
-                                    value={enteredKey}
-                                    onChange={handleAccessKeyChange}
-                                    autoComplete="off"
-                                />
-                                <div className="settings-key-status">
-                                    {keyStatus.loading ? (<span>Validating...</span>)
-                                        : keyStatus.isValid ? (<span>✅ Valid Key ({keyStatus.username || 'User'})</span>)
-                                            : keyStatus.error ? (<span>❌ {keyStatus.error}</span>)
-                                                : (<span>Enter key for restricted features.</span>)}
-                                </div>
-                            </div>
-                            <div className="settings-option">
                                 <label>Persona:</label>
                                 <p className="current-persona-display">
                                     {AVAILABLE_PERSONAS.find(p => p.value === selectedPersona)?.emoji}
@@ -978,7 +706,7 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                                     aria-label="Select AI Model"
                                 >
                                     {ALL_AVAILABLE_MODELS_FRONTEND.map(modelInfo => {
-                                        const isDisabled = modelInfo.restricted && !keyStatus.isValid;
+                                        const isDisabled = modelInfo.restricted && !canAccessAdvanced;
                                         return (
                                             <option
                                                 key={modelInfo.value}
@@ -991,11 +719,7 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                                         );
                                     })}
                                 </select>
-                                {RESTRICTED_MODELS_VALUES.length > 0 && !keyStatus.isValid && (
-                                    <p className="settings-helper-text">
-                                        Enter a valid Access Key to use restricted models.
-                                    </p>
-                                )}
+                                
                             </div>
                         </div>
                         <hr className="settings-separator" />
@@ -1019,7 +743,7 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                         </div>
                     </div> 
                 )}
-                {isInterviewModeOpen && ( <InterviewMode isOpen={isInterviewModeOpen} onClose={closeInterviewMode} selectedModel={selectedModel} accessKey={enteredKey} sttLang={sttLang} /> )}
+                {isInterviewModeOpen && ( <InterviewMode isOpen={isInterviewModeOpen} onClose={closeInterviewMode} selectedModel={selectedModel} sttLang={sttLang} /> )}
                 {isFeedbackModalVisible && ( 
                     <div className="feedback-modal-overlay">
                         <div className="feedback-modal">
@@ -1054,7 +778,7 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                         </div>
                     </div> 
                 )}
-                {isPersonaPlinkoVisible && (<PersonaPlinkoGame isOpen={isPersonaPlinkoVisible} onClose={() => setIsPersonaPlinkoVisible(false)} onPersonaSelected={handlePersonaSelectedFromPlinko} keyStatus={keyStatus} allPersonas={AVAILABLE_PERSONAS} />)}
+                {isPersonaPlinkoVisible && (<PersonaPlinkoGame isOpen={isPersonaPlinkoVisible} onClose={() => setIsPersonaPlinkoVisible(false)} onPersonaSelected={handlePersonaSelectedFromPlinko} hasPremiumAccess={canAccessAdvanced} allPersonas={AVAILABLE_PERSONAS} />)}
                 {isClearCupGameVisible && (<ConfirmClearCupGame isOpen={isClearCupGameVisible} onClose={() => setIsClearCupGameVisible(false)} onConfirm={executeClearChat} />)}
 
                 {/* ✨ NEW: User Info Modal */}
@@ -1073,9 +797,13 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
 </div>
 
 {/* ✨ ADD THIS BLOCK for the premium badge */}
-{dbUser?.has_premium_access && (
+{dbUser?.has_premium_access ? (
     <div className="premium-badge">
         ⭐ Premium Member
+    </div>
+) : (
+    <div className="non-premium-badge">
+        Non-Premium User
     </div>
 )}
                             
@@ -1131,7 +859,6 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                                 selectedModel={selectedModel}
                                 sttLang={sttLang}
                                 selectedPersona={selectedPersona}
-                                accessKey={enteredKey}
                                 onTriggerInterview={openInterviewMode}
                             />
                         </>
