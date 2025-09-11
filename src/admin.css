@@ -462,6 +462,43 @@ tr:hover td:not(.editing-row td) { background-color: #fcfcfc; }
   flex-shrink: 0;
 }
 
+/* --- Admin Page: Actions Column Fix --- */
+
+.action-buttons-cell {
+    display: flex;
+    align-items: center; /* Vertically align items */
+    justify-content: flex-end; /* Push to the right */
+    gap: 0.5rem;
+}
+
+/* Base style for ALL buttons in the actions cell */
+.action-buttons-cell button {
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap; /* Prevent text wrapping */
+}
+
+/* "Revoke Premium" button style */
+.key-status-toggle-button.deactivate {
+    background-color: var(--admin-warning-color);
+    color: #333;
+}
+
+/* "Grant Premium" button style */
+.key-status-toggle-button.activate {
+    background-color: var(--admin-success-color);
+    color: white;
+}
+
+/* "View History" button style */
+.add-key-button {
+    background-color: var(--admin-accent-color);
+    color: white;
+}
 /* ==========================================================================
    Responsive Design
    ========================================================================== */
