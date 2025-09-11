@@ -192,7 +192,7 @@ export const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.d
 export interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
 export const ALL_AVAILABLE_MODELS_FRONTEND: ModelInfo[] = [
     { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', restricted: false },
-    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', restricted: false },
+    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', restricted: true },
     { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', restricted: true }
 ];
 export const ALL_MODEL_VALUES: GeminiModel[] = ALL_AVAILABLE_MODELS_FRONTEND.map(m => m.value);
