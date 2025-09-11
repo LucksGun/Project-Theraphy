@@ -29,7 +29,7 @@ export interface UserWithHistory {
 // --- Configurations & Constants ---
 export const ALL_AVAILABLE_MODELS_FRONTEND: ModelInfo[] = [
     { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', restricted: false },
-    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', restricted: false },
+    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', restricted: true },
     { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', restricted: true }
 ];
 export const AVAILABLE_PERSONAS: PersonaInfo[] = [
