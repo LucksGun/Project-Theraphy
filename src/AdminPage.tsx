@@ -11,16 +11,17 @@ export const WORKER_URL = 'https://project-theraphy-ai-proxy.luckgun99.workers.d
 // --- Types & Interfaces ---
 export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.5-flash-lite';
 export type Persona = 'normal' | 'therapist' | 'university_master' | 'interviewer';
-export interface UserKeyInfo { key: string; username: string | null; status: 'active' | 'inactive'; created_at: string; }
 export interface FeedbackItem { id: number; email: string | null; rating: number; comment: string; submitted_at: string; is_important: number; }
 export type PersonaInstructionMap = { [key in Persona]?: string };
 export interface ApiRequestBody { action: string; staffKey?: string; userId?: string; [key: string]: any; }
 export interface PersonaInfo { value: Persona; label: string; emoji: string; restricted: boolean; }
 export interface ModelInfo { value: GeminiModel; label: string; restricted: boolean; }
+
 export interface UserWithHistory {
     id: string;
     username: string;
     email: string | null;
+    has_premium_access: boolean;
     last_updated: string;
     history_size_bytes: number;
 }
@@ -65,13 +66,9 @@ function AdminPage() {
     const navigate = useNavigate();
     const [authenticatedStaffKey, setAuthenticatedStaffKey] = useState<string | null>(null);
     // --- State ---
-    const [adminUserKeysList, setAdminUserKeysList] = useState<UserKeyInfo[]>([]);
     const [adminRestrictedModelsList, setAdminRestrictedModelsList] = useState<GeminiModel[]>([]);
     const [adminRestrictedPersonasList, setAdminRestrictedPersonasList] = useState<Persona[]>([]);
     const [adminFeedbackList, setAdminFeedbackList] = useState<FeedbackItem[]>([]);
-    const [newKeyUsername, setNewKeyUsername] = useState<string>('');
-    const [editingKey, setEditingKey] = useState<string | null>(null);
-    const [editUsernameValue, setEditUsernameValue] = useState<string>('');
     const [isAdminLoading, setIsAdminLoading] = useState<boolean>(true);
     const [adminError, setAdminError] = useState<string | null>(null);
     const [adminSuccess, setAdminSuccess] = useState<string | null>(null);
@@ -103,23 +100,17 @@ function AdminPage() {
         setAdminError(null);
         setAdminSuccess(null);
         try {
-            const listKeysBody: ApiRequestBody = { action: 'adminListKeys', staffKey };
             const getRestrictionsBody: ApiRequestBody = { action: 'adminGetRestrictions', staffKey };
             const listFeedbackBody: ApiRequestBody = { action: 'adminListFeedback', staffKey };
             const getPromptsBody: ApiRequestBody = { action: 'adminGetPrompts', staffKey };
             const listUsersWithHistoryBody: ApiRequestBody = { action: 'adminListUsersWithHistory', staffKey };
 
-            const [keysRes, restrictRes, feedbackRes, promptsRes, usersWithHistoryRes] = await Promise.all([
-                fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(listKeysBody) }),
+            const [restrictRes, feedbackRes, promptsRes, usersWithHistoryRes] = await Promise.all([
                 fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getRestrictionsBody) }),
                 fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(listFeedbackBody) }),
                 fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getPromptsBody) }),
                 fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(listUsersWithHistoryBody) })
             ]);
-
-            const keysData = await keysRes.json();
-            if (!keysRes.ok || !keysData.success) throw new Error(keysData?.error || 'Failed to fetch keys.');
-            setAdminUserKeysList(keysData.keys || []);
 
             const restrictData = await restrictRes.json();
             if (!restrictRes.ok || !restrictData.success) throw new Error(restrictData?.error || 'Failed to fetch restrictions.');
@@ -144,7 +135,7 @@ function AdminPage() {
             setAdminError(null);
         } catch (e) {
             setAdminError(e instanceof Error ? e.message : "Failed to load admin data.");
-            setAdminUserKeysList([]); setAdminRestrictedModelsList([]); setAdminRestrictedPersonasList([]); setAdminFeedbackList([]); setUsersWithHistory([]); setTotalStorageBytes(0);
+            setAdminRestrictedModelsList([]); setAdminRestrictedPersonasList([]); setAdminFeedbackList([]); setUsersWithHistory([]); setTotalStorageBytes(0);
             setBasePrompt(DEFAULT_BASE_SYSTEM_INSTRUCTION); setPersonaPrompts(DEFAULT_PERSONA_INSTRUCTIONS); setInitialBasePrompt(DEFAULT_BASE_SYSTEM_INSTRUCTION); setInitialPersonaPrompts(DEFAULT_PERSONA_INSTRUCTIONS);
         } finally {
             setIsAdminLoading(false);
@@ -164,17 +155,36 @@ function AdminPage() {
     // --- Handlers ---
     const formatBytes = (bytes: number, decimals = 2) => { if (bytes === 0) return '0 Bytes'; const k = 1024; const dm = decimals < 0 ? 0 : decimals; const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]; };
     const handleLogout = () => { sessionStorage.removeItem('staffKey'); navigate('/'); };
-    const handleToggleUserKeyStatus = async (key: string, status: 'active' | 'inactive') => { if (!authenticatedStaffKey) return; const newStatus = status === 'active' ? 'inactive' : 'active'; const keyShort = key.substring(0, 8); if (!window.confirm(`Are you sure you want to set key "${keyShort}..." to ${newStatus}?`)) return; setIsAdminLoading(true); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminUpdateKeyStatus', staffKey: authenticatedStaffKey, key, newStatus }) }); const data = await res.json(); if (!res.ok || !data.success) throw new Error(data?.error || 'Failed to update key status.'); setAdminSuccess(data.message || "Status updated."); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed to update status."); } finally { fetchAdminData(authenticatedStaffKey); } };
+    
+    const handleTogglePremiumAccess = async (userId: string, currentStatus: boolean) => {
+        if (!authenticatedStaffKey) return;
+        const newStatus = !currentStatus;
+        if (!window.confirm(`Are you sure you want to set premium access to "${newStatus}" for user ${userId}?`)) return;
+
+        setIsAdminLoading(true);
+        try {
+            const res = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'adminSetUserPermission',
+                    staffKey: authenticatedStaffKey,
+                    userId: userId,
+                    hasPremiumAccess: newStatus
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data?.error || 'Failed to update user permission.');
+            setAdminSuccess(data.message || "User permission updated.");
+        } catch (e) {
+            setAdminError(e instanceof Error ? e.message : "Failed to update permission.");
+        } finally {
+            fetchAdminData(authenticatedStaffKey);
+        }
+    };
+
     const handleToggleModelRestriction = async (model: GeminiModel) => { if (!authenticatedStaffKey) return; const isRestricted = adminRestrictedModelsList.includes(model); const actionText = isRestricted ? "make public" : "make restricted"; if (!window.confirm(`Are you sure you want to ${actionText} the model "${model}"?`)) return; const newModels = isRestricted ? adminRestrictedModelsList.filter(m => m !== model) : [...adminRestrictedModelsList, model]; setIsAdminLoading(true); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminSetRestrictedModels', staffKey: authenticatedStaffKey, models: newModels }) }); const data = await res.json(); if (!res.ok || !data.success) throw new Error(data?.error || 'Failed to update model restrictions.'); setAdminSuccess(data.message || "Model restrictions updated."); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed to save changes."); } finally { fetchAdminData(authenticatedStaffKey); } };
     const handleTogglePersonaRestriction = async (persona: Persona) => { if (!authenticatedStaffKey) return; const isRestricted = adminRestrictedPersonasList.includes(persona); const actionText = isRestricted ? "make public" : "make restricted"; if (!window.confirm(`Are you sure you want to ${actionText} the persona "${persona}"?`)) return; const newPersonas = isRestricted ? adminRestrictedPersonasList.filter(p => p !== persona) : [...adminRestrictedPersonasList, persona]; setIsAdminLoading(true); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminSetRestrictedPersonas', staffKey: authenticatedStaffKey, personas: newPersonas }) }); const data = await res.json(); if (!res.ok || !data.success) throw new Error(data?.error || 'Failed to update persona restrictions.'); setAdminSuccess(data.message || "Persona restrictions updated."); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed to save changes."); } finally { fetchAdminData(authenticatedStaffKey); } };
-    const handleAddNewKey = async () => { if (!authenticatedStaffKey) return; setIsAdminLoading(true); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminAddKey', staffKey: authenticatedStaffKey, username: newKeyUsername.trim() || null }) }); const data = await res.json(); if (!res.ok || !data.success) throw new Error(data?.error || 'Failed to add key.'); setAdminSuccess(data.message || "Key added successfully!"); setNewKeyUsername(''); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed to add new key."); } finally { fetchAdminData(authenticatedStaffKey); } };
-    const handleDeleteKey = async (keyToDelete: string) => { if (!authenticatedStaffKey) return; if (!window.confirm(`Are you sure you want to permanently delete the key "${keyToDelete.substring(0, 8)}..."? This cannot be undone.`)) return; setIsAdminLoading(true); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminDeleteKey', staffKey: authenticatedStaffKey, key: keyToDelete }) }); const data = await res.json(); if (!res.ok || !data.success) throw new Error(data?.error || 'Failed to delete key.'); setAdminSuccess(data.message || "Key deleted successfully."); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed to delete key."); } finally { fetchAdminData(authenticatedStaffKey); } };
-    const handleCopyKey = async (keyToCopy: string) => { try { await navigator.clipboard.writeText(keyToCopy); setAdminSuccess(`Key "${keyToCopy.substring(0, 8)}..." copied!`); } catch (err) { setAdminError("Failed to copy key."); } };
-    const handleStartEdit = (key: string, currentUsername: string | null) => { setEditingKey(key); setEditUsernameValue(currentUsername || ''); };
-    const handleCancelEdit = () => { setEditingKey(null); setEditUsernameValue(''); };
-    const handleSaveUsername = async () => { if (!editingKey || !authenticatedStaffKey) return; setIsAdminLoading(true); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminEditUsername', staffKey: authenticatedStaffKey, key: editingKey, newUsername: editUsernameValue.trim() || null }) }); const data = await res.json(); if (!res.ok) throw new Error(data?.error || 'Server error updating username.'); setAdminSuccess(data.message || "Username updated."); setEditingKey(null); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed to update username."); } finally { fetchAdminData(authenticatedStaffKey); } };
-    const handleNewKeyUsernameChange = (e: ChangeEvent<HTMLInputElement>) => { setNewKeyUsername(e.target.value); };
-    const handleEditUsernameChange = (e: ChangeEvent<HTMLInputElement>) => { setEditUsernameValue(e.target.value); };
     const handleMarkImportant = async (feedbackId: number, currentIsImportant: number) => { if (!authenticatedStaffKey) return; setIsAdminLoading(true); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminMarkFeedbackImportant', staffKey: authenticatedStaffKey, feedbackId, isImportant: !currentIsImportant }) }); const data = await res.json(); if (!res.ok || !data.success) throw new Error(data?.error || 'Failed to update feedback.'); setAdminSuccess(data.message || "Feedback updated."); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed to update feedback."); } finally { fetchAdminData(authenticatedStaffKey); } };
     const handleDeleteFeedback = async (feedbackId: number) => { if (!authenticatedStaffKey) return; if (!window.confirm(`Are you sure you want to delete feedback entry #${feedbackId}?`)) return; setIsAdminLoading(true); try { const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adminDeleteFeedback', staffKey: authenticatedStaffKey, feedbackId }) }); const data = await res.json(); if (!res.ok || !data.success) throw new Error(data?.error || 'Failed to delete feedback.'); setAdminSuccess(data.message || "Feedback deleted."); } catch (e) { setAdminError(e instanceof Error ? e.message : "Failed to delete feedback."); } finally { fetchAdminData(authenticatedStaffKey); } };
     const handleBasePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => setBasePrompt(e.target.value);
@@ -187,7 +197,7 @@ function AdminPage() {
     const handleCloseHistoryView = () => { setViewingHistory(null); setViewingUserId(null); setHistoryError(null); };
 
     // --- Render Logic ---
-    if (isAdminLoading && !usersWithHistory.length && !adminUserKeysList.length) { return <div className="admin-loading-text">Loading Admin Data...</div>; }
+    if (isAdminLoading && !usersWithHistory.length) { return <div className="admin-loading-text">Loading Admin Data...</div>; }
     if (!authenticatedStaffKey && !isAdminLoading) { return <div className="admin-feedback error">Error: Not authenticated. Please log in again.</div>; }
 
     const renderStars = (rating: number) => Array.from({ length: 5 }, (_, i) => <span key={i} className={i < rating ? '' : 'star-empty'}>★</span>);
@@ -198,10 +208,10 @@ function AdminPage() {
             <div className="staff-admin-section">
                 <div style={{ minHeight: '40px' }}> {adminSuccess && <p className="admin-feedback success">{adminSuccess}</p>} {adminError && <p className="admin-feedback error">{adminError}</p>} </div>
 
-                <h4>Manage Chat Histories</h4>
+                <h4>Manage User Data & Permissions</h4>
                 <div className="admin-data-section">
                     <div className="restriction-description" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>View or clear chat histories for registered users.</span>
+                        <span>View user data, grant premium access, or clear chat histories.</span>
                         <strong>Total Data Stored: {formatBytes(totalStorageBytes)}</strong>
                     </div>
                     {isAdminLoading && !usersWithHistory.length ? (
@@ -213,6 +223,7 @@ function AdminPage() {
                                     <tr>
                                         <th>Username</th>
                                         <th>Email</th>
+                                        <th>Premium Access</th>
                                         <th>Last Updated</th>
                                         <th>Data Used</th>
                                         <th className="actions-column">Actions</th>
@@ -223,10 +234,18 @@ function AdminPage() {
                                         <tr key={user.id}>
                                             <td>{user.username}</td>
                                             <td>{user.email || <span className="no-username"><em>(none)</em></span>}</td>
-                                            <td>{new Date(user.last_updated).toLocaleString()}</td>
+                                            <td>
+                                                <span className={`status-${user.has_premium_access ? 'active' : 'inactive'}`}>
+                                                    {user.has_premium_access ? 'Yes' : 'No'}
+                                                </span>
+                                            </td>
+                                            <td>{user.last_updated ? new Date(user.last_updated).toLocaleString() : 'N/A'}</td>
                                             <td>{formatBytes(user.history_size_bytes)}</td>
                                             <td>
                                                 <div className="action-buttons-cell">
+                                                    <button onClick={() => handleTogglePremiumAccess(user.id, !!user.has_premium_access)} className={`key-status-toggle-button ${user.has_premium_access ? 'deactivate' : 'activate'}`} disabled={isAdminLoading}>
+                                                        {user.has_premium_access ? 'Revoke Premium' : 'Grant Premium'}
+                                                    </button>
                                                     <button onClick={() => handleFetchHistory(user.id)} className="add-key-button" disabled={isHistoryLoading}>
                                                         {isHistoryLoading && viewingUserId === user.id ? 'Loading...' : '👁️ View History'}
                                                     </button>
@@ -253,26 +272,13 @@ function AdminPage() {
                 )}
 
                 <hr className="staff-separator" />
-                
-                <h4>Manage User Access Keys</h4>
-                <div className="admin-data-section">
-                    <div className="user-keys-list">
-                        <table>
-                            <thead><tr><th>Key</th><th>Username</th><th>Status</th><th>Created</th><th className="actions-column">Actions</th></tr></thead>
-                            <tbody>{adminUserKeysList.map(k => (<tr key={k.key} className={editingKey === k.key ? 'editing-row' : ''}><td><div className="key-cell-content"><code>{k.key}</code><button onClick={() => handleCopyKey(k.key)} className="copy-button" title="Copy Key">📋</button></div></td><td>{editingKey === k.key ? (<input type="text" value={editUsernameValue} onChange={handleEditUsernameChange} className="settings-input inline-edit-input" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') handleSaveUsername(); else if (e.key === 'Escape') handleCancelEdit(); }} />) : (k.username || <span className="no-username"><em>(none)</em></span>)}</td><td><span className={`status-${k.status}`}>{k.status}</span></td><td>{new Date(k.created_at).toLocaleDateString()}</td><td><div className="action-buttons-cell">{editingKey === k.key ? (<><button onClick={handleSaveUsername} className="save-button" disabled={isAdminLoading}>✔️ Save</button><button onClick={handleCancelEdit} className="cancel-button" disabled={isAdminLoading}>❌ Cancel</button></>) : (<><button onClick={() => handleToggleUserKeyStatus(k.key, k.status)} className={`key-status-toggle-button ${k.status === 'active' ? 'deactivate' : 'activate'}`} disabled={isAdminLoading || !!editingKey}>{k.status === 'active' ? 'Deactivate' : 'Activate'}</button><button onClick={() => handleStartEdit(k.key, k.username)} className="edit-button" disabled={isAdminLoading || !!editingKey}>✏️</button><button onClick={() => handleDeleteKey(k.key)} className="delete-button" disabled={isAdminLoading || !!editingKey} title={`Delete key`}>🗑️</button></>)}</div></td></tr>))}</tbody>
-                        </table>
-                    </div>
-                    <div className="add-key-section"><h5>Add New Key</h5><div className="add-key-form"><div className="settings-option" style={{ flexGrow: 1 }}><label htmlFor="new-key-username">Username (Optional):</label><input type="text" id="new-key-username" className="settings-input" value={newKeyUsername} onChange={handleNewKeyUsernameChange} placeholder="Assign username (optional)" disabled={isAdminLoading || !!editingKey} /></div><button onClick={handleAddNewKey} className="add-key-button" disabled={isAdminLoading || !!editingKey}>{isAdminLoading ? 'Adding...' : '+ Add Key'}</button></div></div>
-                </div>
-
-                <hr className="staff-separator" />
                 <h4>Manage User Feedback</h4>
                 <div className="admin-data-section">
                     {adminFeedbackList.length > 0 ? (
                         <div className="feedback-list">
                             <table>
                                 <thead><tr><th>Submitted</th><th>Email</th><th>Rating</th><th style={{ width: "40%" }}>Comment</th><th className="actions-column">Actions</th></tr></thead>
-                                <tbody>{adminFeedbackList.map(fb => (<tr key={fb.id} className={`feedback-item ${fb.is_important ? 'important-feedback' : ''}`}><td>{new Date(fb.submitted_at).toLocaleString()}</td><td>{fb.email || <span className="no-username"><em>(none)</em></span>}</td><td><div className="rating-stars-display">{renderStars(fb.rating)}</div></td><td className="feedback-comment-cell">{fb.comment}</td><td><div className="action-buttons-cell"><button onClick={() => handleMarkImportant(fb.id, fb.is_important)} className={`feedback-action-button ${fb.is_important ? 'unmark-important' : 'mark-important'}`} disabled={isAdminLoading || !!editingKey}>{fb.is_important ? '★ Unmark' : '☆ Mark Imp'}</button><button onClick={() => handleDeleteFeedback(fb.id)} className="delete-button feedback-delete-button" disabled={isAdminLoading || !!editingKey}>🗑️ Delete</button></div></td></tr>))}</tbody>
+                                <tbody>{adminFeedbackList.map(fb => (<tr key={fb.id} className={`feedback-item ${fb.is_important ? 'important-feedback' : ''}`}><td>{new Date(fb.submitted_at).toLocaleString()}</td><td>{fb.email || <span className="no-username"><em>(none)</em></span>}</td><td><div className="rating-stars-display">{renderStars(fb.rating)}</div></td><td className="feedback-comment-cell">{fb.comment}</td><td><div className="action-buttons-cell"><button onClick={() => handleMarkImportant(fb.id, fb.is_important)} className={`feedback-action-button ${fb.is_important ? 'unmark-important' : 'mark-important'}`} disabled={isAdminLoading}>{fb.is_important ? '★ Unmark' : '☆ Mark Imp'}</button><button onClick={() => handleDeleteFeedback(fb.id)} className="delete-button feedback-delete-button" disabled={isAdminLoading}>🗑️ Delete</button></div></td></tr>))}</tbody>
                             </table>
                         </div>
                     ) : (<p>No feedback submitted yet.</p>)}
@@ -282,18 +288,18 @@ function AdminPage() {
                 <h4>Manage AI Prompts</h4>
                 <div className="admin-prompt-warning">⚠️ **Caution:** Editing prompts directly affects AI behavior. Incorrect formatting can break functionality.</div>
                 <div className="admin-data-section prompt-editing-section">
-                    <div className="prompt-edit-area"><label htmlFor="base-prompt-edit">Base System Instruction:</label><textarea id="base-prompt-edit" className="prompt-textarea" value={basePrompt} onChange={handleBasePromptChange} rows={10} disabled={isAdminLoading || !!editingKey} /></div>
+                    <div className="prompt-edit-area"><label htmlFor="base-prompt-edit">Base System Instruction:</label><textarea id="base-prompt-edit" className="prompt-textarea" value={basePrompt} onChange={handleBasePromptChange} rows={10} disabled={isAdminLoading} /></div>
                     <h5>Persona Instructions:</h5>
-                    {ALL_PERSONA_KEYS.map(key => (<div className="prompt-edit-area" key={key}><label htmlFor={`persona-prompt-${key}`}>{key.charAt(0).toUpperCase() + key.slice(1)}:</label><textarea id={`persona-prompt-${key}`} className="prompt-textarea persona-textarea" value={personaPrompts[key as Persona] || ''} onChange={(e) => handlePersonaPromptChange(key, e.target.value)} rows={6} disabled={isAdminLoading || !!editingKey} /></div>))}
-                    <div className="prompt-actions"><button onClick={handleSaveChanges} className="save-button" disabled={!hasPromptChanges || isAdminLoading || !!editingKey} title={!hasPromptChanges ? "No changes to save" : "Save changes"}>{isAdminLoading ? 'Saving...' : '💾 Save Prompt Changes'}</button><button onClick={handleRevertPromptChanges} className="cancel-button" disabled={!hasPromptChanges || isAdminLoading || !!editingKey} title="Discard unsaved changes">↩️ Revert Changes</button></div>
+                    {ALL_PERSONA_KEYS.map(key => (<div className="prompt-edit-area" key={key}><label htmlFor={`persona-prompt-${key}`}>{key.charAt(0).toUpperCase() + key.slice(1)}:</label><textarea id={`persona-prompt-${key}`} className="prompt-textarea persona-textarea" value={personaPrompts[key as Persona] || ''} onChange={(e) => handlePersonaPromptChange(key, e.target.value)} rows={6} disabled={isAdminLoading} /></div>))}
+                    <div className="prompt-actions"><button onClick={handleSaveChanges} className="save-button" disabled={!hasPromptChanges || isAdminLoading} title={!hasPromptChanges ? "No changes to save" : "Save changes"}>{isAdminLoading ? 'Saving...' : '💾 Save Prompt Changes'}</button><button onClick={handleRevertPromptChanges} className="cancel-button" disabled={!hasPromptChanges || isAdminLoading} title="Discard unsaved changes">↩️ Revert Changes</button></div>
                 </div>
 
                 <hr className="staff-separator" />
                 <h4>Manage Restricted Models</h4>
                 <div className="admin-data-section">
                     <div className="restricted-items-list">
-                        <p className="restriction-description">Toggle which models require a user access key.</p>
-                        {ALL_AVAILABLE_MODELS_FRONTEND.map(mInfo => { const isRestricted = adminRestrictedModelsList.includes(mInfo.value); return (<div key={mInfo.value} className="restriction-item"><span>{mInfo.label} (<code>{mInfo.value}</code>)</span><button onClick={() => handleToggleModelRestriction(mInfo.value)} className={`restriction-toggle-button ${isRestricted ? 'deactivate' : 'activate'}`} disabled={isAdminLoading || !!editingKey}>{isRestricted ? 'Restricted ✔' : 'Public'}</button></div>); })}
+                        <p className="restriction-description">Toggle which models require premium access.</p>
+                        {ALL_AVAILABLE_MODELS_FRONTEND.map(mInfo => { const isRestricted = adminRestrictedModelsList.includes(mInfo.value); return (<div key={mInfo.value} className="restriction-item"><span>{mInfo.label} (<code>{mInfo.value}</code>)</span><button onClick={() => handleToggleModelRestriction(mInfo.value)} className={`restriction-toggle-button ${isRestricted ? 'deactivate' : 'activate'}`} disabled={isAdminLoading}>{isRestricted ? 'Restricted ✔' : 'Public'}</button></div>); })}
                     </div>
                 </div>
 
@@ -301,8 +307,8 @@ function AdminPage() {
                 <h4>Manage Restricted Personas</h4>
                 <div className="admin-data-section">
                     <div className="restricted-items-list">
-                        <p className="restriction-description">Toggle which personas require a user access key.</p>
-                        {AVAILABLE_PERSONAS.map(pInfo => { const isRestricted = adminRestrictedPersonasList.includes(pInfo.value); return (<div key={pInfo.value} className="restriction-item"><span>{pInfo.emoji} {pInfo.label} (<code>{pInfo.value}</code>)</span><button onClick={() => handleTogglePersonaRestriction(pInfo.value)} className={`restriction-toggle-button ${isRestricted ? 'deactivate' : 'activate'}`} disabled={isAdminLoading || !!editingKey}>{isRestricted ? 'Restricted ✔' : 'Public'}</button></div>); })}
+                        <p className="restriction-description">Toggle which personas require premium access.</p>
+                        {AVAILABLE_PERSONAS.map(pInfo => { const isRestricted = adminRestrictedPersonasList.includes(pInfo.value); return (<div key={pInfo.value} className="restriction-item"><span>{pInfo.emoji} {pInfo.label} (<code>{pInfo.value}</code>)</span><button onClick={() => handleTogglePersonaRestriction(pInfo.value)} className={`restriction-toggle-button ${isRestricted ? 'deactivate' : 'activate'}`} disabled={isAdminLoading}>{isRestricted ? 'Restricted ✔' : 'Public'}</button></div>); })}
                     </div>
                 </div>
             </div>

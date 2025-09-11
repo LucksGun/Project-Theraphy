@@ -1,398 +1,418 @@
-/* src/admin.css - Full styles for the Staff Admin Panel */
+/* src/admin.css */
 
-/* ==========================================================================
-   Page Layout & Container
-   ========================================================================== */
-
-/* This is the main container that holds the entire admin page content.
-   The height and overflow properties are critical for the scrolling layout. */
-.admin-page-container {
-  height: 100%; /* Fill the parent .App container */
-  overflow-y: auto; /* Allow THIS container to scroll vertically */
-  box-sizing: border-box; /* Include padding in height calculation */
-  padding: 25px 35px;
-  background-color: var(--container-bg, #ffffff);
-  color: var(--text-primary);
-  /* Optional: For a centered layout with a maximum width */
-  max-width: 1200px;
-  margin: 0 auto;
+/* --- General Layout & Variables --- */
+:root {
+    --admin-bg: #f4f6f8;
+    --admin-card-bg: #ffffff;
+    --admin-border-color: #dee2e6;
+    --admin-text-primary: #212529;
+    --admin-text-secondary: #6c757d;
+    --admin-accent-color: #007bff;
+    --admin-success-color: #28a745;
+    --admin-danger-color: #dc3545;
+    --admin-warning-color: #ffc107;
 }
 
-/* Page Header (Title + Logout Button) */
+[data-theme='dark'] {
+    --admin-bg: #1a1a1a;
+    --admin-card-bg: #2a2a2a;
+    --admin-border-color: #444;
+    --admin-text-primary: #f0f0f0;
+    --admin-text-secondary: #aaa;
+    --admin-accent-color: #3b9bff;
+    --admin-success-color: #34c759;
+    --admin-danger-color: #ff453a;
+    --admin-warning-color: #ffcc00;
+}
+
+.admin-page-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 1rem 2rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: var(--admin-text-primary);
+    background-color: var(--admin-bg);
+}
+
 .admin-page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border-color, #dee2e6);
-  flex-wrap: wrap;
-  gap: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--admin-border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 .admin-page-header h1 {
-  margin: 0;
-  font-size: 1.8em;
-  font-weight: 600;
+    margin: 0;
+    font-size: 1.8rem;
+    color: var(--admin-text-primary);
 }
 
-.admin-logout-button {
-  padding: 8px 16px;
-  font-size: 0.9em;
-  background-color: var(--button-secondary-bg, #e9ecef);
-  border: 1px solid var(--border-color, #dee2e6);
-  color: var(--text-primary, #212529);
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+.staff-admin-section {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
 }
-.admin-logout-button:hover {
-  background-color: var(--button-secondary-hover-bg, #dee2e6);
-}
-
-/* ==========================================================================
-   General Section & Element Styling
-   ========================================================================== */
 
 .staff-admin-section h4 {
-  font-size: 1.3em;
-  margin-top: 35px;
-  margin-bottom: 18px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border-color, #dee2e6);
-  font-weight: 600;
-}
-.staff-admin-section h4:first-of-type {
-  margin-top: 0;
+    font-size: 1.4rem;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--admin-border-color);
+    color: var(--admin-text-primary);
 }
 
 .admin-data-section {
-  margin-bottom: 30px;
+    background-color: var(--admin-card-bg);
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid var(--admin-border-color);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-.admin-data-section > p { /* Loading/error/no data text */
-  font-style: italic;
-  color: var(--text-secondary, #6c757d);
-  padding: 15px 5px;
-  text-align: center;
+.admin-loading-text {
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.2rem;
+    color: var(--admin-text-secondary);
 }
 
 .staff-separator {
-  border: none;
-  border-top: 1px solid var(--border-color, #dee2e6);
-  margin: 40px 0;
+    border: none;
+    border-top: 1px solid var(--admin-border-color);
+    margin: 1rem 0;
 }
 
-/* Feedback Messages (Success/Error banners) */
+.restriction-description {
+    font-size: 0.9rem;
+    color: var(--admin-text-secondary);
+    margin-bottom: 1rem;
+}
+
+
+/* --- Feedback & Status Messages --- */
 .admin-feedback {
-  text-align: center;
-  margin-bottom: 15px;
-  padding: 10px 15px;
-  border-radius: 4px;
-  font-weight: 500;
-  border: 1px solid transparent;
-  font-size: 0.9em;
-  min-height: 40px; /* Reserve space */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.admin-feedback:empty { min-height: 0; padding: 0; margin-bottom: 0; border: none; }
-.admin-feedback.success { color: var(--key-valid-color, #198754); background-color: #d1e7dd; border-color: #badbcc; }
-.admin-feedback.error { color: var(--key-invalid-color, #dc3545); background-color: #f8d7da; border-color: #f5c6cb; }
-
-/* ==========================================================================
-   Table Styles (for Keys, Feedback, History List)
-   ========================================================================== */
-
-.user-keys-list, .feedback-list {
-  border: 1px solid var(--border-color, #dee2e6);
-  border-radius: 6px;
-  overflow-x: auto; /* Horizontal scroll for table if needed */
-  background-color: #fff;
-}
-table { width: 100%; border-collapse: collapse; }
-th, td { 
-  padding: 12px 15px; 
-  text-align: left; 
-  border-bottom: 1px solid var(--border-color, #dee2e6); 
-  font-size: 0.9em; 
-  vertical-align: middle; 
-  word-break: break-word; 
-}
-th { 
-  background-color: #f8f9fa; 
-  font-weight: 600; 
-  white-space: nowrap; 
-  color: var(--text-secondary); 
-  position: sticky; 
-  top: 0; 
-  z-index: 1; 
-}
-tr:last-child td { border-bottom: none; }
-tr:hover td:not(.editing-row td) { background-color: #fcfcfc; }
-
-/* Specific Table Cell Content */
-.actions-column { width: 220px; white-space: nowrap; }
-.no-username { color: var(--text-secondary, #888); font-style: italic; }
-.key-cell-content { display: flex; align-items: center; gap: 8px; min-width: 150px; }
-.key-cell-content code { font-family: monospace; background-color: #e9ecef; padding: 3px 6px; border-radius: 3px; font-size: 0.95em; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; max-width: 300px; display: inline-block; }
-.copy-button { background: none; border: none; cursor: pointer; font-size: 1.1em; padding: 0 3px; color: var(--text-secondary); line-height: 1; flex-shrink: 0; }
-.copy-button:hover { color: var(--text-primary); }
-.status-active { color: var(--key-valid-color, #198754); font-weight: 500; }
-.status-inactive { color: var(--key-invalid-color, #dc3545); font-weight: 500; }
-
-/* Inline Editing Styles */
-.inline-edit-input { padding: 4px 8px !important; font-size: 0.9em !important; height: 30px !important; min-height: 0 !important; box-shadow: 0 0 0 1px var(--input-focus-border-color) !important; border-color: var(--input-focus-border-color) !important; }
-.editing-row td { background-color: #fff9e4; }
-
-/* Feedback Table Specifics */
-.feedback-comment-cell { white-space: pre-wrap; max-height: 150px; overflow-y: auto; line-height: 1.5; vertical-align: top; }
-.important-feedback td { background-color: #fff9e4; font-weight: 500; }
-.important-feedback code { background-color: #fdf3d1; }
-.rating-stars-display { color: #ffc107; font-size: 1.1em; white-space: nowrap; }
-.rating-stars-display .star-empty { color: #e0e0e0; }
-
-
-/* ==========================================================================
-   Action Buttons (in Tables)
-   ========================================================================== */
-
-.action-buttons-cell { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
-.action-buttons-cell button { padding: 6px 10px; font-size: 0.85em; flex-grow: 0; flex-shrink: 0; white-space: nowrap; border-radius: 4px; cursor: pointer; border: 1px solid; transition: all 0.2s ease; }
-.action-buttons-cell button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.key-status-toggle-button.deactivate { background-color: var(--settings-clear-bg); color: var(--settings-clear-text); border-color: var(--settings-clear-border); }
-.key-status-toggle-button.deactivate:hover:not(:disabled) { background-color: var(--settings-clear-hover-bg); }
-.key-status-toggle-button.activate { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
-.key-status-toggle-button.activate:hover:not(:disabled) { background-color: #b6dfc8; }
-
-.edit-button { background-color: var(--button-secondary-bg); border-color: var(--input-border-color); color: var(--text-secondary); padding: 5px 8px; }
-.edit-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg); border-color: #adb5bd; }
-
-.delete-button { background-color: #fff0f1; border-color: var(--settings-clear-border); color: var(--settings-clear-text); padding: 5px 8px; }
-.delete-button:hover:not(:disabled) { background-color: var(--settings-clear-hover-bg); }
-
-.save-button { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; flex-grow: 1; }
-.save-button:hover:not(:disabled) { background-color: #b6dfc8; }
-
-.cancel-button { background-color: #e9ecef; border-color: #dee2e6; color: #495057; flex-grow: 1; }
-.cancel-button:hover:not(:disabled) { background-color: #dee2e6; }
-
-/* Feedback Action Buttons */
-.feedback-action-button { padding: 5px 10px !important; font-size: 0.8em !important; margin-right: 5px; }
-.feedback-action-button:last-child { margin-right: 0; }
-.mark-important { background-color: #fffbe6; border-color: #ffe58f; color: #856404; }
-.mark-important:hover:not(:disabled) { background-color: #fff3cd; }
-.unmark-important { background-color: #fff3cd; border-color: #ffeeba; color: #856404; font-weight: bold; }
-.unmark-important:hover:not(:disabled) { background-color: #ffeeba; }
-.feedback-delete-button { padding: 5px 8px !important; }
-
-/* ==========================================================================
-   Forms & Input Sections
-   ========================================================================== */
-
-/* Add Key Section */
-.add-key-section { margin-top: 25px; padding: 20px 25px; border: 1px solid var(--border-color, #dee2e6); border-radius: 6px; background-color: #f8f9fa; }
-.add-key-section h5 { margin-top: 0; margin-bottom: 15px; font-size: 1.15em; font-weight: 600; }
-.add-key-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.add-key-form .settings-option { margin-bottom: 0; flex-grow: 1; }
-.add-key-form .settings-option label { display: block; margin-bottom: 5px; font-size: 0.85em; font-weight: 500; color: var(--settings-label-text); }
-.settings-input { /* Generic input used by forms */
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid var(--input-border-color, #ced4da);
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
     border-radius: 4px;
-    background-color: #fff;
-    color: var(--text-primary);
-    box-sizing: border-box;
-    min-height: 35px;
+    border: 1px solid transparent;
+    font-weight: 500;
 }
-.settings-input:focus { outline: none; border-color: var(--input-focus-border-color); box-shadow: 0 0 0 2px var(--input-focus-shadow); }
 
-.add-key-button { 
-    padding: 8px 18px; 
-    border: none; 
-    background-color: var(--beta-button-bg, #0d6efd); 
-    color: var(--beta-button-text, #fff); 
-    border-radius: 5px; 
-    cursor: pointer; 
-    font-size: 0.9em; 
-    font-weight: 500; 
-    transition: background-color 0.2s ease; 
-    height: 35px; 
-    align-self: flex-end; 
-    flex-shrink: 0; 
+.admin-feedback.success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
 }
-.add-key-button:hover:not(:disabled) { background-color: var(--beta-button-hover-bg, #0b5ed7); }
-.add-key-button:disabled { opacity: 0.6; cursor: default; background-color: var(--button-disabled-bg, #cfe2ff) !important; color: var(--button-disabled-text, #6c757d) !important; }
+
+.admin-feedback.error {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
 
 
-/* Restriction Lists (Models/Personas) */
-.restricted-items-list { margin-top: 10px; border: 1px solid var(--border-color, #dee2e6); border-radius: 6px; max-height: 350px; overflow-y: auto; background-color: #ffffff; }
-.restriction-description { font-size: 0.9em; color: var(--text-secondary, #6c757d); margin-bottom: 0px; padding: 10px 15px; border-bottom: 1px solid var(--border-color, #dee2e6); background-color: #f8f9fa; }
-.restriction-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid var(--border-color, #dee2e6); font-size: 0.9em; min-height: 44px; }
-.restriction-item:last-child { border-bottom: none; }
-.restriction-item span { flex-grow: 1; margin-right: 15px; word-break: break-word; display: flex; align-items: center; gap: 8px; }
-.restriction-item code { background-color: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.9em; }
-.restriction-toggle-button { padding: 6px 12px; font-size: 0.85em; flex-shrink: 0; border: 1px solid; border-radius: 4px; cursor: pointer; }
-.restriction-toggle-button.deactivate { background-color: var(--settings-clear-bg); color: var(--settings-clear-text); border-color: var(--settings-clear-border); }
-.restriction-toggle-button.deactivate:hover:not(:disabled) { background-color: var(--settings-clear-hover-bg); }
-.restriction-toggle-button.activate { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
-.restriction-toggle-button.activate:hover:not(:disabled) { background-color: #b6dfc8; }
+/* --- Tables --- */
+.user-keys-list table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.user-keys-list th, .user-keys-list td {
+    border: 1px solid var(--admin-border-color);
+    padding: 0.75rem;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.user-keys-list th {
+    background-color: var(--admin-bg);
+    font-weight: 600;
+}
+
+.user-keys-list tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='dark'] .user-keys-list tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.actions-column {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right !important;
+}
+
+.no-username {
+    color: var(--admin-text-secondary);
+    font-style: italic;
+}
+
+.status-active {
+    background-color: var(--admin-success-color);
+    color: white;
+    padding: 0.2em 0.6em;
+    border-radius: 10px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.status-inactive {
+    background-color: var(--admin-text-secondary);
+    color: white;
+    padding: 0.2em 0.6em;
+    border-radius: 10px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
 
 
-/* AI Prompt Editing Section */
-.prompt-editing-section { margin-top: 10px; }
-.admin-prompt-warning { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px 20px; border-radius: 6px; margin-bottom: 25px; font-size: 0.9em; line-height: 1.6; }
-.admin-prompt-warning code { background-color: rgba(0,0,0,0.05); padding: 2px 4px; border-radius: 3px; font-size: 0.95em; }
-.prompt-edit-area { margin-bottom: 25px; }
-.prompt-edit-area label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); font-size: 1em; }
-.prompt-textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--input-border-color, #ced4da); border-radius: 4px; font-family: monospace; font-size: 0.9em; line-height: 1.5; background-color: #fff; color: var(--text-primary); resize: vertical; min-height: 150px; }
-.prompt-textarea:focus { outline: none; border-color: var(--input-focus-border-color, #0d6efd); box-shadow: 0 0 0 2px var(--input-focus-shadow, rgba(13, 110, 253, 0.2)); }
-.prompt-textarea:disabled { background-color: #e9ecef; cursor: not-allowed; opacity: 0.7; }
-.persona-textarea { min-height: 100px; }
-.prompt-actions { margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end; }
-.prompt-actions button { padding: 8px 16px; }
-.prompt-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+/* --- Buttons --- */
+.admin-logout-button {
+    background-color: var(--admin-danger-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
 
-/* ==========================================================================
-   Chat History Viewer Modal
-   ========================================================================== */
+.action-buttons-cell {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
 
+.key-status-toggle-button, .add-key-button {
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.key-status-toggle-button.deactivate {
+    background-color: var(--admin-warning-color);
+    color: #333;
+}
+.key-status-toggle-button.activate {
+    background-color: var(--admin-success-color);
+    color: white;
+}
+.add-key-button {
+    background-color: var(--admin-accent-color);
+    color: white;
+}
+.delete-button {
+    background-color: var(--admin-danger-color);
+    color: white;
+    border: none;
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+
+/* --- Chat History Modal --- */
 .chat-history-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1050;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
 }
 
 .chat-history-modal {
-  background-color: var(--container-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  width: 90%;
-  max-width: 700px;
-  height: 80vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    background-color: var(--admin-card-bg);
+    width: 90%;
+    max-width: 800px;
+    height: 80vh;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .chat-history-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--admin-border-color);
 }
-
 .chat-history-header h3 {
-  margin: 0;
-  font-size: 1.1em;
+    margin: 0;
 }
-
 .chat-history-header code {
-  background-color: var(--button-secondary-bg);
-  padding: 3px 6px;
-  border-radius: 4px;
-  font-size: 0.9em;
+    background-color: var(--admin-bg);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
 }
-
 .close-history-button {
-  background: none;
-  border: none;
-  font-size: 1.8em;
-  cursor: pointer;
-  color: var(--text-secondary);
-  line-height: 1;
+    margin-left: auto;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--admin-text-secondary);
 }
 
 .chat-history-content {
-  flex-grow: 1;
-  overflow-y: auto;
-  padding: 20px;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
 }
 
 .chat-history-message {
-  margin-bottom: 15px;
-  max-width: 100%;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    max-width: 85%;
 }
-
-.chat-history-role {
-  font-weight: bold;
-  font-size: 0.8em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-  display: block;
-}
-
 .chat-history-message.user {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+    background-color: var(--admin-accent-color);
+    color: white;
+    margin-left: auto;
 }
-
-.chat-history-message.user .chat-history-role {
-  text-align: right;
+.chat-history-message.model {
+    background-color: var(--admin-bg);
+    margin-right: auto;
 }
-
-.chat-history-text {
-  padding: 10px 15px;
-  border-radius: 8px;
-  background-color: var(--button-secondary-bg);
-  width: fit-content;
-  max-width: 90%;
+.chat-history-role {
+    font-weight: bold;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.25rem;
+    opacity: 0.7;
 }
-
-.chat-history-message.user .chat-history-text {
-  background-color: var(--user-bubble-bg);
-  color: white;
-}
-
 .chat-history-text p {
-  margin: 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
-
 .chat-history-actions {
-  padding: 15px 20px;
-  border-top: 1px solid var(--border-color);
-  text-align: right;
-  flex-shrink: 0;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--admin-border-color);
+    text-align: right;
 }
 
-/* ==========================================================================
-   Responsive Design
-   ========================================================================== */
-
-@media (max-width: 768px) {
-  .admin-page-container {
-    padding: 15px 20px;
-  }
-  .admin-page-header h1 { font-size: 1.5em; }
-  th, td { padding: 10px 8px; font-size: 0.85em; }
-  .action-buttons-cell { flex-wrap: wrap; }
-  .add-key-form { flex-direction: column; align-items: stretch; }
-  .add-key-button { margin-top: 10px; }
-  .rating-stars-display { font-size: 1em; }
-  .feedback-comment-cell { font-size: 0.9em; }
+/* --- Feedback Section --- */
+.feedback-item.important-feedback {
+    background-color: #fffbe6;
+}
+[data-theme='dark'] .feedback-item.important-feedback {
+    background-color: #4d421a;
+}
+.rating-stars-display {
+    color: var(--admin-warning-color);
+}
+.feedback-comment-cell {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.feedback-action-button {
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
 }
 
-@media (max-width: 500px) {
-  .admin-page-container { padding: 10px 15px; }
-  .admin-page-header h1 { font-size: 1.3em; }
-  th, td { font-size: 0.8em; padding: 8px 6px;}
-  .key-cell-content code { max-width: 120px; /* Shorter ellipsis */ }
-  .restriction-item span { margin-right: 8px; gap: 5px;}
+/* --- Prompt Management --- */
+.admin-prompt-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    color: #856404;
+    padding: 0.75rem 1.25rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+.prompt-editing-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.prompt-edit-area {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.prompt-edit-area label {
+    font-weight: 600;
+}
+.prompt-textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--admin-border-color);
+    background-color: var(--admin-bg);
+    color: var(--admin-text-primary);
+    font-family: monospace;
+    font-size: 0.9rem;
+    resize: vertical;
+}
+.prompt-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+.save-button, .cancel-button {
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+.save-button {
+    background-color: var(--admin-success-color);
+    color: white;
+}
+.cancel-button {
+    background-color: var(--admin-text-secondary);
+    color: white;
+}
+
+/* --- Restriction Toggles --- */
+.restricted-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.restriction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--admin-bg);
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+}
+.restriction-toggle-button {
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    min-width: 110px;
+}
+.restriction-toggle-button.deactivate {
+    background-color: var(--admin-success-color);
+    color: white;
+}
+.restriction-toggle-button.activate {
+    background-color: var(--admin-text-secondary);
+    color: white;
 }
