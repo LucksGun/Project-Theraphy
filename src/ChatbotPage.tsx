@@ -112,7 +112,7 @@ async function getBotResponseForAnalysis(
         prompt: userInput,
         model: model,
         persona: persona,
-        token: userToken // <-- MODIFIED: Include token in the request
+        token: userToken 
     };
 
     console.log(`Sending Analysis Request (Model: ${model}, Persona: ${persona}, Token: ${!!userToken})`);
