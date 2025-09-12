@@ -664,15 +664,35 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                                     </button>
                                 )}
                             </div>
-                            {message.sender === 'bot' && !isErrorMessage && suggestions.length > 0 && (
-                                <div className="suggestions-container">
-                                    {suggestions.map((s, i) => (
-                                        <button key={`${message.id}-s-${i}`} className="suggestion-button" onClick={() => handleSuggestionClick(s)} disabled={isLoading || isOnCooldown}>{s}</button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    );
+                            {message.sender === 'bot' && !isErrorMessage && (
+            <>
+                {suggestions.length > 0 && (
+                    <div className="suggestions-container">
+                        {suggestions.map((s, i) => (
+                            <button key={`${message.id}-s-${i}`} className="suggestion-button" onClick={() => handleSuggestionClick(s)} disabled={isLoading || isOnCooldown}>{s}</button>
+                        ))}
+                    </div>
+                )}
+                
+                {/* This is the new part for web search results */}
+                {message.sources && message.sources.length > 0 && (
+                    <div className="message-sources">
+                        <strong>Sources:</strong>
+                        <ul>
+                            {message.sources.map((url, index) => (
+                                <li key={index}>
+                                    <a href={url} target="_blank" rel="noopener noreferrer">
+                                        {new URL(url).hostname}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+            </>
+        )}
+    </div>
+);
                 })}
                 <div ref={messagesEndRef} style={{ height: '1px' }} />
             </div>

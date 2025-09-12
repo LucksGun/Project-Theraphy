@@ -170,7 +170,7 @@ if (GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-JX58QMMKZY" && GA_MEASUREMENT_
 }
 
 // --- Types & Interfaces ---
-export interface Message { id: number; text: string; sender: 'user' | 'bot' | 'loading'; timestamp: number; imageUrl?: string; modelUsed?: string; }
+export interface Message { id: number; text: string; sender: 'user' | 'bot' | 'loading'; timestamp: number; imageUrl?: string; modelUsed?: string;    sources?: string[]; }
 export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.5-flash-lite';
 export type SpeechLanguage = 'en-US' | 'th-TH' | 'es-ES' | 'fr-FR';
 export type Persona = 'normal' | 'therapist' | 'university_master';
