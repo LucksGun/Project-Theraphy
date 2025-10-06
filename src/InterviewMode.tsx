@@ -476,8 +476,9 @@ function InterviewMode({ isOpen, onClose, selectedModel, sttLang }: InterviewMod
             
             // --- NEW: More flexible trigger word detection ---
             const lowerText = response.text.toLowerCase();
-            const passRegex = /(conclusion:\s*pass|\*\*pass\*\*)/i;
-            const failRegex = /(conclusion:\s*fail|\*\*fail\*\*)/i;
+            // FIX: Use a more robust regex to find the whole word "pass" or "fail"
+            const passRegex = /\bpass\b/i;
+            const failRegex = /\bfail\b/i;
 
             let endResult: InterviewResult = null;
             if (passRegex.test(lowerText)) {
