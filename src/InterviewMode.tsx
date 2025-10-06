@@ -529,7 +529,7 @@ function InterviewMode({ isOpen, onClose, selectedModel, sttLang }: InterviewMod
     const generateReport = useCallback(async () => {
         console.log("Generating interview report...");
         try {
-            const response = await getBotResponseInterview("", messageHistoryRef.current, selectedModel, INTERVIEWER_PERSONA_ID, useTransition, true);
+            const response = await getBotResponseInterview("", messageHistoryRef.current, selectedModel, INTERVIEWER_PERSONA_ID, user, true);
             if (response.text.startsWith("Error:")) {
                 throw new Error(response.text);
             }
