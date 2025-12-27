@@ -322,7 +322,7 @@ function MainApp() {
         return 'en-US';
     });
     const [selectedPersona, setSelectedPersona] = useState<Persona>(DEFAULT_UNRESTRICTED_PERSONA);
-    const [isInterviewModeOpen, setIsInterviewModeOpen] = useState(false);
+    const [isInterviewModeOpen, setIsInterviewModeOpen] = useState(true);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState<boolean>(false);
     const [isStaffLoginModalVisible, setIsStaffLoginModalVisible] = useState<boolean>(false);
