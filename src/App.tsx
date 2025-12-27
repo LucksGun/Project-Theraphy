@@ -743,8 +743,7 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                         </div>
                     </div> 
                 )}
-                {isInterviewModeOpen && ( <InterviewMode isOpen={isInterviewModeOpen} onClose={closeInterviewMode} selectedModel={selectedModel} sttLang={sttLang} /> )}
-                {isFeedbackModalVisible && ( 
+{isInterviewModeOpen && ( <InterviewMode isOpen={isInterviewModeOpen} onClose={closeInterviewMode} /> )}                {isFeedbackModalVisible && ( 
                     <div className="feedback-modal-overlay">
                         <div className="feedback-modal">
                             <h3 id="feedback-title">Submit Feedback</h3>
