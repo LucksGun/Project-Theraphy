@@ -1,5 +1,5 @@
 // src/InterviewMode.tsx
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { RealtimeAudioPlayer } from './AudioPlayer';
 import './InterviewMode.css';
 
