@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { RealtimeAudioPlayer } from './AudioPlayer';
 import './InterviewMode.css';
 
+// --- CONFIGURATION ---
 const WORKER_SOCKET_URL = 'wss://project-theraphy-ai-proxy.luckgun99.workers.dev/';
 
 const VIDEO_ASSETS = {
@@ -37,12 +38,13 @@ type RealtimeEvent =
     | { type: 'error'; error: any };
 
 // --- HELPER: Fast Base64 Encoding for Audio ---
+// Converts Float32 audio from the browser to PCM16 (Little Endian) for OpenAI
 const floatTo16BitPCM = (float32Array: Float32Array) => {
     const buffer = new ArrayBuffer(float32Array.length * 2);
     const view = new DataView(buffer);
     for (let i = 0; i < float32Array.length; i++) {
         const s = Math.max(-1, Math.min(1, float32Array[i]));
-        // Convert to 16-bit PCM, Little Endian (True)
+        // Little Endian (true) is required by the OpenAI Realtime API
         view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
     }
     return buffer;
@@ -77,10 +79,11 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
     useEffect(() => {
         if (!isOpen) return;
 
-        // Initialize Audio Player
+        // 1. FORCE RESET the audio gate. 
+        // This ensures the mic is blocked every time the modal opens.
+        audioGateRef.current = false;
+
         audioPlayerRef.current = new RealtimeAudioPlayer();
-        
-        // Initialize WebSocket
         const ws = new WebSocket(WORKER_SOCKET_URL);
         socketRef.current = ws;
 
@@ -88,15 +91,22 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
             console.log("Connected to AI Worker");
             setStatus('idle');
             
-            // Allow audio sending after 1 second (prevents start-up pop)
+            // 2. SAFETY: Clear any "click" noise that was already sent
+            // This tells the server to ignore any audio sent in the last few ms.
+            sendEvent({ type: "input_audio_buffer.clear" });
+
+            // 3. Open the audio gate after 1 second of silence
+            // This gives the hardware time to settle.
             setTimeout(() => {
+                console.log("Microphone gate opened");
                 audioGateRef.current = true;
             }, 1000);
 
-            // Trigger the AI Introduction
+            // 4. Send instructions AFTER clearing the buffer
             sendEvent({
                 type: "response.create",
                 response: {
+                    modalities: ["text", "audio"],
                     instructions: "You are a serious University Interviewer. Briefly introduce yourself and ask the first question."
                 }
             });
@@ -114,7 +124,6 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
         ws.onclose = () => console.log("Disconnected from AI Worker");
         ws.onerror = (err) => console.error("WebSocket Error", err);
 
-        // Start Mic
         startMicrophone();
 
         return () => cleanupSession();
@@ -139,7 +148,7 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
                     channelCount: 1,
-                    echoCancellation: true,
+                    echoCancellation: true, // CRITICAL: Prevents AI from hearing itself
                     noiseSuppression: true,
                     autoGainControl: true
                 }, 
@@ -156,7 +165,8 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
 
             // 2. Setup Processing
             const source = audioContext.createMediaStreamSource(stream);
-            // 4096 buffer size = ~0.17s latency at 24kHz
+            // 4096 buffer size = ~0.17s latency at 24kHz.
+            // This is a balance between latency and performance.
             const processor = audioContext.createScriptProcessor(4096, 1, 1);
             processorRef.current = processor;
 
@@ -196,6 +206,7 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
                 break;
             case 'input_audio_buffer.speech_started':
                 // User started talking - clear the bot's audio queue
+                console.log("Speech started detected");
                 audioPlayerRef.current?.clear();
                 sendEvent({ type: "input_audio_buffer.clear" });
                 setStatus('listening');
