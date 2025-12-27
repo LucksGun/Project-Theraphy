@@ -1,5 +1,5 @@
 // src/InterviewMode.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { RealtimeAudioPlayer } from './AudioPlayer';
 import './InterviewMode.css';
 
@@ -12,17 +12,17 @@ const VIDEO_ASSETS = {
     thinking: '/assets/thinking.mp4',
 };
 
-// --- TYPES FOR EXPORT (Fixes InterviewReport.tsx errors) ---
+// --- TYPES ---
 export type InterviewResult = 'pass' | 'fail' | null;
 
 export interface InterviewReportData {
     result: InterviewResult;
     summary: string;
-    transcript: { 
-        id: number; 
-        text: string; 
-        sender: 'user' | 'bot' | 'loading'; 
-        timestamp: number; 
+    transcript: {
+        id: number;
+        text: string;
+        sender: 'user' | 'bot' | 'loading';
+        timestamp: number;
     }[];
 }
 
@@ -31,39 +31,74 @@ interface InterviewModeProps {
     onClose: () => void;
 }
 
-type RealtimeEvent = 
+type RealtimeEvent =
     | { type: 'response.audio.delta'; delta: string }
     | { type: 'input_audio_buffer.speech_started' }
     | { type: 'response.done' }
     | { type: 'error'; error: any };
 
+// --- HELPER: Fast Base64 Encoding for Audio ---
+const floatTo16BitPCM = (float32Array: Float32Array) => {
+    const buffer = new ArrayBuffer(float32Array.length * 2);
+    const view = new DataView(buffer);
+    for (let i = 0; i < float32Array.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32Array[i]));
+        // Convert to 16-bit PCM, Little Endian (True)
+        view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    return buffer;
+};
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+};
+
 const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
     const [status, setStatus] = useState<'connecting' | 'idle' | 'listening' | 'speaking' | 'thinking'>('connecting');
     const [isMuted, setIsMuted] = useState(false);
-    
+
     const socketRef = useRef<WebSocket | null>(null);
     const audioPlayerRef = useRef<RealtimeAudioPlayer | null>(null);
     const mediaStreamRef = useRef<MediaStream | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
     const processorRef = useRef<ScriptProcessorNode | null>(null);
-    
+
     const interviewerVideoRef = useRef<HTMLVideoElement>(null);
     const userCamRef = useRef<HTMLVideoElement>(null);
+    
+    // Safety gate to prevent initial "click" from triggering VAD
+    const audioGateRef = useRef<boolean>(false);
 
     useEffect(() => {
         if (!isOpen) return;
 
+        // Initialize Audio Player
         audioPlayerRef.current = new RealtimeAudioPlayer();
+        
+        // Initialize WebSocket
         const ws = new WebSocket(WORKER_SOCKET_URL);
         socketRef.current = ws;
 
         ws.onopen = () => {
             console.log("Connected to AI Worker");
             setStatus('idle');
+            
+            // Allow audio sending after 1 second (prevents start-up pop)
+            setTimeout(() => {
+                audioGateRef.current = true;
+            }, 1000);
+
+            // Trigger the AI Introduction
             sendEvent({
                 type: "response.create",
                 response: {
-                    instructions: "You are a serious University Interviewer. Briefly introduce yourself."
+                    instructions: "You are a serious University Interviewer. Briefly introduce yourself and ask the first question."
                 }
             });
         };
@@ -78,17 +113,21 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
         };
 
         ws.onclose = () => console.log("Disconnected from AI Worker");
+        ws.onerror = (err) => console.error("WebSocket Error", err);
+
+        // Start Mic
         startMicrophone();
 
         return () => cleanupSession();
     }, [isOpen]);
 
+    // Video State Management
     useEffect(() => {
         if (!interviewerVideoRef.current) return;
         let targetVideo = VIDEO_ASSETS.idle;
         if (status === 'speaking') targetVideo = VIDEO_ASSETS.talking;
         if (status === 'thinking') targetVideo = VIDEO_ASSETS.thinking;
-        
+
         const currentSrc = interviewerVideoRef.current.getAttribute('src');
         if (currentSrc !== targetVideo) {
             interviewerVideoRef.current.src = targetVideo;
@@ -98,38 +137,55 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
 
     const startMicrophone = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    channelCount: 1,
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }, 
+                video: true 
+            });
+            
             mediaStreamRef.current = stream;
             if (userCamRef.current) userCamRef.current.srcObject = stream;
 
+            // 1. Create Audio Context (Try 24kHz for OpenAI, fallback to default)
             const audioContext = new AudioContext({ sampleRate: 24000 });
             audioContextRef.current = audioContext;
-            
+            await audioContext.resume(); // Ensure context is running
+
+            // 2. Setup Processing
             const source = audioContext.createMediaStreamSource(stream);
-            const processor = audioContext.createScriptProcessor(4096, 1, 1); 
+            // 4096 buffer size = ~0.17s latency at 24kHz
+            const processor = audioContext.createScriptProcessor(4096, 1, 1);
             processorRef.current = processor;
 
             processor.onaudioprocess = (e) => {
-                if (socketRef.current?.readyState !== WebSocket.OPEN || isMuted) return;
+                if (
+                    socketRef.current?.readyState !== WebSocket.OPEN || 
+                    isMuted || 
+                    !audioGateRef.current // Block audio if gate is closed
+                ) return;
+
                 const inputData = e.inputBuffer.getChannelData(0);
-                const int16Data = new Int16Array(inputData.length);
-                for (let i = 0; i < inputData.length; i++) {
-                    const s = Math.max(-1, Math.min(1, inputData[i]));
-                    int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                }
                 
-                let binary = '';
-                const bytes = new Uint8Array(int16Data.buffer);
-                for (let i = 0; i < bytes.byteLength; i++) {
-                    binary += String.fromCharCode(bytes[i]);
-                }
-                sendEvent({ type: "input_audio_buffer.append", audio: window.btoa(binary) });
+                // 3. Convert Float32 -> PCM16 (ArrayBuffer)
+                const pcm16Buffer = floatTo16BitPCM(inputData);
+                
+                // 4. Convert to Base64
+                const base64Audio = arrayBufferToBase64(pcm16Buffer);
+
+                // 5. Send to Worker
+                sendEvent({ type: "input_audio_buffer.append", audio: base64Audio });
             };
 
             source.connect(processor);
             processor.connect(audioContext.destination);
+
         } catch (err) {
             console.error("Mic Error", err);
+            alert("Could not access microphone/camera. Please allow permissions.");
         }
     };
 
@@ -140,12 +196,18 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
                 setStatus('speaking');
                 break;
             case 'input_audio_buffer.speech_started':
+                // User started talking - clear the bot's audio queue
                 audioPlayerRef.current?.clear();
                 sendEvent({ type: "input_audio_buffer.clear" });
                 setStatus('listening');
                 break;
             case 'response.done':
-                setStatus('listening'); 
+                // AI finished generating response
+                setStatus('idle');
+                break;
+            case 'error':
+                console.error("AI Error:", data.error);
+                setStatus('idle');
                 break;
         }
     };
@@ -176,12 +238,17 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
                 <div className="user-cam-pip">
                     <video ref={userCamRef} autoPlay muted playsInline />
                 </div>
+                
                 <div className={`status-pill status-${status}`}>
                     <div className="status-dot"></div>
                     <span>{status.toUpperCase()}</span>
                 </div>
+
                 <div className="control-bar">
-                    <button className={`control-btn btn-mic ${isMuted ? 'muted' : ''}`} onClick={() => setIsMuted(!isMuted)}>
+                    <button 
+                        className={`control-btn btn-mic ${isMuted ? 'muted' : ''}`} 
+                        onClick={() => setIsMuted(!isMuted)}
+                    >
                         {isMuted ? '🔇' : '🎙️'}
                     </button>
                     <button className="control-btn btn-exit" onClick={onClose}>❌</button>
