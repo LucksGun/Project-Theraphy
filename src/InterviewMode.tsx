@@ -38,13 +38,12 @@ type RealtimeEvent =
     | { type: 'response.done' }
     | { type: 'error'; error: any };
 
-// --- HELPER: Fast Base64 Encoding for Audio ---
+// --- HELPER: Fast Base64 Encoding ---
 const floatTo16BitPCM = (float32Array: Float32Array) => {
     const buffer = new ArrayBuffer(float32Array.length * 2);
     const view = new DataView(buffer);
     for (let i = 0; i < float32Array.length; i++) {
         const s = Math.max(-1, Math.min(1, float32Array[i]));
-        // Little Endian (true) is required by OpenAI
         view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
     }
     return buffer;
@@ -74,13 +73,13 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
     const userCamRef = useRef<HTMLVideoElement>(null);
     
     // Safety Gates
-    const audioGateRef = useRef<boolean>(false); // Blocks initial startup pop
-    const isProcessingRef = useRef<boolean>(false); // Blocks noise during "Thinking" phase
+    const audioGateRef = useRef<boolean>(false); 
+    const isProcessingRef = useRef<boolean>(false);
 
     useEffect(() => {
         if (!isOpen) return;
 
-        // 1. LOCK DOWN AUDIO immediately
+        // Reset gates
         audioGateRef.current = false;
         isProcessingRef.current = false;
 
@@ -92,14 +91,11 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
             console.log("Connected to AI Worker");
             setStatus('idle');
             
-            // 2. CRITICAL SEQUENCE: Clear Buffer -> Wait -> Greet -> Wait -> Unmute
-            // This prevents the "0ms" crash seen in your logs.
-            
-            // Step A: Wipe any noise sent during connection
+            // Clear any connection noise
             sendEvent({ type: "input_audio_buffer.clear" });
 
             setTimeout(() => {
-                // Step B: Ask AI to start (after buffer is definitely clear)
+                // Send instructions
                 sendEvent({
                     type: "response.create",
                     response: {
@@ -108,9 +104,9 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
                     }
                 });
 
-                // Step C: Finally open the microphone gate after AI has started processing
+                // Open mic gate after 1s
                 setTimeout(() => {
-                    console.log("Microphone Gate Open");
+                    console.log("Mic Gate Open");
                     audioGateRef.current = true;
                 }, 1000); 
 
@@ -134,6 +130,7 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
         return () => cleanupSession();
     }, [isOpen]);
 
+    // Video Sync
     useEffect(() => {
         if (!interviewerVideoRef.current) return;
         let targetVideo = VIDEO_ASSETS.idle;
@@ -152,7 +149,7 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
                     channelCount: 1,
-                    echoCancellation: true, // MUST BE TRUE to prevent self-interruption
+                    echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true
                 }, 
@@ -167,15 +164,11 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
             await audioContext.resume();
 
             const source = audioContext.createMediaStreamSource(stream);
-            const processor = audioContext.createScriptProcessor(4096, 1, 1);
+            // OPTIMIZATION: Reduced buffer size from 4096 to 2048 to reduce "tail" latency
+            const processor = audioContext.createScriptProcessor(2048, 1, 1);
             processorRef.current = processor;
 
             processor.onaudioprocess = (e) => {
-                // Block audio if:
-                // 1. Socket not open
-                // 2. User is muted
-                // 3. Initial startup gate is closed
-                // 4. AI is currently "Thinking" (prevents accidental interruptions)
                 if (
                     socketRef.current?.readyState !== WebSocket.OPEN || 
                     isMuted || 
@@ -194,36 +187,35 @@ const InterviewMode: React.FC<InterviewModeProps> = ({ isOpen, onClose }) => {
 
         } catch (err) {
             console.error("Mic Error", err);
-            alert("Could not access microphone. Please check permissions.");
+            alert("Could not access microphone.");
         }
     };
 
     const handleServerEvent = (data: RealtimeEvent) => {
         switch (data.type) {
             case 'response.audio.delta':
-                // AI is speaking
-                isProcessingRef.current = false; // Allow user to interrupt now if they want
+                isProcessingRef.current = false;
                 audioPlayerRef.current?.playChunk(data.delta);
                 setStatus('speaking');
                 break;
                 
             case 'input_audio_buffer.speech_started':
-                // User started speaking -> Interrupt AI
-                console.log("User speech started");
-                audioPlayerRef.current?.clear(); // Stop AI audio instantly
-                sendEvent({ type: "input_audio_buffer.clear" }); // Clear server buffer
+                audioPlayerRef.current?.clear(); 
+                sendEvent({ type: "input_audio_buffer.clear" }); 
                 setStatus('listening');
                 break;
 
             case 'input_audio_buffer.speech_stopped':
-                // User finished speaking -> AI starts "Thinking"
-                // Lock the mic briefly to prevent noise from cancelling the response
+                // 🛑 MAGIC FIX: The user stopped talking.
+                // 1. Lock the mic (client-side) to stop sending "tail" noise.
                 isProcessingRef.current = true; 
+                // 2. Tell Server to wipe any "tail" noise that already arrived.
+                sendEvent({ type: "input_audio_buffer.clear" });
+                
                 setStatus('thinking');
                 break;
 
             case 'response.done':
-                // AI Finished
                 isProcessingRef.current = false;
                 setStatus('idle');
                 break;
