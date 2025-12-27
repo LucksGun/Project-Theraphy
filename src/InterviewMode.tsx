@@ -3,7 +3,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { RealtimeAudioPlayer } from './AudioPlayer';
 import './InterviewMode.css';
 
-// --- CONFIGURATION ---
 const WORKER_SOCKET_URL = 'wss://project-theraphy-ai-proxy.luckgun99.workers.dev/';
 
 const VIDEO_ASSETS = {
