@@ -744,7 +744,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                 )}
 
                 <div style={{ position: 'relative', width: '100%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', flexGrow: 1, gap: '5px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', flexGrow: 1, gap: '10px' }}>
                         <button
                             ref={menuToggleRef}
                             onClick={toggleActionMenu}
@@ -753,6 +753,7 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
                             disabled={isLoading || isOnCooldown}
                             aria-haspopup="true"
                             aria-expanded={isActionMenuOpen}
+                            style={{ marginLeft: '15px' }}
                         >
                            <FaPlus />
                         </button>

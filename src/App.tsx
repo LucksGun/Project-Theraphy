@@ -2,6 +2,8 @@ import React, { useState, useEffect, ChangeEvent, useCallback, createContext, us
 import ReactGA from 'react-ga4';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Barcode from 'react-barcode'; // ✨ NEW: Import for barcode generation
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Settings01Icon, Comment01Icon } from '@hugeicons/core-free-icons';
 import './App.css';
 import ChatbotPage from './ChatbotPage';
 import AdminPage from './AdminPage';
@@ -613,7 +615,21 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
     
     // --- JSX ---
     if (loading) {
-        return <div>Loading Application...</div>;
+        return (
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100vh',
+                width: '100vw'
+            }}>
+                <div className="loading-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        );
     }
     
     return (
@@ -782,7 +798,7 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
 
                 {/* ✨ NEW: User Info Modal */}
                 {isUserInfoModalVisible && user && (
-                    <div className="settings-menu" role="dialog" aria-labelledby="user-info-title">
+                    <div className="user-info" role="dialog" aria-labelledby="user-info-title">
                         <h3 id="user-info-title">User Information</h3>
                         <div className="settings-column" style={{ alignItems: 'center', gap: '15px' }}>
                             <img 
@@ -844,11 +860,11 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                         <>
                             <header className="App-header">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    <button onClick={toggleSettings} className="settings-button" title="Settings">⚙️</button>
-                                    <button onClick={toggleFeedbackModal} className="settings-button" title="Submit Feedback">💬</button>
+                                    <button onClick={toggleSettings} className="settings-button" title="Settings"><HugeiconsIcon icon={Settings01Icon} /></button>
+                                    <button onClick={toggleFeedbackModal} className="settings-button" title="Submit Feedback"><HugeiconsIcon icon={Comment01Icon} /></button>
                                 </div>
                                 <h1>Project Theraphy</h1>
-                                <div className="header-spacer-center">
+                                <div className="header-user-info">
                                     {user ? <UserProfile onProfileClick={toggleUserInfoModal} /> : <LoginButton />}
                                 </div>
                             </header>
