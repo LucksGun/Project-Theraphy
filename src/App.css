@@ -1503,6 +1503,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     box-shadow: none;
     min-height: 40px;
     box-sizing: border-box;
+    min-width: 0;
 }
 .chatbot-input-area input[type="text"].chatbot-input::placeholder {
     color: var(--text-secondary);
