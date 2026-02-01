@@ -848,7 +848,7 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                                     <button onClick={toggleFeedbackModal} className="settings-button" title="Submit Feedback">💬</button>
                                 </div>
                                 <h1>Project Theraphy</h1>
-                                <div className="header-spacer-right">
+                                <div className="header-spacer-center">
                                     {user ? <UserProfile onProfileClick={toggleUserInfoModal} /> : <LoginButton />}
                                 </div>
                             </header>
