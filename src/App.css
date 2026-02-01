@@ -12,8 +12,8 @@
   --border-color: #dee2e6;
   --text-primary: #212529;
   --text-secondary: #6c757d;
-  --user-bubble-bg: #0d6efd;
-  --bot-bubble-bg: #e7f5e7;
+  --user-bubble-bg: #3699fe;
+  --bot-bubble-bg: #ffffff;
   --button-primary-bg: var(--user-bubble-bg);
   --button-primary-hover-bg: #0b5ed7;
   --button-secondary-bg: #e9ecef;
@@ -335,6 +335,8 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 .settings-button:hover { opacity: 1; color: var(--text-primary); }
 .header-spacer-right { width: calc(32px * 2 + 5px); flex-shrink: 0; }
 
+
+
 /* --- Settings Menu / Shared Modal Styles --- */
 .settings-menu {
     position: fixed;
@@ -355,6 +357,28 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     overflow-y: auto;
 }
 /* --- Additions for Login System --- */
+.user-info {
+    position: fixed;
+    top: 55px;
+    right: 15px;
+    background-color: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: var(--glass-shadow);
+    z-index: 1000;
+    width: max-content;
+    max-width: 700px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    max-height: calc(100dvh - 70px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    text-align: center;
+}
 
 /* 1. Update Header Spacer for Flexibility */
 /* This changes the right side of the header from a fixed-width spacer 
@@ -1189,6 +1213,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 }
 .message-wrapper-bot, .message-wrapper-loading {
     align-items: flex-start;
+    margin-left: 10px;
 }
 /* === User Info Modal Styles === */
 
@@ -1209,6 +1234,8 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
   border: 3px solid var(--primary-accent-color, #4a90e2);
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   object-fit: cover;
+  display: block;
+  margin: 0 auto;
 }
 
 .user-info-name {
@@ -1310,6 +1337,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     color: var(--text-primary);
     align-self: flex-start;
     border-bottom-left-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 .message.loading {
     padding: 8px 15px;
@@ -1628,11 +1656,12 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 }
 .action-menu-popup {
     position: absolute;
-    bottom: calc(100% + 8px);
+    bottom: calc(100% + 10px);
     left: 0;
-    background-color: var(--container-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    background-color: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
     box-shadow: 0 4px 12px var(--shadow-color);
     z-index: 100;
     padding: 5px;
@@ -1641,6 +1670,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     gap: 4px;
     min-width: 180px;
 }
+
 .action-menu-item {
     display: flex;
     align-items: center;
@@ -1675,7 +1705,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 
 
 /* --- Responsive Styles --- */
-@media (max-width: 900px) {
+@media (max-width: 0px) {
     .App-header {
         padding: 8px 10px;
         min-height: 0;
@@ -1843,7 +1873,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     }
 }
 
-@media (max-width: 500px) {
+@media (max-width: 0px) {
     .chatbot-messages {
         padding: 15px 8px 20px 8px;
         gap: 12px;
