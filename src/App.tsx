@@ -828,7 +828,7 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                                 <div className="user-info-barcode-container">
                                     <Barcode 
                                         value={user.uid} 
-                                        width={1}
+                                        width={1.5}
                                         height={50}
                                         displayValue={false}
                                         background="transparent"
