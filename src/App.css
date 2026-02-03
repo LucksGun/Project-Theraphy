@@ -314,54 +314,8 @@
 
 
 /* Basic Reset & Font */
-html {
-  font-size: 16px; /* Default font size */
-}
-
-/* Responsive font sizes */
-@media (max-width: 1200px) {
-  html {
-    font-size: 15px;
-  }
-}
-
-@media (max-width: 992px) {
-  html {
-    font-size: 14px;
-  }
-}
-
-@media (max-width: 768px) {
-  html {
-    font-size: 13px;
-  }
-}
-
-@media (max-width: 576px) {
-  html {
-    font-size: 12px;
-  }
-}
-
-@media (max-width: 400px) {
-  html {
-    font-size: 11px;
-  }
-}
-
-@media (max-width: 320px) {
-  html {
-    font-size: 10px;
-  }
-}
 html, body, #root { height: 100%; margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: var(--page-bg); overflow: hidden; color: var(--text-primary); transition: background-color 0.3s ease, color 0.3s ease; }
-body {
-  font-size: 1rem;
-}
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-button, input, select, textarea { font-family: inherit; color: inherit; background-color: transparent; }
+button, input, select, textarea { font-family: inherit; color: inherit; background-color: transparent; box-sizing: border-box; }
 
 /* --- Main App Layout Fix --- */
 .App { display: flex; flex-direction: column; height: 100dvh; width: 100%; overflow: hidden; }
@@ -405,7 +359,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 /* --- Additions for Login System --- */
 .user-info {
     position: fixed;
-    top: 65px; /* Adjusted top position */
+    top: 55px;
     right: 15px;
     background-color: var(--glass-bg);
     backdrop-filter: var(--glass-blur);
@@ -414,34 +368,16 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     padding: 20px;
     box-shadow: var(--glass-shadow);
     z-index: 1000;
-    width: auto; /* Changed from max-content */
-    max-width: 380px; /* Set a max-width for larger screens */
+    width: max-content;
+    max-width: 700px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction: column;
-    max-height: calc(100dvh - 80px); /* Adjusted max-height */
+    max-height: calc(100dvh - 70px);
     overflow-y: auto;
     overflow-x: hidden;
     text-align: center;
-    transition: all 0.3s ease-in-out; /* Added transition */
-}
-@media (max-width: 768px) {
-    .user-info {
-        top: 10px;
-        right: 10px;
-        padding: 15px;
-   }
-}
-@media (max-width: 480px) {
-    .user-info {
-        width: 90%;
-        top: 10px;
-        right: 0;
-        left: 0;
-        margin: auto;
-        padding: 15px;
-   }
 }
 
 /* 1. Update Header Spacer for Flexibility */
@@ -1317,13 +1253,11 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 
 .user-info-box {
   width: 100%;
+  text-align: center;
   padding: 15px;
   background-color: var(--background-color-secondary);
   border-radius: 12px;
   margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 
 .user-info-label {
@@ -1772,109 +1706,280 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 
 
 /* --- Responsive Styles --- */
-@media (max-width: 768px) {
+@media (max-width: 0px) {
+    .App-header {
+        padding: 8px 10px;
+        min-height: 0;
+    }
     .App-header h1 {
-        font-size: 1.25rem;
+        font-size: 1.0em;
     }
-
     .settings-button {
-        font-size: 1.2rem;
+        font-size: 20px;
+        padding: 4px;
     }
-
+    .header-spacer-right {
+        width: calc(28px * 2 + 5px);
+    }
     .chatbot-messages {
-        font-size: 1rem;
+        padding: 15px 10px 20px 10px;
+        gap: 15px;
+        font-size: 0.95rem;
     }
-
+    .chatbot-input-area {
+        padding: 8px;
+    }
+    .chatbot-input-area .input-row {
+        gap: 5px;
+    }
     .message {
-        max-width: 90%;
+        max-width: 85%;
+        border-radius: 14px;
+        padding: 9px 14px;
     }
-
     .chatbot-input-area input[type="text"].chatbot-input {
-        font-size: 1rem;
+        padding: 9px 14px;
+        font-size: 0.9rem;
+        min-height: 38px;
+        border-radius: 14px;
     }
-
+    .chatbot-input-area .input-button, .chatbot-input-area .send-button {
+        width: 38px;
+        height: 38px;
+        font-size: 1.1em;
+        border-radius: 12px;
+    }
+    .image-preview-area {
+        padding: 4px 8px;
+        margin-bottom: 8px;
+    }
+    .image-preview-thumbnail {
+        max-height: 35px;
+        max-width: 50px;
+    }
+    .suggestions-container {
+        gap: 5px;
+        margin-left: 10px;
+    }
     .suggestion-button {
-        font-size: 0.8rem;
+        padding: 4px 10px;
+        font-size: 0.8em;
+    }
+    /* Adjust settings modal width/position */
+    .settings-menu {
+        position: fixed;
+        top: 55px;
+        left: 15px;
+        background-color: var(--settings-menu-bg);
+        border: 1px solid var(--settings-menu-border);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 5px 15px var(--settings-menu-shadow);
+        z-index: 1000;
+        width: max-content;
+        max-width: 700px; /* <<< CONFIRM THIS VALUE IS INCREASED (e.g., 700px) */
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 70px);
+        overflow-y: auto;
+    }
+    .settings-menu .settings-column {
+        gap: 15px;
+    } /* Adjust gap */
+    .analysis-form-modal {
+        padding: 20px;
+        max-height: 85vh;
+    }
+    .staff-panel-modal {
+        width: 95%;
+        max-width: 95%;
+        padding: 20px;
+    }
+    .message pre code {
+        font-size: 0.85em !important;
+    }
+    .message-meta {
+        font-size: 0.65em;
+    }
+    .tts-button {
+        font-size: 1.1em;
+    }
+    .message-wrapper-bot .message-meta, .message-wrapper-user .message-meta {
+        margin-left: 10px;
+        margin-right: 10px;
+    }
+    .action-menu-popup {
+        bottom: calc(100% + 5px);
+        left: -5px;
     }
 
-    .settings-menu {
-        width: calc(100% - 30px);
+    /* Welcome Page Responsive */
+    .welcome-title {
+        font-size: 2.5em;
+    }
+    .welcome-subtitle {
+        font-size: 1.2em;
+        margin-bottom: 20px;
+    }
+    .welcome-instructions {
+        font-size: 1em;
+        margin-bottom: 30px;
+    }
+    .welcome-main-button {
+        width: 120px;
+        height: 120px;
+        font-size: 2.5em;
+        border-width: 3px;
+    }
+    .welcome-bottom-text {
+        font-size: 0.9em;
+    }
+
+    /* Knowledge Check Responsive */
+    .knowledge-check-modal {
+        padding: 30px;
         max-width: 400px;
     }
-
-    .settings-option label {
-        font-size: 0.9rem;
+    .knowledge-check-modal h2 {
+        font-size: 1.5em;
+        margin-bottom: 20px;
+    }
+    .knowledge-button {
+        padding: 10px 20px;
+        font-size: 1em;
+    }
+    .lie-detector-image {
+        max-width: 90%;
+        max-height: 70vh;
     }
 
-    .settings-select, .settings-input {
-        font-size: 0.9rem;
+    /* Tutorial Responsive */
+    .tutorial-modal {
+        padding: 25px;
+        max-width: 600px;
     }
-
-    .settings-action-button {
-        font-size: 0.9rem;
+    .tutorial-modal h3 {
+        font-size: 1.5em;
     }
-
-    .close-settings-button {
-        font-size: 0.9rem;
+    .tutorial-modal h4 {
+        font-size: 1.1em;
     }
-
-    .welcome-title {
-        font-size: 2rem;
+    .tutorial-modal p {
+        font-size: 0.95em;
+    }
+    .tutorial-bait-button {
+        padding: 10px 20px;
+        font-size: 1.2em;
+        min-width: 80px;
     }
 }
 
-@media (max-width: 480px) {
-    .App-header h1 {
-        font-size: 1.1rem;
-    }
-
-    .settings-button {
-        font-size: 1.1rem;
-    }
-
+@media (max-width: 0px) {
     .chatbot-messages {
-        font-size: 0.9rem;
+        padding: 15px 8px 20px 8px;
+        gap: 12px;
     }
-
     .message {
-        max-width: 95%;
+        max-width: 90%;
+        padding: 8px 12px;
     }
-
+    .message-timestamp {
+        font-size: 0.65em;
+    }
+    .chatbot-input-area {
+        padding: 6px;
+    }
+    .chatbot-input-area .input-row {
+        gap: 4px;
+    }
     .chatbot-input-area input[type="text"].chatbot-input {
+        padding: 8px 12px;
         font-size: 0.9rem;
+        min-height: 36px;
+        border-radius: 12px;
     }
-
+    .chatbot-input-area .input-button, .chatbot-input-area .send-button {
+        width: 36px;
+        height: 36px;
+        font-size: 1.0em;
+        border-radius: 10px;
+    }
+    .image-preview-thumbnail {
+        max-height: 30px;
+        max-width: 45px;
+    }
+    .suggestions-container {
+        gap: 4px;
+        margin-left: 8px;
+    }
     .suggestion-button {
-        font-size: 0.7rem;
+        padding: 4px 8px;
+        font-size: 0.75em;
     }
-
+    /* Adjust settings modal width/position */
     .settings-menu {
-        width: calc(100% - 20px);
-        max-width: none;
-        left: 10px;
-        right: 10px;
+        position: fixed;
+        top: 55px;
+        left: 15px;
+        background-color: var(--settings-menu-bg);
+        border: 1px solid var(--settings-menu-border);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 5px 15px var(--settings-menu-shadow);
+        z-index: 1000;
+        width: max-content;
+        max-width: 700px; /* <<< CONFIRM THIS VALUE IS INCREASED (e.g., 700px) */
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 70px);
+        overflow-y: auto;
     }
-
+    .settings-menu .settings-column {
+        gap: 12px;
+    }
     .settings-option label {
-        font-size: 0.8rem;
+        font-size: 0.8em;
     }
-
     .settings-select, .settings-input {
-        font-size: 0.8rem;
+        font-size: 0.85em;
+        padding: 6px 8px;
     }
-
     .settings-action-button {
-        font-size: 0.8rem;
+        font-size: 0.85em;
+        padding: 8px 10px;
+        gap: 6px;
     }
-
+    .settings-helper-text {
+        font-size: 0.75em;
+    }
     .close-settings-button {
-        font-size: 0.8rem;
+        font-size: 0.85em;
+        padding: 8px 12px;
     }
-
-    .welcome-title {
-        font-size: 1.5rem;
+    .analysis-form-modal {
+        padding: 15px;
     }
-}
+    .analysis-form-actions {
+        gap: 6px;
+    }
+    .analysis-form-actions .close-settings-button, .analysis-form-actions .beta-accept-button {
+        font-size: 0.9em;
+        padding: 6px 12px;
+    }
+    .staff-panel-modal {
+        padding: 15px;
+    }
+    .staff-panel-modal h3 {
+        font-size: 1.15em;
+        margin-bottom: 15px;
+    }
+    .message pre code {
+        font-size: 0.82em !important;
+    }
+    .message-meta {
+        font-size: 0.6em;
+        gap: 3px;
+    }
     .tts-button {
         font-size: 1em;
     }
@@ -1946,56 +2051,4 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
         font-size: 1em;
         min-width: 70px;
     }
-
-/* Responsive adjustments for user info on smaller screens */
-@media (max-width: 768px) {
-    .user-info-uid {
-        font-size: 0.85em; /* Slightly smaller font for tablets */
-        padding: 4px 6px;
-    }
-
-    .user-info-barcode-container {
-        padding: 8px;
-    }
-}
-
-@media (max-width: 480px) {
-    .user-info-name {
-      font-size: 1.15em;
-    }
-    .user-info-uid {
-        font-size: 0.75em; /* Smaller font for mobile */
-        word-break: break-all; /* Ensure long UIDs wrap */
-    }
-
-    .user-info-barcode-container {
-        padding: 5px;
-        background-color: transparent; /* Make background transparent to fit design */
-    }
-
-    .user-info-barcode-container svg {
-        width: 100%;
-        height: auto;
-        display: block;
-    }
-}
-
-.popup-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.popup {
-  background-color: white;
-  padding: 20px;
-  border-radius: 5px;
-  text-align: center;
 }
