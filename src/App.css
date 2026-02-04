@@ -1743,6 +1743,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     align-items: center;
     gap: 8px;
     background: none;
+    backdrop-filter: var(--glass-blur);
     border: none;
     padding: 8px 12px;
     text-align: left;
@@ -1750,7 +1751,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     cursor: pointer;
     border-radius: 4px;
     color: var(--text-primary);
-    font-size: 0.9em;
+    font-size: 1em;
     transition: background-color 0.2s ease;
 }
 .action-menu-item:hover:not(:disabled) {
@@ -1782,11 +1783,11 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     }
 
     .chatbot-messages {
-        font-size: 1rem;
+        font-size: 1.2rem;
     }
 
     .message {
-        max-width: 90%;
+        max-width: 110%;
     }
 
     .chatbot-input-area input[type="text"].chatbot-input {
@@ -1825,27 +1826,27 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
 
 @media (max-width: 480px) {
     .App-header h1 {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
     }
 
     .settings-button {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
     }
 
     .chatbot-messages {
-        font-size: 0.9rem;
+        font-size: 1.2rem;
     }
 
     .message {
-        max-width: 95%;
+        max-width: 100%;
     }
 
     .chatbot-input-area input[type="text"].chatbot-input {
-        font-size: 0.9rem;
+        font-size: 1.2rem;
     }
 
     .suggestion-button {
-        font-size: 0.7rem;
+        font-size: 1rem;
     }
 
     .settings-menu {
@@ -1856,19 +1857,19 @@ button, input, select, textarea { font-family: inherit; color: inherit; backgrou
     }
 
     .settings-option label {
-        font-size: 0.8rem;
+        font-size: 1rem;
     }
 
     .settings-select, .settings-input {
-        font-size: 0.8rem;
+        font-size: 1rem;
     }
 
     .settings-action-button {
-        font-size: 0.8rem;
+        font-size: 1rem;
     }
 
     .close-settings-button {
-        font-size: 0.8rem;
+        font-size: 1rem;
     }
 
     .welcome-title {
