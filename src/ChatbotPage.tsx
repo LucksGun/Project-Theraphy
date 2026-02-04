@@ -191,11 +191,11 @@ interface ChatbotPageProps {
     selectedModel: GeminiModel;
     sttLang: SpeechLanguage;
     selectedPersona: Persona;
-    onTriggerInterview: () => void;
+    //onTriggerInterview: () => void;
 }
 
 // --- ChatbotPage Component ---
-function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona, onTriggerInterview }: ChatbotPageProps) {
+function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona /*, onTriggerInterview*/ }: ChatbotPageProps) {
     // --- State ---
     const [input, setInput] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
