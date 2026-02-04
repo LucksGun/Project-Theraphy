@@ -469,7 +469,7 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
     const toggleAdvancedSettings = () => { const currentlyVisible = isAdvancedSettingsOpen; closeAllModals(); if (!currentlyVisible) { setIsAdvancedSettingsOpen(true); } }
     const openAdvancedSettingsFromMain = () => { setIsSettingsOpen(false); setIsAdvancedSettingsOpen(true); };
     const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => { const newModel = event.target.value as GeminiModel; setSelectedModel(newModel); };
-    const openInterviewMode = () => { closeAllModals(); setIsInterviewModeOpen(true); };
+    //const openInterviewMode = () => { closeAllModals(); setIsInterviewModeOpen(true); };
     const closeInterviewMode = () => { setIsInterviewModeOpen(false); };
     
     const executeClearChat = async () => {
@@ -828,7 +828,7 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                                 <div className="user-info-barcode-container">
                                     <Barcode 
                                         value={user.uid} 
-                                        width={1.5}
+                                        width={1}
                                         height={50}
                                         displayValue={false}
                                         background="transparent"
@@ -874,7 +874,7 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                                 selectedModel={selectedModel}
                                 sttLang={sttLang}
                                 selectedPersona={selectedPersona}
-                                onTriggerInterview={openInterviewMode}
+                                //onTriggerInterview={openInterviewMode}
                             />
                         </>
                     } />

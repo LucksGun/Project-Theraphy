@@ -191,11 +191,11 @@ interface ChatbotPageProps {
     selectedModel: GeminiModel;
     sttLang: SpeechLanguage;
     selectedPersona: Persona;
-    onTriggerInterview: () => void;
+    //onTriggerInterview: () => void;
 }
 
 // --- ChatbotPage Component ---
-function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona, onTriggerInterview }: ChatbotPageProps) {
+function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPersona /*, onTriggerInterview*/ }: ChatbotPageProps) {
     // --- State ---
     const [input, setInput] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -213,8 +213,9 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
     const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
     const [capturedImageDataUrl, setCapturedImageDataUrl] = useState<string | null>(null);
     const [isActionMenuOpen, setIsActionMenuOpen] = useState<boolean>(false);
+    const [showInDevelopmentPopup, setShowInDevelopmentPopup] = useState<boolean>(false);
     const handleMenuInterviewClick = () => {
-        onTriggerInterview();
+        setShowInDevelopmentPopup(true);
         setIsActionMenuOpen(false);
     };
 
@@ -620,6 +621,14 @@ function ChatbotPage({ messages, setMessages, selectedModel, sttLang, selectedPe
     // --- JSX Rendering ---
     return (
         <div className="chatbot-container">
+            {showInDevelopmentPopup && (
+                <div className="popup-overlay">
+                    <div className="popup">
+                        <h3>In Development</h3>
+                        <button onClick={() => setShowInDevelopmentPopup(false)}>Close</button>
+                    </div>
+                </div>
+            )}
             <div className="chatbot-messages">
                 {messages.map((message: Message) => {
                     let mainText = message.text; let suggestions: string[] = []; let isErrorMessage = message.sender === 'bot' && message.text.startsWith('Error:');
