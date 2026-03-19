@@ -1,120 +1,88 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth, WORKER_URL } from './App'; 
-import ReactFlow, { Background, Controls, Node, Edge } from 'reactflow';
+import ReactFlow, { Background, Controls, Node, Edge, MarkerType } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, addDays } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-const locales = { 'en-US': enUS };
-const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
+const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { 'en-US': enUS } });
+
+interface ChatMessage { id: string; text: string; sender: 'user' | 'ai'; }
 
 export default function CopilotMode({ onClose }: { onClose: () => void }) {
     const { user } = useAuth();
+    
+    // Core Layout States
     const [savedPlans, setSavedPlans] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<'tree' | 'calendar'>('tree');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     
-    // UI States
-    const [isCreatingNew, setIsCreatingNew] = useState(false);
-    const [prompt, setPrompt] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    
-    // Core Data State
+    // Active Plan States
+    const [activePlanId, setActivePlanId] = useState<string | null>(null);
     const [planData, setPlanData] = useState<any>(null);
     const [nodes, setNodes] = useState<Node[]>([]);
     const [edges, setEdges] = useState<Edge[]>([]);
     const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
     
-    // Recommendations Panel
+    // AI Chat & Modification States
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([{ id: 'welcome', text: 'Hi! I am your Admissions Co-pilot. Tell me your university goals, or select a saved plan. You can chat with me anytime to modify your roadmap!', sender: 'ai' }]);
+    const [prompt, setPrompt] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
+    const chatEndRef = useRef<HTMLDivElement>(null);
+
+    // Context Panel (Recommendations)
     const [selectedRecs, setSelectedRecs] = useState<any[] | null>(null);
     const [selectedNodeTitle, setSelectedNodeTitle] = useState<string>('');
 
-    // Load saved plans on mount
+    // 1. Fetch Plans on Mount
     useEffect(() => {
         const fetchPlans = async () => {
             if (!user) return;
             try {
                 const token = await user.getIdToken();
                 const res = await fetch(WORKER_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'getCopilotPlans', token })
                 });
                 const data = await res.json();
-                if (data.success && data.plans) {
-                    setSavedPlans(data.plans);
-                }
-            } catch (err) {
-                console.error("Failed to fetch saved plans", err);
-            }
+                if (data.success) setSavedPlans(data.plans);
+            } catch (err) { console.error("Failed to fetch plans", err); }
         };
         fetchPlans();
     }, [user]);
 
-    const generatePlan = async () => {
-        if (!prompt.trim() || !user) return alert("Please enter your academic goal.");
-        
-        setIsLoading(true);
-        setSelectedRecs(null);
-        setSelectedNodeTitle('');
+    // Scroll Chat
+    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMessages]);
 
-        try {
-            const token = await user.getIdToken();
-            const res = await fetch(WORKER_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'generateCopilotPlan', token, prompt })
-            });
-            
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error(data.error || "Failed to generate plan");
-            
-            const generatedPlan = data.plan_data;
-            setPlanData(generatedPlan);
-            mapDataToUI(generatedPlan);
-            setIsCreatingNew(false); // Close the modal
-            
-            // Optimistically update sidebar
-            setSavedPlans(prev => [{ id: data.plan_id, title: generatedPlan.plan_title, created_at: new Date().toISOString() }, ...prev]);
-
-        } catch (error: any) {
-            console.error(error);
-            alert("Error: " + error.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const mapDataToUI = (generatedPlan: any) => {
-        const newFlowNodes: Node[] = [];
-        const newFlowEdges: Edge[] = [];
-        const newCalEvents: any[] = [];
+    // 2. The Universal Map Renderer
+    const renderMapAndCalendar = useCallback((generatedPlan: any) => {
+        const newNodes: Node[] = [];
+        const newEdges: Edge[] = [];
+        const newEvents: any[] = [];
         let rollingDate = new Date(); 
 
         generatedPlan.nodes.forEach((node: any, index: number) => {
-            // Distinct styling for a modern look
-            newFlowNodes.push({
+            newNodes.push({
                 id: node.node_id,
-                position: { x: 300, y: (index + 1) * 150 }, 
+                position: { x: 250 + (index % 2 === 0 ? 0 : 150), y: (index + 1) * 160 }, // Staggered layout
                 data: { label: node.title, recommendations: node.recommendations },
                 style: { 
-                    backgroundColor: '#ffffff', color: '#111827', 
-                    border: '2px solid #3b82f6', borderRadius: '12px', 
-                    padding: '15px', width: 250, textAlign: 'center',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                    fontWeight: 'bold'
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                    color: '#0f172a', border: '1px solid #cbd5e1', borderRadius: '12px', 
+                    padding: '16px', width: 260, textAlign: 'center',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025)',
+                    fontWeight: '600', fontSize: '14px'
                 }
             });
 
             if (node.prerequisites && node.prerequisites.length > 0) {
                 node.prerequisites.forEach((prereqId: string) => {
-                    newFlowEdges.push({
-                        id: `e-${prereqId}-${node.node_id}`,
-                        source: prereqId,
-                        target: node.node_id,
-                        animated: true,
-                        style: { stroke: '#3b82f6', strokeWidth: 3 } 
+                    newEdges.push({
+                        id: `e-${prereqId}-${node.node_id}`, source: prereqId, target: node.node_id,
+                        animated: true, style: { stroke: '#3b82f6', strokeWidth: 2 },
+                        markerEnd: { type: MarkerType.ArrowClosed, color: '#3b82f6' }
                     });
                 });
             }
@@ -123,157 +91,218 @@ export default function CopilotMode({ onClose }: { onClose: () => void }) {
                 node.calendar_events.forEach((event: any) => {
                     const startDate = new Date(rollingDate);
                     const endDate = addDays(startDate, event.duration_days || 1);
-                    newCalEvents.push({ title: `${node.title}: ${event.title}`, start: startDate, end: endDate, allDay: true });
+                    newEvents.push({ title: `${node.title}: ${event.title}`, start: startDate, end: endDate, allDay: true });
                     rollingDate = endDate; 
                 });
             }
         });
 
-        setNodes(newFlowNodes);
-        setEdges(newFlowEdges);
-        setCalendarEvents(newCalEvents);
+        setNodes(newNodes); setEdges(newEdges); setCalendarEvents(newEvents);
+    }, []);
+
+    // 3. Handle Chat Submission (Creates OR Modifies)
+    const handleSendPrompt = async () => {
+        if (!prompt.trim() || !user || isProcessing) return;
+        
+        const userMsg = prompt;
+        setPrompt('');
+        setChatMessages(prev => [...prev, { id: Date.now().toString(), text: userMsg, sender: 'user' }]);
+        setIsProcessing(true);
+
+        try {
+            const token = await user.getIdToken();
+            const res = await fetch(WORKER_URL, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    action: 'generateCopilotPlan', 
+                    token, 
+                    prompt: userMsg,
+                    planId: activePlanId, // Pass ID if modifying
+                    currentPlanJson: planData ? JSON.stringify(planData) : null // Pass context
+                })
+            });
+            
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error(data.error || "Failed");
+            
+            const generatedPlan = data.plan_data;
+            setPlanData(generatedPlan);
+            setActivePlanId(data.plan_id);
+            renderMapAndCalendar(generatedPlan);
+            
+            setChatMessages(prev => [...prev, { id: Date.now().toString(), text: `I've updated the roadmap! Check the main canvas to see the changes.`, sender: 'ai' }]);
+
+            // Refresh sidebar quietly
+            setSavedPlans(prev => {
+                const existing = prev.filter(p => p.id !== data.plan_id);
+                return [{ id: data.plan_id, title: generatedPlan.plan_title, plan_data: generatedPlan }, ...existing];
+            });
+
+        } catch (error: any) {
+            setChatMessages(prev => [...prev, { id: Date.now().toString(), text: `Error: ${error.message}`, sender: 'ai' }]);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const loadPlan = (plan: any) => {
+        setActivePlanId(plan.id);
+        setPlanData(plan.plan_data);
+        renderMapAndCalendar(plan.plan_data);
+        setChatMessages([{ id: Date.now().toString(), text: `Loaded "${plan.title}". How would you like to modify this plan?`, sender: 'ai' }]);
+    };
+
+    const handleNewPlan = () => {
+        setActivePlanId(null); setPlanData(null); setNodes([]); setEdges([]); setCalendarEvents([]);
+        setChatMessages([{ id: Date.now().toString(), text: 'Starting fresh! What is your new goal?', sender: 'ai' }]);
     };
 
     const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-        if (node.data && node.data.recommendations) {
+        if (node.data?.recommendations) {
             setSelectedNodeTitle(node.data.label);
             setSelectedRecs(node.data.recommendations);
-        } else {
-            setSelectedRecs(null);
-        }
+        } else { setSelectedRecs(null); }
     }, []);
 
     return (
-        <div style={{ display: 'flex', height: '100vh', width: '100vw', backgroundColor: '#f3f4f6', fontFamily: 'system-ui, sans-serif' }}>
+        <div style={{ display: 'flex', height: '100vh', width: '100vw', backgroundColor: '#f1f5f9', fontFamily: 'Inter, system-ui, sans-serif' }}>
             
-            {/* LEFT SIDEBAR: Navigation & Saved Plans */}
-            <div style={{ width: '280px', backgroundColor: '#1f2937', color: 'white', display: 'flex', flexDirection: 'column', boxShadow: '4px 0 15px rgba(0,0,0,0.1)', zIndex: 10 }}>
-                <div style={{ padding: '20px', borderBottom: '1px solid #374151' }}>
-                    <h2 style={{ margin: '0 0 15px 0', fontSize: '1.2em', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        🎓 Uni Co-pilot
-                        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.2em' }}>✕</button>
-                    </h2>
-                    <button 
-                        onClick={() => setIsCreatingNew(true)} 
-                        style={{ width: '100%', padding: '10px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
-                    >
-                        + New Roadmap
+            {/* PANE 1: LEFT SIDEBAR (History) */}
+            <div style={{ width: isSidebarOpen ? '260px' : '0px', transition: 'width 0.3s', overflow: 'hidden', backgroundColor: '#ffffff', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', zIndex: 10 }}>
+                <div style={{ padding: '20px', borderBottom: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                        <h2 style={{ margin: 0, fontSize: '1.2em', color: '#0f172a', fontWeight: 'bold' }}>🎓 Co-pilot</h2>
+                    </div>
+                    <button onClick={handleNewPlan} style={{ width: '100%', padding: '10px', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+                        <span>+</span> New Roadmap
                     </button>
                 </div>
-                
                 <div style={{ flexGrow: 1, overflowY: 'auto', padding: '15px' }}>
-                    <h3 style={{ fontSize: '0.9em', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>My Roadmaps</h3>
-                    {savedPlans.length === 0 ? (
-                        <p style={{ color: '#6b7280', fontSize: '0.85em' }}>No saved roadmaps yet.</p>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {savedPlans.map(plan => (
-                                <button key={plan.id} style={{ textAlign: 'left', padding: '10px', backgroundColor: '#374151', color: '#e5e7eb', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9em' }}>
-                                    {plan.title}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* MAIN CONTENT AREA */}
-            <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                
-                {/* Header Tabs */}
-                {planData && (
-                    <div style={{ display: 'flex', backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '15px 30px', gap: '20px', alignItems: 'center' }}>
-                        <h2 style={{ margin: 0, color: '#111827', fontSize: '1.3em', marginRight: 'auto' }}>{planData.plan_title}</h2>
-                        <button onClick={() => setActiveTab('tree')} style={{ background: 'none', border: 'none', padding: '8px 15px', fontSize: '1em', fontWeight: activeTab === 'tree' ? 'bold' : 'normal', color: activeTab === 'tree' ? '#3b82f6' : '#6b7280', borderBottom: activeTab === 'tree' ? '2px solid #3b82f6' : 'none', cursor: 'pointer' }}>
-                            🗺️ Roadmap View
-                        </button>
-                        <button onClick={() => setActiveTab('calendar')} style={{ background: 'none', border: 'none', padding: '8px 15px', fontSize: '1em', fontWeight: activeTab === 'calendar' ? 'bold' : 'normal', color: activeTab === 'calendar' ? '#3b82f6' : '#6b7280', borderBottom: activeTab === 'calendar' ? '2px solid #3b82f6' : 'none', cursor: 'pointer' }}>
-                            📅 Schedule View
-                        </button>
-                    </div>
-                )}
-
-                {/* Main Render Area */}
-                <div style={{ flexGrow: 1, position: 'relative' }}>
-                    
-                    {!planData && !isCreatingNew && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6b7280' }}>
-                            <span style={{ fontSize: '4em', marginBottom: '20px' }}>🏛️</span>
-                            <h2>Welcome to your Admissions Co-pilot</h2>
-                            <p>Click "+ New Roadmap" to map out your university journey.</p>
-                        </div>
-                    )}
-
-                    {planData && activeTab === 'tree' && (
-                        <ReactFlow nodes={nodes} edges={edges} onNodeClick={onNodeClick} fitView>
-                            <Background color="#cbd5e1" gap={16} />
-                            <Controls />
-                        </ReactFlow>
-                    )}
-                    
-                    {planData && activeTab === 'calendar' && (
-                        <div style={{ padding: '20px', height: '100%', backgroundColor: 'white' }}>
-                            <Calendar localizer={localizer} events={calendarEvents} startAccessor="start" endAccessor="end" views={['month', 'week', 'agenda']} style={{ height: '100%', color: '#111827' }} />
-                        </div>
-                    )}
-                </div>
-
-                {/* SLIDE-IN RECOMMENDATIONS PANEL */}
-                {selectedRecs && activeTab === 'tree' && (
-                    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '350px', backgroundColor: 'white', boxShadow: '-4px 0 15px rgba(0,0,0,0.05)', padding: '25px', overflowY: 'auto', zIndex: 20 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ margin: 0, color: '#111827' }}>Resources</h3>
-                            <button onClick={() => setSelectedRecs(null)} style={{ background: 'none', border: 'none', fontSize: '1.2em', cursor: 'pointer', color: '#9ca3af' }}>✕</button>
-                        </div>
-                        <p style={{ color: '#6b7280', fontSize: '0.9em', marginBottom: '20px' }}>Action items for: <strong>{selectedNodeTitle}</strong></p>
-                        
-                        {selectedRecs.length === 0 ? (
-                            <p style={{ color: '#9ca3af' }}>No external resources needed. Focus on self-study.</p>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                {selectedRecs.map((rec: any, idx: number) => (
-                                    <div key={idx} style={{ padding: '15px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                                        <strong style={{ display: 'block', color: '#1e293b', marginBottom: '5px' }}>{rec.name}</strong>
-                                        <span style={{ fontSize: '0.85em', color: '#64748b', display: 'block' }}>Type: {rec.type}</span>
-                                        <span style={{ fontSize: '0.85em', color: '#10b981', display: 'block', fontWeight: 'bold', marginTop: '3px' }}>{rec.estimated_price}</span>
-                                        {rec.url && (
-                                            <a href={rec.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: '10px', fontSize: '0.85em', color: '#fff', backgroundColor: '#3b82f6', padding: '6px 12px', borderRadius: '4px', textDecoration: 'none' }}>
-                                                View Resource →
-                                            </a>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-
-            {/* CREATE NEW PLAN MODAL */}
-            {isCreatingNew && (
-                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '500px', maxWidth: '90%', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
-                        <h2 style={{ margin: '0 0 15px 0', color: '#111827' }}>Create Admissions Roadmap</h2>
-                        <p style={{ color: '#6b7280', fontSize: '0.9em', marginBottom: '20px' }}>Tell me your target university, major, current GPA, and timeline. I'll build the strategy.</p>
-                        
-                        <textarea 
-                            rows={5} 
-                            placeholder="e.g., I want to apply to Chula Engineering. My GPA is 3.2. I have 6 months left. I need to build a portfolio and prep for TGAT/TPAT3."
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            disabled={isLoading}
-                            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', resize: 'none', marginBottom: '20px', fontFamily: 'inherit' }}
-                        />
-                        
-                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setIsCreatingNew(false)} disabled={isLoading} style={{ padding: '10px 15px', backgroundColor: 'transparent', border: 'none', color: '#6b7280', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
-                            <button onClick={generatePlan} disabled={isLoading} style={{ padding: '10px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                {isLoading ? 'Analyzing Requirements...' : 'Generate Roadmap'}
+                    <p style={{ fontSize: '0.75em', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold', marginBottom: '10px' }}>Your Saved Paths</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {savedPlans.map(plan => (
+                            <button key={plan.id} onClick={() => loadPlan(plan)} style={{ textAlign: 'left', padding: '12px 10px', backgroundColor: activePlanId === plan.id ? '#e0f2fe' : 'transparent', color: activePlanId === plan.id ? '#0369a1' : '#334155', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9em', fontWeight: activePlanId === plan.id ? '600' : '400', transition: 'all 0.2s' }}>
+                                📄 {plan.title}
                             </button>
-                        </div>
+                        ))}
                     </div>
                 </div>
-            )}
+            </div>
+
+            {/* PANE 2: CENTER CANVAS (The Work Area) */}
+            <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+                
+                {/* Header Navbar */}
+                <div style={{ height: '60px', backgroundColor: '#ffffff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', padding: '0 20px', gap: '20px' }}>
+                    <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} style={{ background: 'none', border: 'none', fontSize: '1.2em', cursor: 'pointer', color: '#64748b' }}>☰</button>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.1em', fontWeight: '600', flexGrow: 1 }}>{planData ? planData.plan_title : 'Untitled Roadmap'}</h3>
+                    
+                    {planData && (
+                        <div style={{ display: 'flex', backgroundColor: '#f1f5f9', borderRadius: '8px', padding: '4px' }}>
+                            <button onClick={() => setActiveTab('tree')} style={{ background: activeTab === 'tree' ? '#ffffff' : 'transparent', border: 'none', padding: '6px 16px', borderRadius: '6px', fontSize: '0.9em', fontWeight: activeTab === 'tree' ? '600' : '500', color: activeTab === 'tree' ? '#0f172a' : '#64748b', cursor: 'pointer', boxShadow: activeTab === 'tree' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>Roadmap</button>
+                            <button onClick={() => setActiveTab('calendar')} style={{ background: activeTab === 'calendar' ? '#ffffff' : 'transparent', border: 'none', padding: '6px 16px', borderRadius: '6px', fontSize: '0.9em', fontWeight: activeTab === 'calendar' ? '600' : '500', color: activeTab === 'calendar' ? '#0f172a' : '#64748b', cursor: 'pointer', boxShadow: activeTab === 'calendar' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>Calendar</button>
+                        </div>
+                    )}
+                    <button onClick={onClose} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Exit Co-pilot</button>
+                </div>
+
+                {/* Main View Area */}
+                <div style={{ flexGrow: 1, position: 'relative' }}>
+                    {!planData ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', textAlign: 'center', padding: '20px' }}>
+                            <div style={{ fontSize: '3em', marginBottom: '15px' }}>✨</div>
+                            <h2 style={{ color: '#0f172a', marginBottom: '10px' }}>Your blank canvas awaits.</h2>
+                            <p style={{ maxWidth: '400px', lineHeight: '1.5' }}>Use the AI Assistant on the right to describe your academic goals. I will instantly build a custom roadmap here.</p>
+                        </div>
+                    ) : (
+                        <>
+                            {activeTab === 'tree' && (
+                                <ReactFlow nodes={nodes} edges={edges} onNodeClick={onNodeClick} fitView attributionPosition="bottom-left">
+                                    <Background color="#cbd5e1" gap={20} size={2} />
+                                    <Controls style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)', borderRadius: '8px', overflow: 'hidden' }} />
+                                </ReactFlow>
+                            )}
+                            {activeTab === 'calendar' && (
+                                <div style={{ padding: '20px', height: '100%', backgroundColor: '#ffffff' }}>
+                                    <Calendar localizer={localizer} events={calendarEvents} startAccessor="start" endAccessor="end" views={['month', 'week', 'agenda']} style={{ height: '100%', color: '#0f172a' }} />
+                                </div>
+                            )}
+
+                            {/* Node Details Overlay */}
+                            {selectedRecs && activeTab === 'tree' && (
+                                <div style={{ position: 'absolute', top: 20, left: 20, width: '320px', backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', zIndex: 5 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                        <h4 style={{ margin: 0, color: '#0f172a', fontSize: '1.1em' }}>{selectedNodeTitle}</h4>
+                                        <button onClick={() => setSelectedRecs(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}>✕</button>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {selectedRecs.map((rec: any, idx: number) => (
+                                            <div key={idx} style={{ padding: '12px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                                                <strong style={{ display: 'block', color: '#1e293b', fontSize: '0.95em', marginBottom: '4px' }}>{rec.name}</strong>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8em', color: '#64748b' }}>
+                                                    <span>{rec.type}</span>
+                                                    <span style={{ color: '#059669', fontWeight: 'bold' }}>{rec.estimated_price}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* PANE 3: RIGHT PANEL (AI Assistant Chat) */}
+            <div style={{ width: '340px', backgroundColor: '#ffffff', borderLeft: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', zIndex: 10, boxShadow: '-4px 0 15px rgba(0,0,0,0.02)' }}>
+                <div style={{ padding: '15px 20px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                    <h3 style={{ margin: 0, fontSize: '1em', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ display: 'inline-block', width: '8px', height: '8px', backgroundColor: '#10b981', borderRadius: '50%' }}></span>
+                        AI Assistant
+                    </h3>
+                </div>
+                
+                {/* Chat History */}
+                <div style={{ flexGrow: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    {chatMessages.map(msg => (
+                        <div key={msg.id} style={{ alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+                            <div style={{ backgroundColor: msg.sender === 'user' ? '#3b82f6' : '#f1f5f9', color: msg.sender === 'user' ? '#ffffff' : '#334155', padding: '12px 16px', borderRadius: msg.sender === 'user' ? '16px 16px 0 16px' : '16px 16px 16px 0', fontSize: '0.95em', lineHeight: '1.5', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                {msg.text}
+                            </div>
+                        </div>
+                    ))}
+                    {isProcessing && (
+                        <div style={{ alignSelf: 'flex-start', backgroundColor: '#f1f5f9', padding: '12px 16px', borderRadius: '16px 16px 16px 0', color: '#64748b', fontSize: '0.9em', display: 'flex', gap: '4px' }}>
+                            <span className="dot-pulse">●</span><span className="dot-pulse" style={{ animationDelay: '0.2s'}}>●</span><span className="dot-pulse" style={{ animationDelay: '0.4s'}}>●</span>
+                        </div>
+                    )}
+                    <div ref={chatEndRef} />
+                </div>
+
+                {/* Chat Input */}
+                <div style={{ padding: '15px', borderTop: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+                    <div style={{ display: 'flex', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '24px', padding: '4px 8px 4px 16px', transition: 'border-color 0.2s' }}>
+                        <input 
+                            type="text" 
+                            value={prompt} 
+                            onChange={(e) => setPrompt(e.target.value)} 
+                            onKeyPress={(e) => { if (e.key === 'Enter') handleSendPrompt(); }}
+                            placeholder={planData ? "Ask to modify..." : "Generate roadmap for..."}
+                            disabled={isProcessing}
+                            style={{ flexGrow: 1, border: 'none', background: 'transparent', outline: 'none', color: '#0f172a', fontSize: '0.95em' }}
+                        />
+                        <button onClick={handleSendPrompt} disabled={isProcessing || !prompt.trim()} style={{ backgroundColor: prompt.trim() ? '#3b82f6' : '#94a3b8', color: 'white', border: 'none', borderRadius: '20px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: prompt.trim() ? 'pointer' : 'default', transition: 'background-color 0.2s' }}>
+                            ↑
+                        </button>
+                    </div>
+                    <p style={{ textAlign: 'center', fontSize: '0.75em', color: '#94a3b8', margin: '8px 0 0 0' }}>AI can make mistakes. Verify information.</p>
+                </div>
+            </div>
+
+            <style>{`
+                @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+                .dot-pulse { animation: pulse 1s infinite; display: inline-block; }
+            `}</style>
         </div>
     );
 }
