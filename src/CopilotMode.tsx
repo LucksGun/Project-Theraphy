@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth, WORKER_URL } from './App'; 
 import ReactFlow, { Background, Controls, Node, Edge } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -7,31 +7,53 @@ import { format, parse, startOfWeek, getDay, addDays } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// Setup Calendar Localizer for react-big-calendar using date-fns v3
 const locales = { 'en-US': enUS };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
 export default function CopilotMode({ onClose }: { onClose: () => void }) {
     const { user } = useAuth();
+    const [savedPlans, setSavedPlans] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<'tree' | 'calendar'>('tree');
+    
+    // UI States
+    const [isCreatingNew, setIsCreatingNew] = useState(false);
     const [prompt, setPrompt] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     
     // Core Data State
     const [planData, setPlanData] = useState<any>(null);
-    const [nodes, setNodes] = useState<Node[]>([{ id: '1', position: { x: 250, y: 50 }, data: { label: 'Start Your Journey' } }]);
+    const [nodes, setNodes] = useState<Node[]>([]);
     const [edges, setEdges] = useState<Edge[]>([]);
     const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
     
-    // Recommendations State (Populates when a user clicks a node)
+    // Recommendations Panel
     const [selectedRecs, setSelectedRecs] = useState<any[] | null>(null);
     const [selectedNodeTitle, setSelectedNodeTitle] = useState<string>('');
 
+    // Load saved plans on mount
+    useEffect(() => {
+        const fetchPlans = async () => {
+            if (!user) return;
+            try {
+                const token = await user.getIdToken();
+                const res = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'getCopilotPlans', token })
+                });
+                const data = await res.json();
+                if (data.success && data.plans) {
+                    setSavedPlans(data.plans);
+                }
+            } catch (err) {
+                console.error("Failed to fetch saved plans", err);
+            }
+        };
+        fetchPlans();
+    }, [user]);
+
     const generatePlan = async () => {
-        if (!prompt.trim() || !user) {
-            alert("Please enter a goal and ensure you are logged in.");
-            return;
-        }
+        if (!prompt.trim() || !user) return alert("Please enter your academic goal.");
         
         setIsLoading(true);
         setSelectedRecs(null);
@@ -42,11 +64,7 @@ export default function CopilotMode({ onClose }: { onClose: () => void }) {
             const res = await fetch(WORKER_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'generateCopilotPlan',
-                    token: token,
-                    prompt: prompt
-                })
+                body: JSON.stringify({ action: 'generateCopilotPlan', token, prompt })
             });
             
             const data = await res.json();
@@ -54,60 +72,11 @@ export default function CopilotMode({ onClose }: { onClose: () => void }) {
             
             const generatedPlan = data.plan_data;
             setPlanData(generatedPlan);
+            mapDataToUI(generatedPlan);
+            setIsCreatingNew(false); // Close the modal
             
-            // --- 1. Map Skill Tree Nodes & Edges ---
-            const newFlowNodes: Node[] = [];
-            const newFlowEdges: Edge[] = [];
-
-            generatedPlan.nodes.forEach((node: any, index: number) => {
-                newFlowNodes.push({
-                    id: node.node_id,
-                    position: { x: 250, y: (index + 1) * 120 }, // Vertical spacing
-                    data: { 
-                        label: node.title,
-                        recommendations: node.recommendations // Store recs inside the node data
-                    },
-                    style: { backgroundColor: 'var(--bot-bubble-bg)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', width: 200, textAlign: 'center' }
-                });
-
-                if (node.prerequisites && node.prerequisites.length > 0) {
-                    node.prerequisites.forEach((prereqId: string) => {
-                        newFlowEdges.push({
-                            id: `e-${prereqId}-${node.node_id}`,
-                            source: prereqId,
-                            target: node.node_id,
-                            animated: true,
-                            style: { stroke: '#10b981', strokeWidth: 2 } 
-                        });
-                    });
-                }
-            });
-
-            setNodes(newFlowNodes);
-            setEdges(newFlowEdges);
-
-            // --- 2. Map Calendar Events ---
-            const newCalEvents: any[] = [];
-            let rollingDate = new Date(); 
-
-            generatedPlan.nodes.forEach((node: any) => {
-                if (node.calendar_events && node.calendar_events.length > 0) {
-                    node.calendar_events.forEach((event: any) => {
-                        const startDate = new Date(rollingDate);
-                        const endDate = addDays(startDate, event.duration_days || 1);
-                        
-                        newCalEvents.push({
-                            title: `${node.title}: ${event.title}`, 
-                            start: startDate,
-                            end: endDate,
-                            allDay: true
-                        });
-                        rollingDate = endDate; 
-                    });
-                }
-            });
-
-            setCalendarEvents(newCalEvents);
+            // Optimistically update sidebar
+            setSavedPlans(prev => [{ id: data.plan_id, title: generatedPlan.plan_title, created_at: new Date().toISOString() }, ...prev]);
 
         } catch (error: any) {
             console.error(error);
@@ -117,7 +86,54 @@ export default function CopilotMode({ onClose }: { onClose: () => void }) {
         }
     };
 
-    // Handle clicking a node to show recommendations
+    const mapDataToUI = (generatedPlan: any) => {
+        const newFlowNodes: Node[] = [];
+        const newFlowEdges: Edge[] = [];
+        const newCalEvents: any[] = [];
+        let rollingDate = new Date(); 
+
+        generatedPlan.nodes.forEach((node: any, index: number) => {
+            // Distinct styling for a modern look
+            newFlowNodes.push({
+                id: node.node_id,
+                position: { x: 300, y: (index + 1) * 150 }, 
+                data: { label: node.title, recommendations: node.recommendations },
+                style: { 
+                    backgroundColor: '#ffffff', color: '#111827', 
+                    border: '2px solid #3b82f6', borderRadius: '12px', 
+                    padding: '15px', width: 250, textAlign: 'center',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    fontWeight: 'bold'
+                }
+            });
+
+            if (node.prerequisites && node.prerequisites.length > 0) {
+                node.prerequisites.forEach((prereqId: string) => {
+                    newFlowEdges.push({
+                        id: `e-${prereqId}-${node.node_id}`,
+                        source: prereqId,
+                        target: node.node_id,
+                        animated: true,
+                        style: { stroke: '#3b82f6', strokeWidth: 3 } 
+                    });
+                });
+            }
+
+            if (node.calendar_events && node.calendar_events.length > 0) {
+                node.calendar_events.forEach((event: any) => {
+                    const startDate = new Date(rollingDate);
+                    const endDate = addDays(startDate, event.duration_days || 1);
+                    newCalEvents.push({ title: `${node.title}: ${event.title}`, start: startDate, end: endDate, allDay: true });
+                    rollingDate = endDate; 
+                });
+            }
+        });
+
+        setNodes(newFlowNodes);
+        setEdges(newFlowEdges);
+        setCalendarEvents(newCalEvents);
+    };
+
     const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
         if (node.data && node.data.recommendations) {
             setSelectedNodeTitle(node.data.label);
@@ -128,118 +144,136 @@ export default function CopilotMode({ onClose }: { onClose: () => void }) {
     }, []);
 
     return (
-        <div style={{ display: 'flex', height: '100vh', width: '100vw', backgroundColor: 'var(--bg-primary)' }}>
+        <div style={{ display: 'flex', height: '100vh', width: '100vw', backgroundColor: '#f3f4f6', fontFamily: 'system-ui, sans-serif' }}>
             
-            {/* LEFT PANEL: Chat, Input, and Recommendations */}
-            <div style={{ width: '35%', minWidth: '300px', borderRight: '1px solid var(--border-color)', padding: '20px', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-secondary)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <h2 style={{ margin: 0 }}>🚀 Co-pilot</h2>
-                    {/* EXIT BUTTON */}
+            {/* LEFT SIDEBAR: Navigation & Saved Plans */}
+            <div style={{ width: '280px', backgroundColor: '#1f2937', color: 'white', display: 'flex', flexDirection: 'column', boxShadow: '4px 0 15px rgba(0,0,0,0.1)', zIndex: 10 }}>
+                <div style={{ padding: '20px', borderBottom: '1px solid #374151' }}>
+                    <h2 style={{ margin: '0 0 15px 0', fontSize: '1.2em', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        🎓 Uni Co-pilot
+                        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.2em' }}>✕</button>
+                    </h2>
                     <button 
-                        onClick={onClose} 
-                        className="settings-action-button" 
-                        style={{ backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '8px 15px', fontWeight: 'bold' }}
+                        onClick={() => setIsCreatingNew(true)} 
+                        style={{ width: '100%', padding: '10px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
                     >
-                        Close Copilot
+                        + New Roadmap
                     </button>
                 </div>
                 
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9em', marginBottom: '20px' }}>
-                    Describe your learning goal, budget, and timeline. I will build a curriculum, schedule it, and find the best resources.
-                </p>
-                
-                {/* Scrollable Content Area */}
-                <div style={{ flexGrow: 1, overflowY: 'auto', marginBottom: '15px', paddingRight: '10px' }}>
-                    {planData && (
-                        <div style={{ padding: '15px', backgroundColor: 'var(--bot-bubble-bg)', borderRadius: '10px', marginBottom: '20px', border: '1px solid #10b981' }}>
-                            <h3 style={{ margin: '0 0 10px 0', color: '#10b981' }}>{planData.plan_title}</h3>
-                            <p style={{ margin: 0, fontSize: '0.9em' }}>Plan generated! Click on the Skill Tree nodes to view specific course recommendations.</p>
+                <div style={{ flexGrow: 1, overflowY: 'auto', padding: '15px' }}>
+                    <h3 style={{ fontSize: '0.9em', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>My Roadmaps</h3>
+                    {savedPlans.length === 0 ? (
+                        <p style={{ color: '#6b7280', fontSize: '0.85em' }}>No saved roadmaps yet.</p>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {savedPlans.map(plan => (
+                                <button key={plan.id} style={{ textAlign: 'left', padding: '10px', backgroundColor: '#374151', color: '#e5e7eb', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9em' }}>
+                                    {plan.title}
+                                </button>
+                            ))}
                         </div>
                     )}
-
-                    {/* Place/Course Recommendations Panel */}
-                    {selectedRecs && (
-                        <div style={{ padding: '15px', backgroundColor: 'var(--bg-primary)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                            <h4 style={{ margin: '0 0 15px 0' }}>Resources for: {selectedNodeTitle}</h4>
-                            {selectedRecs.length === 0 ? (
-                                <p style={{ fontSize: '0.9em', color: 'var(--text-secondary)' }}>No specific resources found for this step.</p>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    {selectedRecs.map((rec: any, idx: number) => (
-                                        <div key={idx} style={{ padding: '10px', backgroundColor: 'var(--bot-bubble-bg)', borderRadius: '6px' }}>
-                                            <strong style={{ display: 'block', marginBottom: '5px' }}>{rec.name}</strong>
-                                            <span style={{ fontSize: '0.8em', color: 'var(--text-secondary)', display: 'block' }}>Type: {rec.type} | Price: {rec.estimated_price}</span>
-                                            {rec.url && (
-                                                <a href={rec.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.85em', color: '#3b82f6', textDecoration: 'none', display: 'inline-block', marginTop: '8px' }}>
-                                                    View Resource →
-                                                </a>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* Input Area */}
-                <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <textarea 
-                        className="settings-input" 
-                        rows={4} 
-                        placeholder="e.g., I want to get into KMITL IT. My GPA is 2.5."
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        disabled={isLoading}
-                        style={{ resize: 'none' }}
-                    />
-                    <button onClick={generatePlan} className="send-button" style={{ width: '100%', borderRadius: '8px', padding: '12px', fontWeight: 'bold' }} disabled={isLoading}>
-                        {isLoading ? 'Architecting Plan...' : 'Generate Plan'}
-                    </button>
                 </div>
             </div>
 
-            {/* RIGHT PANEL: Visual Dashboards */}
-            <div style={{ width: '65%', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+            {/* MAIN CONTENT AREA */}
+            <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
                 
-                {/* Tabs */}
-                <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', padding: '10px 20px', gap: '10px', backgroundColor: 'var(--bg-secondary)' }}>
-                    <button onClick={() => setActiveTab('tree')} className={`settings-action-button ${activeTab === 'tree' ? 'selected' : ''}`} style={activeTab === 'tree' ? { backgroundColor: 'var(--bot-bubble-bg)', borderColor: '#10b981' } : {}}>
-                        🌳 Skill Tree
-                    </button>
-                    <button onClick={() => setActiveTab('calendar')} className={`settings-action-button ${activeTab === 'calendar' ? 'selected' : ''}`} style={activeTab === 'calendar' ? { backgroundColor: 'var(--bot-bubble-bg)', borderColor: '#10b981' } : {}}>
-                        📅 Calendar
-                    </button>
-                </div>
+                {/* Header Tabs */}
+                {planData && (
+                    <div style={{ display: 'flex', backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '15px 30px', gap: '20px', alignItems: 'center' }}>
+                        <h2 style={{ margin: 0, color: '#111827', fontSize: '1.3em', marginRight: 'auto' }}>{planData.plan_title}</h2>
+                        <button onClick={() => setActiveTab('tree')} style={{ background: 'none', border: 'none', padding: '8px 15px', fontSize: '1em', fontWeight: activeTab === 'tree' ? 'bold' : 'normal', color: activeTab === 'tree' ? '#3b82f6' : '#6b7280', borderBottom: activeTab === 'tree' ? '2px solid #3b82f6' : 'none', cursor: 'pointer' }}>
+                            🗺️ Roadmap View
+                        </button>
+                        <button onClick={() => setActiveTab('calendar')} style={{ background: 'none', border: 'none', padding: '8px 15px', fontSize: '1em', fontWeight: activeTab === 'calendar' ? 'bold' : 'normal', color: activeTab === 'calendar' ? '#3b82f6' : '#6b7280', borderBottom: activeTab === 'calendar' ? '2px solid #3b82f6' : 'none', cursor: 'pointer' }}>
+                            📅 Schedule View
+                        </button>
+                    </div>
+                )}
 
-                {/* Dashboard Rendering Area */}
+                {/* Main Render Area */}
                 <div style={{ flexGrow: 1, position: 'relative' }}>
-                    {activeTab === 'tree' && (
-                        <ReactFlow 
-                            nodes={nodes} 
-                            edges={edges} 
-                            onNodeClick={onNodeClick}
-                            fitView
-                        >
-                            <Background />
+                    
+                    {!planData && !isCreatingNew && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6b7280' }}>
+                            <span style={{ fontSize: '4em', marginBottom: '20px' }}>🏛️</span>
+                            <h2>Welcome to your Admissions Co-pilot</h2>
+                            <p>Click "+ New Roadmap" to map out your university journey.</p>
+                        </div>
+                    )}
+
+                    {planData && activeTab === 'tree' && (
+                        <ReactFlow nodes={nodes} edges={edges} onNodeClick={onNodeClick} fitView>
+                            <Background color="#cbd5e1" gap={16} />
                             <Controls />
                         </ReactFlow>
                     )}
                     
-                    {activeTab === 'calendar' && (
-                        <div style={{ padding: '20px', height: '100%' }}>
-                            <Calendar
-                                localizer={localizer}
-                                events={calendarEvents} 
-                                startAccessor="start"
-                                endAccessor="end"
-                                style={{ height: '100%', color: 'var(--text-primary)' }}
-                                views={['month', 'week', 'agenda']}
-                            />
+                    {planData && activeTab === 'calendar' && (
+                        <div style={{ padding: '20px', height: '100%', backgroundColor: 'white' }}>
+                            <Calendar localizer={localizer} events={calendarEvents} startAccessor="start" endAccessor="end" views={['month', 'week', 'agenda']} style={{ height: '100%', color: '#111827' }} />
                         </div>
                     )}
                 </div>
+
+                {/* SLIDE-IN RECOMMENDATIONS PANEL */}
+                {selectedRecs && activeTab === 'tree' && (
+                    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '350px', backgroundColor: 'white', boxShadow: '-4px 0 15px rgba(0,0,0,0.05)', padding: '25px', overflowY: 'auto', zIndex: 20 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ margin: 0, color: '#111827' }}>Resources</h3>
+                            <button onClick={() => setSelectedRecs(null)} style={{ background: 'none', border: 'none', fontSize: '1.2em', cursor: 'pointer', color: '#9ca3af' }}>✕</button>
+                        </div>
+                        <p style={{ color: '#6b7280', fontSize: '0.9em', marginBottom: '20px' }}>Action items for: <strong>{selectedNodeTitle}</strong></p>
+                        
+                        {selectedRecs.length === 0 ? (
+                            <p style={{ color: '#9ca3af' }}>No external resources needed. Focus on self-study.</p>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                {selectedRecs.map((rec: any, idx: number) => (
+                                    <div key={idx} style={{ padding: '15px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                                        <strong style={{ display: 'block', color: '#1e293b', marginBottom: '5px' }}>{rec.name}</strong>
+                                        <span style={{ fontSize: '0.85em', color: '#64748b', display: 'block' }}>Type: {rec.type}</span>
+                                        <span style={{ fontSize: '0.85em', color: '#10b981', display: 'block', fontWeight: 'bold', marginTop: '3px' }}>{rec.estimated_price}</span>
+                                        {rec.url && (
+                                            <a href={rec.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: '10px', fontSize: '0.85em', color: '#fff', backgroundColor: '#3b82f6', padding: '6px 12px', borderRadius: '4px', textDecoration: 'none' }}>
+                                                View Resource →
+                                            </a>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
+
+            {/* CREATE NEW PLAN MODAL */}
+            {isCreatingNew && (
+                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '500px', maxWidth: '90%', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+                        <h2 style={{ margin: '0 0 15px 0', color: '#111827' }}>Create Admissions Roadmap</h2>
+                        <p style={{ color: '#6b7280', fontSize: '0.9em', marginBottom: '20px' }}>Tell me your target university, major, current GPA, and timeline. I'll build the strategy.</p>
+                        
+                        <textarea 
+                            rows={5} 
+                            placeholder="e.g., I want to apply to Chula Engineering. My GPA is 3.2. I have 6 months left. I need to build a portfolio and prep for TGAT/TPAT3."
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            disabled={isLoading}
+                            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', resize: 'none', marginBottom: '20px', fontFamily: 'inherit' }}
+                        />
+                        
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setIsCreatingNew(false)} disabled={isLoading} style={{ padding: '10px 15px', backgroundColor: 'transparent', border: 'none', color: '#6b7280', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+                            <button onClick={generatePlan} disabled={isLoading} style={{ padding: '10px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                {isLoading ? 'Analyzing Requirements...' : 'Generate Roadmap'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
