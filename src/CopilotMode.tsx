@@ -1,16 +1,12 @@
-import React, { useState, useCallback } from 'react';
-import { useAuth } from './App'; // Adjust path if needed
+import { useState } from 'react';
+import { useAuth } from './App'; 
 import ReactFlow, { Background, Controls } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import startOfWeek from 'date-fns/startOfWeek';
-import getDay from 'date-fns/getDay';
-import enUS from 'date-fns/locale/en-US';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { WORKER_URL } from './App';
-
 // Setup Calendar Localizer
 const locales = { 'en-US': enUS };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
@@ -25,10 +21,8 @@ export default function CopilotMode({ onClose }: { onClose: () => void }) {
     const [planData, setPlanData] = useState<any>(null);
 
     // React Flow initial state (we will populate this from the AI data later)
-    const [nodes, setNodes] = useState([{ id: '1', position: { x: 250, y: 5 }, data: { label: 'Start Your Journey' } }]);
-    const [edges, setEdges] = useState([]);
-
-    const generatePlan = async () => {
+const [nodes] = useState([{ id: '1', position: { x: 250, y: 5 }, data: { label: 'Start Your Journey' } }]);
+const [edges] = useState([]);    const generatePlan = async () => {
         if (!prompt.trim() || !user) return alert("Please enter a goal and ensure you are logged in.");
         
         setIsLoading(true);

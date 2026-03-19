@@ -247,7 +247,7 @@ export interface ApiRequestBody {
     token?: string | null;
 }
 
-const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+
 // --- Component for Protected Route ---
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const keyFromSession = sessionStorage.getItem('staffKey');
@@ -887,7 +887,8 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
         selectedPersona={selectedPersona}
         //onTriggerInterview={openInterviewMode}
     />
-)}                        </>
+)}
+    </>
                     } />
                     <Route path="/admin" element={ <ProtectedRoute> <AdminPage /> </ProtectedRoute> } />
                     <Route path="/present" element={<PresentationPage />} />
