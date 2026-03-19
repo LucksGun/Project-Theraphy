@@ -5,6 +5,7 @@ import Barcode from 'react-barcode'; // ✨ NEW: Import for barcode generation
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Settings01Icon, Comment01Icon } from '@hugeicons/core-free-icons';
 import './App.css';
+import CopilotMode from './CopilotMode';
 import ChatbotPage from './ChatbotPage';
 import AdminPage from './AdminPage';
 import ConfirmClearCupGame from './ConfirmClearCupGame';
@@ -246,7 +247,7 @@ export interface ApiRequestBody {
     token?: string | null;
 }
 
-
+const [isCopilotOpen, setIsCopilotOpen] = useState(false);
 // --- Component for Protected Route ---
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const keyFromSession = sessionStorage.getItem('staffKey');
@@ -326,6 +327,7 @@ function MainApp() {
     const [selectedPersona, setSelectedPersona] = useState<Persona>(DEFAULT_UNRESTRICTED_PERSONA);
     const [isInterviewModeOpen, setIsInterviewModeOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+    const [isCopilotOpen, setIsCopilotOpen] = useState<boolean>(false);
     const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState<boolean>(false);
     const [isStaffLoginModalVisible, setIsStaffLoginModalVisible] = useState<boolean>(false);
     const [enteredStaffKey, setEnteredStaffKey] = useState<string>('');
@@ -858,25 +860,34 @@ const canChangePersona = canAccessAdvanced && availablePersonasForGame.length >=
                 <Routes>
                     <Route path="/" element={
                         <>
-                            <header className="App-header">
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    <button onClick={toggleSettings} className="settings-button" title="Settings"><HugeiconsIcon icon={Settings01Icon} /></button>
-                                    <button onClick={toggleFeedbackModal} className="settings-button" title="Submit Feedback"><HugeiconsIcon icon={Comment01Icon} /></button>
-                                </div>
+<header className="App-header">
+    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <button onClick={toggleSettings} className="settings-button" title="Settings"><HugeiconsIcon icon={Settings01Icon} /></button>
+        <button onClick={toggleFeedbackModal} className="settings-button" title="Submit Feedback"><HugeiconsIcon icon={Comment01Icon} /></button>
+        
+        {/* NEW COPILOT BUTTON */}
+        <button onClick={() => { closeAllModals(); setIsCopilotOpen(true); }} className="settings-button" title="Open Co-pilot">
+            🚀 Co-pilot
+        </button>
+    </div>                                
                                 <h1>Project Theraphy</h1>
                                 <div className="header-user-info">
                                     {user ? <UserProfile onProfileClick={toggleUserInfoModal} /> : <LoginButton />}
                                 </div>
+                                
                             </header>
-                            <ChatbotPage
-                                messages={messages}
-                                setMessages={setMessages}
-                                selectedModel={selectedModel}
-                                sttLang={sttLang}
-                                selectedPersona={selectedPersona}
-                                //onTriggerInterview={openInterviewMode}
-                            />
-                        </>
+{isCopilotOpen ? (
+    <CopilotMode onClose={() => setIsCopilotOpen(false)} />
+) : (
+    <ChatbotPage
+        messages={messages}
+        setMessages={setMessages}
+        selectedModel={selectedModel}
+        sttLang={sttLang}
+        selectedPersona={selectedPersona}
+        //onTriggerInterview={openInterviewMode}
+    />
+)}                        </>
                     } />
                     <Route path="/admin" element={ <ProtectedRoute> <AdminPage /> </ProtectedRoute> } />
                     <Route path="/present" element={<PresentationPage />} />
