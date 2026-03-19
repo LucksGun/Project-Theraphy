@@ -3,7 +3,7 @@ import { useAuth, WORKER_URL } from './App';
 import ReactFlow, { Background, Controls, Node, Edge, MarkerType } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
-import { format, parse, startOfWeek, getDay, addDays, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, parse, startOfWeek, getDay, addDays, isWithinInterval, startOfDay} from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
@@ -52,7 +52,7 @@ export default function CopilotMode({ onClose }: { onClose: () => void }) {
 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMessages]);
 
-    // 2. The Universal Map & Task Renderer
+// 2. The Universal Map & Task Renderer
     const renderMapAndCalendar = useCallback((generatedPlan: any) => {
         const newNodes: Node[] = [];
         const newEdges: Edge[] = [];
@@ -60,8 +60,6 @@ export default function CopilotMode({ onClose }: { onClose: () => void }) {
         const activeTasksForToday: any[] = [];
         
         let rollingDate = startOfDay(new Date()); 
-        const todayStart = startOfDay(new Date());
-        const todayEnd = endOfDay(new Date());
 
         generatedPlan.nodes.forEach((node: any, index: number) => {
             const isCompleted = node.status === 'completed';
@@ -96,16 +94,12 @@ export default function CopilotMode({ onClose }: { onClose: () => void }) {
             }
 
             // Build Calendar Events & Detect Today's Tasks
-if (node.calendar_events && node.calendar_events.length > 0) {
+            if (node.calendar_events && node.calendar_events.length > 0) {
                 node.calendar_events.forEach((event: any) => {
-                    // ✨ STATE OF THE ART: Read the exact AI calculated dates
+                    // Use actual dates from AI if provided, otherwise fallback to rolling dates
                     const startDate = event.start_date ? new Date(event.start_date) : new Date(rollingDate);
-                    const endDate = event.end_date ? new Date(event.end_date) : addDays(startDate, 1);
+                    const endDate = event.end_date ? new Date(event.end_date) : addDays(startDate, event.duration_days || 1);
                     
-                    // Calculate hours based on date difference (1 day = intense, 14 days = spread out)
-                    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    const recommendedHrs = diffDays < 3 ? 3 : 1.5;                    
                     newEvents.push({ 
                         title: `${isCompleted ? '✅ ' : ''}${node.title}: ${event.title}`, 
                         start: startDate, end: endDate, allDay: true, resource: node
@@ -113,12 +107,16 @@ if (node.calendar_events && node.calendar_events.length > 0) {
 
                     // Check if this event falls on TODAY and is NOT completed
                     if (!isCompleted && isWithinInterval(new Date(), { start: startDate, end: endDate })) {
+                        // Calculate recommended hours properly
+                        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        const calculatedHrs = diffDays < 3 ? 3 : 1.5;
+
                         activeTasksForToday.push({
                             nodeId: node.node_id,
                             parentTitle: node.title,
                             taskTitle: event.title,
-                            // Assign recommended hours dynamically based on duration (shorter duration = more intense hours per day)
-                            recommendedHours: event.duration_days < 3 ? 3 : 1.5,
+                            recommendedHours: calculatedHrs, // We are successfully using the variable now!
                             status: 'todo',
                             resources: node.recommendations
                         });
@@ -129,7 +127,8 @@ if (node.calendar_events && node.calendar_events.length > 0) {
         });
 
         setNodes(newNodes); setEdges(newEdges); setCalendarEvents(newEvents); setTodayTasks(activeTasksForToday);
-    }, []);
+    }, []);       
+    
 
     // 3. Handle Plan Generation/Modification
     const handleSendPrompt = async () => {
