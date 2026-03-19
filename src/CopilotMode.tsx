@@ -96,11 +96,16 @@ export default function CopilotMode({ onClose }: { onClose: () => void }) {
             }
 
             // Build Calendar Events & Detect Today's Tasks
-            if (node.calendar_events && node.calendar_events.length > 0) {
+if (node.calendar_events && node.calendar_events.length > 0) {
                 node.calendar_events.forEach((event: any) => {
-                    const startDate = new Date(rollingDate);
-                    const endDate = addDays(startDate, event.duration_days || 1);
+                    // ✨ STATE OF THE ART: Read the exact AI calculated dates
+                    const startDate = event.start_date ? new Date(event.start_date) : new Date(rollingDate);
+                    const endDate = event.end_date ? new Date(event.end_date) : addDays(startDate, 1);
                     
+                    // Calculate hours based on date difference (1 day = intense, 14 days = spread out)
+                    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const recommendedHrs = diffDays < 3 ? 3 : 1.5;                    
                     newEvents.push({ 
                         title: `${isCompleted ? '✅ ' : ''}${node.title}: ${event.title}`, 
                         start: startDate, end: endDate, allDay: true, resource: node
