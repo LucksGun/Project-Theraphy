@@ -7,8 +7,8 @@ This project was born from the **Satit NU** mandatory curriculum. We recognized 
 While many use social media, we believed a **private, dedicated platform** would offer better security and privacy. Our goal was to create a "limitless" assistant to help students keep up with the complex information required for their future.
 ---
 ## 🏆 Competition History
-*   **Satit NU Local Project Competition** (Finalist)
-*   **Young Scientist Competition - YSC** (First Round Participant)
+*   **Satit NU Local Project Competition** (Failed)
+*   **Young Scientist Competition - YSC** (First Round Parcitipant)
 ---
 ## 🛠 Technical Specifications
 
@@ -34,7 +34,7 @@ While many use social media, we believed a **private, dedicated platform** would
     * Competition filings, project presentations, and legal paperwork.
 ### **Support**
 *   **Ramjitti Phempon** — *Project Artist*
-    * Visual design, group portraits, and branding.
+    * Group Portrait.
 ---
 ## 📂 Developer Notes
 > [!IMPORTANT]
