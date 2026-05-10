@@ -40,7 +40,10 @@ While many use social media, we believed a **private, dedicated platform** would
 > [!IMPORTANT]
 > **Backend Structure:** I personally prefer the Cloudflare Workers Web Editor over Wrangler. Therefore, all backend logic is located in the folder labeled `[BACKEND]`.
 > [!TIP]
-> **Contribute:** The **Live Interview Simulation** is currently unfinished/broken. If you're looking to contribute, feel free to submit a fix!
+> **Contribute:** The **Live Interview Simulation** is currently unfinished/broken. If you're looking to contribute, feel free to submit a fix! 
 ### 📜 Attribution
-This project is now public and discontinued. If you use this code or refer to our logic, **please give credit to the Project Theraphy team.** We spent months fine-tuning these AI prompts and system architectures.
+This project is now public and discontinued. If you use this code or refer to our logic, **please give credit to the Project Theraphy team.** We spent months fine-tuning these AI prompts and system architectures. (If Possible Please)
 ---
+
+
+oh yes yes yes last thing If I forgot to delete some crucial credintials please ignore/inform me and please dont ddos me please 🙏🙏🙏🙏
