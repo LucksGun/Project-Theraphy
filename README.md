@@ -1,5 +1,5 @@
 # 🩺 Project Theraphy
-![Project Banner](https://ibb.co/JRpf0MSp)
+![Project Banner](plain-apac-prod-public.komododecks.com/202605/10/gWzUYVdnMOjm8QlBJE5y/image.png)
 > **"Empowering Thai students to navigate the gap between High School and University with AI."**
 ---
 ## 💡 Project Intention
