@@ -1,5 +1,5 @@
 # 🩺 Project Theraphy
-![Project Banner](https://kommodo.ai/i/gWzUYVdnMOjm8QlBJE5y)
+![Project Banner](https://ibb.co/JRpf0MSp)
 > **"Empowering Thai students to navigate the gap between High School and University with AI."**
 ---
 ## 💡 Project Intention
